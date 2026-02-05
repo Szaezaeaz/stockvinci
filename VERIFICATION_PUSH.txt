@@ -1,6 +1,0 @@
-CECI EST UN FICHIER DE TEST.
-
-Si vous voyez ce fichier sur GitHub, c'est que le push fonctionne correctement sur la branche MAIN.
-
-Date : 05 Fevrier 2026
-Message : Verification pour Yanis
