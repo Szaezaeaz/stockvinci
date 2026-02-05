@@ -672,6 +672,8 @@ input[type="checkbox"]:focus {
   flex-direction: column;
   overflow: hidden;
   animation: slideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  max-height: 90dvh;
+  /* Adapt to viewport height */
 }
 
 .modal-header {
@@ -700,6 +702,9 @@ input[type="checkbox"]:focus {
 
 .modal-body {
   padding: 25px;
+  overflow-y: auto;
+  /* Allow internal scrolling */
+  flex: 1;
 }
 
 .loan-form-modal {
