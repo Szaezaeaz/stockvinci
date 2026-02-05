@@ -1,0 +1,106 @@
+import React from 'react';
+import GlobalWithdrawModal from './GlobalWithdrawModal';
+
+const DASHBOARD_ITEMS = [
+    { type: 'group', title: 'PC', items: ['PC Neuf', 'PC Occasion'], span: 2, icon: '💻' },
+    { type: 'group', title: 'TÉLÉPHONES', items: ['Iphone', 'Xcover'], span: 2, icon: '📱' },
+    { type: 'single', id: 'Casque', icon: '🎧' },
+    { type: 'single', id: 'Clavier', icon: '⌨️' },
+    { type: 'single', id: 'Souris', icon: '🖱️' },
+    { type: 'single', id: 'Sacoche', icon: '💼' },
+    { type: 'single', id: 'Chargeur', icon: '🔌' },
+    { type: 'single', id: 'Dock', icon: '⚙️' },
+];
+
+export default function StockDashboard({ stock, onUpdate, onWithdraw }) {
+    const [isWithdrawModalOpen, setIsWithdrawModalOpen] = React.useState(false);
+
+    return (
+        <div className="dashboard-grid">
+            <GlobalWithdrawModal
+                isOpen={isWithdrawModalOpen}
+                onClose={() => setIsWithdrawModalOpen(false)}
+                stock={stock}
+                onConfirm={onWithdraw}
+            />
+
+            {DASHBOARD_ITEMS.map((item, index) => {
+                const spanClass = item.span === 2 ? 'col-span-2' : '';
+
+                if (item.type === 'single') {
+                    const isLowStock = item.id === 'Casque' && (stock[item.id] || 0) < 5;
+                    return (
+                        <div key={item.id} className={`stock-card ${spanClass} ${isLowStock ? 'low-stock' : ''}`}>
+                            <h3>{item.icon} {item.id}</h3>
+                            <div className={`stock-count ${isLowStock ? 'text-red' : ''}`}>{stock[item.id]}</div>
+                            <div className="actions">
+                                <button
+                                    className="btn-circle btn-minus"
+                                    onClick={() => onUpdate(item.id, -1)}
+                                    aria-label={`Retirer ${item.id}`}
+                                >
+                                    -
+                                </button>
+                                <button
+                                    className="btn-circle btn-plus"
+                                    onClick={() => onUpdate(item.id, 1)}
+                                    aria-label={`Ajouter ${item.id}`}
+                                >
+                                    +
+                                </button>
+                            </div>
+                        </div>
+                    );
+                } else if (item.type === 'group') {
+                    return (
+                        <div key={item.title} className={`stock-card group-card ${spanClass}`}>
+                            <h3>{item.icon} {item.title}</h3>
+                            <div className="group-content">
+                                {item.items.map(subItem => (
+                                    <div key={subItem} className="group-row">
+                                        <span className="group-label">{subItem}</span>
+                                        <div className="group-controls">
+                                            <button
+                                                className="btn-mini btn-minus"
+                                                onClick={() => onUpdate(subItem, -1)}
+                                            >
+                                                -
+                                            </button>
+                                            <span className="group-count">{stock[subItem]}</span>
+                                            <button
+                                                className="btn-mini btn-plus"
+                                                onClick={() => onUpdate(subItem, 1)}
+                                            >
+                                                +
+                                            </button>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    );
+                }
+                return null;
+            })}
+
+            {/* Global Withdrawal Card */}
+            <div
+                className="stock-card interactable-card"
+                style={{
+                    cursor: 'pointer',
+                    background: 'linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%)',
+                    border: '1px solid #bae6fd',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    minHeight: '140px'
+                }}
+                onClick={() => setIsWithdrawModalOpen(true)}
+            >
+                <div style={{ fontSize: '2.5rem', marginBottom: '10px', color: '#0ea5e9' }}>📤</div>
+                <h3 style={{ margin: 0, color: '#0c4a6e', fontSize: '1.2rem', fontWeight: 600 }}>Retrait Matériel</h3>
+            </div>
+        </div>
+    );
+}
