@@ -191,6 +191,97 @@ export function useInventory() {
                 date: newDate
             };
 
+            const newState = {
+                ...prev,
+                stock: newStock,
+                history: [historyEntry, ...prev.history].slice(0, 50)
+            };
+
+            // 4. If type is 'pret', save it as an active loan
+            if (type === 'pret') {
+                const newLoan = {
+                    id: Date.now(), // Unique ID for this loan
+                    recipient,
+                    items: withdrawnItemsList,
+                    date: newDate
+                };
+                newState.loans = [...prev.loans, newLoan];
+            }
+
+            return newState;
+        });
+    };
+
+    const returnLoan = (loanId) => {
+        setData(prev => {
+            const loan = prev.loans.find(l => l.id === loanId);
+            if (!loan) return prev;
+
+            const stockUpdates = {};
+            // Parse items from "Souris (x2)" or "Casque" strings
+            loan.items.forEach(itemStr => {
+                let id = itemStr;
+                let count = 1;
+                // Check for (xN) pattern
+                const match = itemStr.match(/(.+) \(x(\d+)\)/);
+                if (match) {
+                    id = match[1];
+                    count = parseInt(match[2], 10);
+                }
+                stockUpdates[id] = (stockUpdates[id] || 0) + count;
+            });
+
+            // Update Stock
+            const newStock = { ...prev.stock };
+            for (const [id, count] of Object.entries(stockUpdates)) {
+                newStock[id] = (newStock[id] || 0) + count;
+            }
+
+            // History Log
+            const historyEntry = {
+                id: Date.now(),
+                category: 'Retour Prêt',
+                delta: 1,
+                recipient: loan.recipient,
+                details: loan.items,
+                date: new Date()
+            };
+
+            return {
+                ...prev,
+                stock: newStock,
+                history: [historyEntry, ...prev.history].slice(0, 50),
+                loans: prev.loans.filter(l => l.id !== loanId) // Remove from active loans
+            };
+        });
+    };
+
+    const quickReturnPC = (accessories = { mouse: true, charger: true, headset: false, bag: false }) => {
+        setData(prev => {
+            const stockUpdates = { 'PC Occasion': 1 };
+            const returnedItemsLog = ['PC Occasion'];
+
+            if (accessories.mouse) { stockUpdates['Souris'] = 1; returnedItemsLog.push('Souris'); }
+            if (accessories.charger) { stockUpdates['Chargeur'] = 1; returnedItemsLog.push('Chargeur'); }
+            if (accessories.headset) { stockUpdates['Casque'] = 1; returnedItemsLog.push('Casque'); }
+            if (accessories.bag) { stockUpdates['Sacoche'] = 1; returnedItemsLog.push('Sacoche'); }
+
+            // Update Stock
+            const newStock = { ...prev.stock };
+            for (const [id, count] of Object.entries(stockUpdates)) {
+                newStock[id] = (newStock[id] || 0) + count;
+            }
+
+            // History Log
+            const historyEntry = {
+                id: Date.now(),
+                category: 'Retour PC (Rapide)',
+                delta: 1,
+                recipient: 'Anonyme',
+                details: returnedItemsLog,
+                date: new Date()
+            };
+
             return {
                 ...prev,
                 stock: newStock,
@@ -213,6 +304,8 @@ export function useInventory() {
         updateStock,
         addLoan,
         addWithdrawal,
-        removeLoan
+        removeLoan,
+        returnLoan,
+        quickReturnPC
     };
 }

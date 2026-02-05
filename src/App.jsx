@@ -8,7 +8,7 @@ import { useInventory } from './hooks/useInventory';
 import AlertBanner from './components/AlertBanner';
 
 function App() {
-  const { stock, history, loans, updateStock, addLoan, removeLoan, addWithdrawal } = useInventory();
+  const { stock, history, loans, updateStock, addLoan, removeLoan, addWithdrawal, returnLoan, quickReturnPC } = useInventory();
   const [activeTab, setActiveTab] = useState('stock'); // 'stock' or 'loans'
 
   return (
@@ -36,6 +36,9 @@ function App() {
               stock={stock}
               onUpdate={updateStock}
               onWithdraw={addWithdrawal}
+              loans={loans}
+              onReturnLoan={returnLoan}
+              onQuickReturnPC={quickReturnPC}
             />
             <HistoryLog history={history} />
           </>

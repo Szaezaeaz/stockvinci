@@ -1,5 +1,6 @@
-import React from 'react';
+import React, { useState } from 'react';
 import GlobalWithdrawModal from './GlobalWithdrawModal';
+import ReturnModal from './ReturnModal';
 
 const DASHBOARD_ITEMS = [
     { type: 'group', title: 'PC', items: ['PC Neuf', 'PC Occasion'], span: 2, icon: '💻' },
@@ -12,8 +13,16 @@ const DASHBOARD_ITEMS = [
     { type: 'single', id: 'Dock', icon: '⚙️' },
 ];
 
-export default function StockDashboard({ stock, onUpdate, onWithdraw }) {
-    const [isWithdrawModalOpen, setIsWithdrawModalOpen] = React.useState(false);
+export default function StockDashboard({
+    stock,
+    onUpdate,
+    onWithdraw,
+    loans,
+    onReturnLoan,
+    onQuickReturnPC
+}) {
+    const [isWithdrawModalOpen, setIsWithdrawModalOpen] = useState(false);
+    const [isReturnModalOpen, setIsReturnModalOpen] = useState(false);
 
     return (
         <div className="dashboard-grid">
@@ -22,6 +31,14 @@ export default function StockDashboard({ stock, onUpdate, onWithdraw }) {
                 onClose={() => setIsWithdrawModalOpen(false)}
                 stock={stock}
                 onConfirm={onWithdraw}
+            />
+
+            <ReturnModal
+                isOpen={isReturnModalOpen}
+                onClose={() => setIsReturnModalOpen(false)}
+                loans={loans}
+                onReturnLoan={onReturnLoan}
+                onQuickReturnPC={onQuickReturnPC}
             />
 
             {DASHBOARD_ITEMS.map((item, index) => {
@@ -115,7 +132,7 @@ export default function StockDashboard({ stock, onUpdate, onWithdraw }) {
                     justifyContent: 'center',
                     minHeight: '140px'
                 }}
-                onClick={() => { }}
+                onClick={() => setIsReturnModalOpen(true)}
             >
                 <div style={{ fontSize: '2.5rem', marginBottom: '10px', color: '#22c55e' }}>📥</div>
                 <h3 style={{ margin: 0, color: '#14532d', fontSize: '1.2rem', fontWeight: 600 }}>Retour Matériel</h3>
