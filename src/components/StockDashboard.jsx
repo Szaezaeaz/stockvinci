@@ -101,6 +101,25 @@ export default function StockDashboard({ stock, onUpdate, onWithdraw }) {
                 <div style={{ fontSize: '2.5rem', marginBottom: '10px', color: '#0ea5e9' }}>📤</div>
                 <h3 style={{ margin: 0, color: '#0c4a6e', fontSize: '1.2rem', fontWeight: 600 }}>Retrait Matériel</h3>
             </div>
+
+            {/* Global Return Card */}
+            <div
+                className="stock-card interactable-card"
+                style={{
+                    cursor: 'pointer',
+                    background: 'linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%)', // Pastel Green
+                    border: '1px solid #bbf7d0',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    minHeight: '140px'
+                }}
+                onClick={() => { }}
+            >
+                <div style={{ fontSize: '2.5rem', marginBottom: '10px', color: '#22c55e' }}>📥</div>
+                <h3 style={{ margin: 0, color: '#14532d', fontSize: '1.2rem', fontWeight: 600 }}>Retour Matériel</h3>
+            </div>
         </div>
     );
 }
