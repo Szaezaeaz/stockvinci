@@ -5,7 +5,7 @@ import ReturnModal from './ReturnModal';
 const DASHBOARD_ITEMS = [
     { type: 'group', title: 'PC', items: ['PC Neuf', 'PC Occasion'], span: 2, icon: '💻' },
     { type: 'group', title: 'TÉLÉPHONES', items: ['Iphone', 'Xcover'], span: 2, icon: '📱' },
-    { type: 'single', id: 'Casque', icon: '🐔' },
+    { type: 'single', id: 'Casque', icon: '🎧' },
     { type: 'single', id: 'Clavier', icon: '⌨️' },
     { type: 'single', id: 'Souris', icon: '🖱️' },
     { type: 'single', id: 'Sacoche', icon: '💼' },

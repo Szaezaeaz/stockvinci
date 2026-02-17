@@ -4,7 +4,7 @@ import Modal from './Modal';
 const ITEMS_TO_DISPLAY = [
     { id: 'Souris', icon: '🖱️' },
     { id: 'Clavier', icon: '⌨️' },
-    { id: 'Casque', icon: '🐔' },
+    { id: 'Casque', icon: '🎧' },
     { id: 'Sacoche', icon: '💼' },
     { id: 'Chargeur', icon: '🔌' },
     { id: 'Dock', icon: '⚙️' },
