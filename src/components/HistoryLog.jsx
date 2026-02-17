@@ -3,6 +3,78 @@ import React, { useState } from 'react';
 export default function HistoryLog({ history }) {
     const [expandedMonths, setExpandedMonths] = useState({});
 
+    // Date Filtering State
+    // Default to first day of current month and today
+    const [startDate, setStartDate] = useState(() => {
+        const now = new Date();
+        return new Date(now.getFullYear(), now.getMonth(), 1).toISOString().split('T')[0];
+    });
+    const [endDate, setEndDate] = useState(() => {
+        return new Date().toISOString().split('T')[0];
+    });
+
+    // Filter History Logic
+    const filteredHistory = history.filter(item => {
+        if (!startDate && !endDate) return true;
+        const itemDate = new Date(item.date).setHours(0, 0, 0, 0);
+        const start = startDate ? new Date(startDate).setHours(0, 0, 0, 0) : null;
+        const end = endDate ? new Date(endDate).setHours(23, 59, 59, 999) : null;
+
+        if (start && itemDate < start) return false;
+        if (end && itemDate > end) return false;
+        return true;
+    });
+
+    const downloadCSV = () => {
+        if (filteredHistory.length === 0) {
+            alert("Aucune donnée à exporter pour cette période.");
+            return;
+        }
+
+        // CSV Headers
+        const headers = ["Date", "Heure", "Type", "Bénéficiaire", "Quantité", "Détails"];
+
+        // Prepare Rows
+        const rows = filteredHistory.map(item => {
+            const dateObj = new Date(item.date);
+            const dateStr = dateObj.toLocaleDateString();
+            const timeStr = dateObj.toLocaleTimeString();
+            let details = item.category;
+
+            if (item.category === 'Prêt PC' && item.details) {
+                details += ` (${item.details.join(', ')})`;
+            } else if (item.details && Array.isArray(item.details)) {
+                details += ` (${item.details.join(', ')})`;
+            }
+
+            // Escape quotes and wrap in quotes for CSV safety
+            const safeDetails = `"${details.replace(/"/g, '""')}"`;
+            const safeRecipient = `"${(item.recipient || 'N/A').replace(/"/g, '""')}"`;
+
+            return [
+                dateStr,
+                timeStr,
+                item.delta > 0 ? "Entrée" : "Sortie",
+                safeRecipient,
+                item.delta, // Raw number
+                safeDetails
+            ].join(';'); // Using semicolon for Excel FR compatibility
+        });
+
+        // Add BOM for UTF-8 in Excel
+        const csvContent = "\uFEFF" + [headers.join(';'), ...rows].join('\n');
+
+        // Create Blob and Download
+        const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.setAttribute('download', `rapport_stock_it_${startDate}_${endDate}.csv`);
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+    };
+
     if (history.length === 0) {
         return (
             <div className="history-section">
@@ -13,7 +85,8 @@ export default function HistoryLog({ history }) {
     }
 
     // Group by Month (Month Year) -> Date (DD/MM/YYYY)
-    const groupedByMonth = history.reduce((months, item) => {
+    // Use filteredHistory instead of history
+    const groupedByMonth = filteredHistory.reduce((months, item) => {
         const dateObj = new Date(item.date);
         // Month Key: "February 2026" or "Février 2026"
         const monthKey = dateObj.toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' });
@@ -77,8 +150,40 @@ export default function HistoryLog({ history }) {
 
     return (
         <div className="history-section">
-            <h2>Historique récent</h2>
+            <div className="history-header-actions" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '15px', flexWrap: 'wrap', gap: '10px' }}>
+                <h2>Historique</h2>
+
+                <div className="csv-controls">
+                    <input
+                        type="date"
+                        className="mini-date-input"
+                        value={startDate}
+                        onChange={(e) => setStartDate(e.target.value)}
+                        title="Date de début"
+                    />
+                    <span className="date-separator">au</span>
+                    <input
+                        type="date"
+                        className="mini-date-input"
+                        value={endDate}
+                        onChange={(e) => setEndDate(e.target.value)}
+                        title="Date de fin"
+                    />
+                    <button
+                        className="btn-download-csv"
+                        onClick={downloadCSV}
+                        title="Télécharger en CSV"
+                    >
+                        📥 CSV
+                    </button>
+                </div>
+            </div>
+
             <div className="history-container">
+                {filteredHistory.length === 0 && (
+                    <p style={{ color: '#999', textAlign: 'center', padding: '20px' }}>Aucun mouvement sur cette période.</p>
+                )}
+
                 {sortedMonths.map(monthKey => {
                     const isExpanded = !!expandedMonths[monthKey];
                     const days = groupedByMonth[monthKey];
