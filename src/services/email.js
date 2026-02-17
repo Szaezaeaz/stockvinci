@@ -12,9 +12,13 @@ export const sendLowStockAlert = (item, count) => {
     // We rely on the fact that this function is called only when stock updates.
 
     const templateParams = {
+        to_email: 'yaniscones893@gmail.com',
+        subject: `ATTENTION ! Plus que ${count} ${item} dans le stock, prévoir une commande.`,
         item: item,
         count: count,
-        message: `Attention, le stock de ${item} est critique ! Il ne reste que ${count} unités.`
+        message: `ATTENTION !
+
+Plus que ${count} ${item} dans le stock, prévoir une commande.`
     };
 
     emailjs.send(SERVICE_ID, TEMPLATE_ID, templateParams, PUBLIC_KEY)
