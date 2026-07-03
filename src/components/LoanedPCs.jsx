@@ -13,7 +13,7 @@ export default function LoanedPCs({ loans, onAdd, onRemove }) {
     const [includeBag, setIncludeBag] = useState(true);
 
     const filteredLoans = loans.filter(loan =>
-        loan.name.toLowerCase().includes(searchQuery.toLowerCase())
+        (loan.name || loan.recipient || '').toLowerCase().includes(searchQuery.toLowerCase())
     );
 
     const handleSubmit = (e) => {
@@ -160,7 +160,7 @@ export default function LoanedPCs({ loans, onAdd, onRemove }) {
                 {filteredLoans.map((loan) => (
                     <li key={loan.id} className="loan-item">
                         <div className="loan-info">
-                            <span className="loan-name">{loan.name}</span>
+                            <span className="loan-name">{loan.name || loan.recipient}</span>
                             <div className="loan-meta">
                                 {loan.items && loan.items.join(' • ')}
                             </div>

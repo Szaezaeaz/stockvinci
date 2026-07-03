@@ -201,6 +201,7 @@ export function useInventory() {
             if (type === 'pret') {
                 const newLoan = {
                     id: Date.now(), // Unique ID for this loan
+                    name: recipient,
                     recipient,
                     items: withdrawnItemsList,
                     date: newDate
