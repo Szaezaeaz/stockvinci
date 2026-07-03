@@ -3,14 +3,16 @@ import GlobalWithdrawModal from './GlobalWithdrawModal';
 import ReturnModal from './ReturnModal';
 
 const DASHBOARD_ITEMS = [
-    { type: 'group', title: 'PC', items: ['PC Neuf', 'PC Occasion'], span: 2, icon: '💻' },
-    { type: 'group', title: 'TÉLÉPHONES', items: ['Iphone', 'Xcover'], span: 2, icon: '📱' },
+    { type: 'group', title: 'PC', items: ['650 G11 Neuf', '650 G11 Occasion', '850 G8 Occasion'], span: 2, icon: '💻' },
+    { type: 'group', title: 'TÉLÉPHONES', items: ['iPhone 16e', 'Samsung XCOVER 7', 'Samsung A36'], span: 2, icon: '📱' },
     { type: 'single', id: 'Casque', icon: '🎧' },
     { type: 'single', id: 'Clavier', icon: '⌨️' },
     { type: 'single', id: 'Souris', icon: '🖱️' },
     { type: 'single', id: 'Sacoche', icon: '💼' },
+    { type: 'single', id: 'Sac à Dos', icon: '🎒' },
+    { type: 'single', id: 'Écran', icon: '🖥️' },
     { type: 'single', id: 'Chargeur', icon: '🔌' },
-    { type: 'single', id: 'Dock', icon: '⚙️' },
+    { type: 'single', id: 'Dock', icon: '📦' },
 ];
 
 export default function StockDashboard({

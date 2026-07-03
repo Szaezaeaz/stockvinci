@@ -12,24 +12,26 @@ export default function ReturnModal({
     const [searchQuery, setSearchQuery] = useState('');
 
     // Quick Return State
+    const [quickPcModel, setQuickPcModel] = useState('650 G11 Occasion');
     const [includeMouse, setIncludeMouse] = useState(true);
     const [includeCharger, setIncludeCharger] = useState(true);
     const [includeHeadset, setIncludeHeadset] = useState(false);
     const [includeBag, setIncludeBag] = useState(false);
 
     const filteredLoans = loans.filter(loan =>
-        loan.recipient && loan.recipient.toLowerCase().includes(searchQuery.toLowerCase())
+        (loan.recipient || loan.name || '').toLowerCase().includes(searchQuery.toLowerCase())
     );
 
     const handleQuickSubmit = (e) => {
         e.preventDefault();
-        onQuickReturnPC({
+        onQuickReturnPC(quickPcModel, {
             mouse: includeMouse,
             charger: includeCharger,
             headset: includeHeadset,
             bag: includeBag
         });
         // Reset defaults
+        setQuickPcModel('650 G11 Occasion');
         setIncludeMouse(true);
         setIncludeCharger(true);
         setIncludeHeadset(false);
@@ -79,7 +81,7 @@ export default function ReturnModal({
                         {filteredLoans.map(loan => (
                             <div key={loan.id} className="loan-item" style={{ padding: '10px', borderBottom: '1px solid #f0f0f0' }}>
                                 <div style={{ flex: 1 }}>
-                                    <div style={{ fontWeight: 600 }}>{loan.recipient}</div>
+                                    <div style={{ fontWeight: 600 }}>{loan.recipient || loan.name}</div>
                                     <div style={{ fontSize: '0.85rem', color: '#64748b' }}>
                                         {new Date(loan.date).toLocaleDateString()}
                                     </div>
@@ -91,7 +93,7 @@ export default function ReturnModal({
                                     className="btn-add"
                                     style={{ padding: '8px 12px', fontSize: '0.9rem' }}
                                     onClick={() => {
-                                        if (window.confirm(`Confirmer le retour pour ${loan.recipient} ?`)) {
+                                        if (window.confirm(`Confirmer le retour pour ${loan.recipient || loan.name} ?`)) {
                                             onReturnLoan(loan.id);
                                         }
                                     }}
@@ -106,7 +108,27 @@ export default function ReturnModal({
                 <form onSubmit={handleQuickSubmit}>
                     <div className="alert-box" style={{ background: '#f0fdf4', borderColor: '#bbf7d0', color: '#166534', marginBottom: '15px' }}>
                         Ce formulaire ajoute : <br />
-                        <strong>+1 PC Occasion</strong> + Accessoires cochés.
+                        <strong>+1 {quickPcModel}</strong> + Accessoires cochés.
+                    </div>
+
+                    <div className="form-group">
+                        <label>Modèle de PC rendu</label>
+                        <div className="segmented-control" style={{ marginTop: '5px', marginBottom: '15px' }}>
+                            <button
+                                type="button"
+                                className={`segment-btn ${quickPcModel === '650 G11 Occasion' ? 'active' : ''}`}
+                                onClick={() => setQuickPcModel('650 G11 Occasion')}
+                            >
+                                650 G11 Occ.
+                            </button>
+                            <button
+                                type="button"
+                                className={`segment-btn ${quickPcModel === '850 G8 Occasion' ? 'active' : ''}`}
+                                onClick={() => setQuickPcModel('850 G8 Occasion')}
+                            >
+                                850 G8 Occ.
+                            </button>
+                        </div>
                     </div>
 
                     <div className="form-group">

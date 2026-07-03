@@ -5,20 +5,45 @@ const STORAGE_KEY = 'vinci_inventory_v3';
 
 const INITIAL_STATE = {
     stock: {
-        'PC Neuf': 5,
-        'PC Occasion': 5,
+        '650 G11 Neuf': 5,
+        '650 G11 Occasion': 5,
+        '850 G8 Occasion': 0,
         Casque: 10,
         Souris: 20,
         Clavier: 10,
         Sacoche: 15,
+        'Sac à Dos': 0,
         Chargeur: 20,
         Dock: 10,
-        Iphone: 5,
-        Xcover: 5
+        Écran: 0,
+        'iPhone 16e': 5,
+        'Samsung XCOVER 7': 5,
+        'Samsung A36': 0
     },
     history: [],
     loans: [] // Array of { id, name, date }
 };
+
+// Maps legacy generic category names (pre-model-tracking) to their closest
+// specific replacement, so existing on-device stock counts aren't lost when
+// this update lands on a tablet that already has real inventory data.
+const LEGACY_KEY_MIGRATIONS = {
+    'PC Neuf': '650 G11 Neuf',
+    'PC Occasion': '650 G11 Occasion',
+    Iphone: 'iPhone 16e',
+    Xcover: 'Samsung XCOVER 7'
+};
+
+function migrateLegacyStock(stock) {
+    const migrated = { ...stock };
+    for (const [legacyKey, newKey] of Object.entries(LEGACY_KEY_MIGRATIONS)) {
+        if (migrated[legacyKey] !== undefined) {
+            migrated[newKey] = (migrated[newKey] || 0) + migrated[legacyKey];
+            delete migrated[legacyKey];
+        }
+    }
+    return migrated;
+}
 
 export function useInventory() {
     const [data, setData] = useState(() => {
@@ -27,7 +52,7 @@ export function useInventory() {
             try {
                 const parsed = JSON.parse(saved);
                 return {
-                    stock: { ...INITIAL_STATE.stock, ...parsed.stock },
+                    stock: { ...INITIAL_STATE.stock, ...migrateLegacyStock(parsed.stock || {}) },
                     history: parsed.history || [],
                     loans: parsed.loans || []
                 };
@@ -257,10 +282,10 @@ export function useInventory() {
         });
     };
 
-    const quickReturnPC = (accessories = { mouse: true, charger: true, headset: false, bag: false }) => {
+    const quickReturnPC = (pcModel = '650 G11 Occasion', accessories = { mouse: true, charger: true, headset: false, bag: false }) => {
         setData(prev => {
-            const stockUpdates = { 'PC Occasion': 1 };
-            const returnedItemsLog = ['PC Occasion'];
+            const stockUpdates = { [pcModel]: 1 };
+            const returnedItemsLog = [pcModel];
 
             if (accessories.mouse) { stockUpdates['Souris'] = 1; returnedItemsLog.push('Souris'); }
             if (accessories.charger) { stockUpdates['Chargeur'] = 1; returnedItemsLog.push('Chargeur'); }

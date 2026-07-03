@@ -608,8 +608,8 @@ input[type="checkbox"]:focus {
 /* Grid Spanning */
 .col-span-2 {
   grid-column: span 2;
-  aspect-ratio: 2.2 / 1;
-  /* Wider than tall, to approximate single card height */
+  aspect-ratio: 1.5 / 1;
+  /* Taller than before to fit 3 model rows per group card */
 }
 
 /* On mobile (2 columns), span 2 means full width */

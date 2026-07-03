@@ -6,12 +6,16 @@ const ITEMS_TO_DISPLAY = [
     { id: 'Clavier', icon: '⌨️' },
     { id: 'Casque', icon: '🎧' },
     { id: 'Sacoche', icon: '💼' },
+    { id: 'Sac à Dos', icon: '🎒' },
     { id: 'Chargeur', icon: '🔌' },
-    { id: 'Dock', icon: '⚙️' },
-    { id: 'Iphone', icon: '📱' },
-    { id: 'Xcover', icon: '📱' },
-    { id: 'PC Neuf', icon: '💻' },
-    { id: 'PC Occasion', icon: '💻' },
+    { id: 'Dock', icon: '📦' },
+    { id: 'Écran', icon: '🖥️' },
+    { id: 'iPhone 16e', icon: '📱' },
+    { id: 'Samsung XCOVER 7', icon: '📱' },
+    { id: 'Samsung A36', icon: '📱' },
+    { id: '650 G11 Neuf', icon: '💻' },
+    { id: '650 G11 Occasion', icon: '💻' },
+    { id: '850 G8 Occasion', icon: '💻' },
 ];
 
 export default function GlobalWithdrawModal({ isOpen, onClose, onConfirm, stock }) {

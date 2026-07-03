@@ -4,7 +4,7 @@ import Modal from './Modal';
 export default function LoanedPCs({ loans, onAdd, onRemove }) {
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [name, setName] = useState('');
-    const [pcType, setPcType] = useState('PC Neuf');
+    const [pcType, setPcType] = useState('650 G11 Neuf');
     const [phoneType, setPhoneType] = useState('Aucun');
     const [searchQuery, setSearchQuery] = useState('');
 
@@ -25,7 +25,7 @@ export default function LoanedPCs({ loans, onAdd, onRemove }) {
             bag: includeBag
         });
         setName('');
-        setPcType('PC Neuf');
+        setPcType('650 G11 Neuf');
         setPhoneType('Aucun');
         // Reset defaults
         setIncludeMouse(true);
@@ -66,17 +66,24 @@ export default function LoanedPCs({ loans, onAdd, onRemove }) {
                         <div className="segmented-control">
                             <button
                                 type="button"
-                                className={`segment-btn ${pcType === 'PC Neuf' ? 'active' : ''}`}
-                                onClick={() => setPcType('PC Neuf')}
+                                className={`segment-btn ${pcType === '650 G11 Neuf' ? 'active' : ''}`}
+                                onClick={() => setPcType('650 G11 Neuf')}
                             >
-                                Neuf
+                                650 G11 Neuf
                             </button>
                             <button
                                 type="button"
-                                className={`segment-btn ${pcType === 'PC Occasion' ? 'active' : ''}`}
-                                onClick={() => setPcType('PC Occasion')}
+                                className={`segment-btn ${pcType === '650 G11 Occasion' ? 'active' : ''}`}
+                                onClick={() => setPcType('650 G11 Occasion')}
                             >
-                                Occasion
+                                650 G11 Occ.
+                            </button>
+                            <button
+                                type="button"
+                                className={`segment-btn ${pcType === '850 G8 Occasion' ? 'active' : ''}`}
+                                onClick={() => setPcType('850 G8 Occasion')}
+                            >
+                                850 G8 Occ.
                             </button>
                         </div>
                     </div>
@@ -123,17 +130,24 @@ export default function LoanedPCs({ loans, onAdd, onRemove }) {
                             </button>
                             <button
                                 type="button"
-                                className={`segment-btn ${phoneType === 'Iphone' ? 'active' : ''}`}
-                                onClick={() => setPhoneType('Iphone')}
+                                className={`segment-btn ${phoneType === 'iPhone 16e' ? 'active' : ''}`}
+                                onClick={() => setPhoneType('iPhone 16e')}
                             >
-                                iPhone
+                                iPhone 16e
                             </button>
                             <button
                                 type="button"
-                                className={`segment-btn ${phoneType === 'Xcover' ? 'active' : ''}`}
-                                onClick={() => setPhoneType('Xcover')}
+                                className={`segment-btn ${phoneType === 'Samsung XCOVER 7' ? 'active' : ''}`}
+                                onClick={() => setPhoneType('Samsung XCOVER 7')}
                             >
-                                XCover
+                                XCOVER 7
+                            </button>
+                            <button
+                                type="button"
+                                className={`segment-btn ${phoneType === 'Samsung A36' ? 'active' : ''}`}
+                                onClick={() => setPhoneType('Samsung A36')}
+                            >
+                                A36
                             </button>
                         </div>
                     </div>
