@@ -1,22 +1,6 @@
 import React, { useState } from 'react';
 import Modal from './Modal';
-
-const ITEMS_TO_DISPLAY = [
-    { id: 'Souris', icon: '🖱️' },
-    { id: 'Clavier', icon: '⌨️' },
-    { id: 'Casque', icon: '🎧' },
-    { id: 'Sacoche', icon: '💼' },
-    { id: 'Sac à Dos', icon: '🎒' },
-    { id: 'Chargeur', icon: '🔌' },
-    { id: 'Dock', icon: '📦' },
-    { id: 'Écran', icon: '🖥️' },
-    { id: 'iPhone 16e', icon: '📱' },
-    { id: 'Samsung XCOVER 7', icon: '📱' },
-    { id: 'Samsung A36', icon: '📱' },
-    { id: '650 G11 Neuf', icon: '💻' },
-    { id: '650 G11 Occasion', icon: '💻' },
-    { id: '850 G8 Occasion', icon: '💻' },
-];
+import { ALL_STOCK_ITEMS } from '../config/items';
 
 export default function GlobalWithdrawModal({ isOpen, onClose, onConfirm, stock }) {
     const [recipient, setRecipient] = useState('');
@@ -100,7 +84,7 @@ export default function GlobalWithdrawModal({ isOpen, onClose, onConfirm, stock 
                 <div className="form-section" style={{ marginTop: '25px', flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column' }}>
                     <label className="section-label" style={{ marginBottom: '12px' }}>SÉLECTION DU MATÉRIEL</label>
                     <div className="items-grid-selection">
-                        {ITEMS_TO_DISPLAY.map(item => {
+                        {ALL_STOCK_ITEMS.map(item => {
                             const isSelected = !!selectedItems[item.id];
                             const available = stock[item.id] || 0;
                             const isOutOfStock = available === 0;

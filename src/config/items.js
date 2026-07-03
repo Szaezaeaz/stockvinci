@@ -1,0 +1,18 @@
+// Liste partagée des articles de stock affichés dans les modales de
+// mouvement de matériel (Retrait, Ajout...).
+export const ALL_STOCK_ITEMS = [
+    { id: 'Souris', icon: '🖱️' },
+    { id: 'Clavier', icon: '⌨️' },
+    { id: 'Casque', icon: '🎧' },
+    { id: 'Sacoche', icon: '💼' },
+    { id: 'Sac à Dos', icon: '🎒' },
+    { id: 'Chargeur', icon: '🔌' },
+    { id: 'Dock', icon: '📦' },
+    { id: 'Écran', icon: '🖥️' },
+    { id: 'iPhone 16e', icon: '📱' },
+    { id: 'Samsung XCOVER 7', icon: '📱' },
+    { id: 'Samsung A36', icon: '📱' },
+    { id: '650 G11 Neuf', icon: '💻' },
+    { id: '650 G11 Occasion', icon: '💻' },
+    { id: '850 G8 Occasion', icon: '💻' },
+];

@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import GlobalWithdrawModal from './GlobalWithdrawModal';
 import ReturnModal from './ReturnModal';
-import LongPressButton from './LongPressButton';
+import AddMaterielModal from './AddMaterielModal';
 import { LOW_STOCK_THRESHOLD } from '../config/thresholds';
 
 const DASHBOARD_ITEMS = [
@@ -19,14 +19,15 @@ const DASHBOARD_ITEMS = [
 
 export default function StockDashboard({
     stock,
-    onUpdate,
     onWithdraw,
+    onAddStock,
     loans,
     onReturnLoan,
     onQuickReturnPC
 }) {
     const [isWithdrawModalOpen, setIsWithdrawModalOpen] = useState(false);
     const [isReturnModalOpen, setIsReturnModalOpen] = useState(false);
+    const [isAddModalOpen, setIsAddModalOpen] = useState(false);
 
     return (
         <div className="dashboard-grid">
@@ -45,7 +46,13 @@ export default function StockDashboard({
                 onQuickReturnPC={onQuickReturnPC}
             />
 
-            {DASHBOARD_ITEMS.map((item, index) => {
+            <AddMaterielModal
+                isOpen={isAddModalOpen}
+                onClose={() => setIsAddModalOpen(false)}
+                onConfirm={onAddStock}
+            />
+
+            {DASHBOARD_ITEMS.map((item) => {
                 const spanClass = item.span === 2 ? 'col-span-2' : '';
 
                 if (item.type === 'single') {
@@ -54,22 +61,6 @@ export default function StockDashboard({
                         <div key={item.id} className={`stock-card ${spanClass} ${isLowStock ? 'low-stock' : ''}`}>
                             <h3>{item.icon} {item.id}</h3>
                             <div className={`stock-count ${isLowStock ? 'text-red' : ''}`}>{stock[item.id]}</div>
-                            <div className="actions">
-                                <LongPressButton
-                                    className="btn-circle btn-minus"
-                                    ariaLabel={`Retirer ${item.id}`}
-                                    onPress={(step) => onUpdate(item.id, -step)}
-                                >
-                                    -
-                                </LongPressButton>
-                                <LongPressButton
-                                    className="btn-circle btn-plus"
-                                    ariaLabel={`Ajouter ${item.id}`}
-                                    onPress={(step) => onUpdate(item.id, step)}
-                                >
-                                    +
-                                </LongPressButton>
-                            </div>
                         </div>
                     );
                 } else if (item.type === 'group') {
@@ -80,23 +71,7 @@ export default function StockDashboard({
                                 {item.items.map(subItem => (
                                     <div key={subItem} className="group-row">
                                         <span className="group-label">{subItem}</span>
-                                        <div className="group-controls">
-                                            <LongPressButton
-                                                className="btn-mini btn-minus"
-                                                ariaLabel={`Retirer ${subItem}`}
-                                                onPress={(step) => onUpdate(subItem, -step)}
-                                            >
-                                                -
-                                            </LongPressButton>
-                                            <span className="group-count">{stock[subItem]}</span>
-                                            <LongPressButton
-                                                className="btn-mini btn-plus"
-                                                ariaLabel={`Ajouter ${subItem}`}
-                                                onPress={(step) => onUpdate(subItem, step)}
-                                            >
-                                                +
-                                            </LongPressButton>
-                                        </div>
+                                        <span className="group-count">{stock[subItem]}</span>
                                     </div>
                                 ))}
                             </div>
@@ -142,6 +117,25 @@ export default function StockDashboard({
             >
                 <div style={{ fontSize: '2.5rem', marginBottom: '10px', color: '#22c55e' }}>📥</div>
                 <h3 style={{ margin: 0, color: '#14532d', fontSize: '1.2rem', fontWeight: 600 }}>Retour Matériel</h3>
+            </div>
+
+            {/* Global Add Materiel Card */}
+            <div
+                className="stock-card interactable-card"
+                style={{
+                    cursor: 'pointer',
+                    background: 'linear-gradient(135deg, #fefce8 0%, #fef9c3 100%)',
+                    border: '1px solid #fde68a',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    minHeight: '140px'
+                }}
+                onClick={() => setIsAddModalOpen(true)}
+            >
+                <div style={{ fontSize: '2.5rem', marginBottom: '10px', color: '#ca8a04' }}>➕</div>
+                <h3 style={{ margin: 0, color: '#713f12', fontSize: '1.2rem', fontWeight: 600 }}>Ajout Matériel</h3>
             </div>
         </div>
     );

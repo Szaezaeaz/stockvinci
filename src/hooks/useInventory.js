@@ -70,36 +70,6 @@ export function useInventory() {
 
 
 
-    // ... (existing imports and constants)
-
-    const updateStock = (category, delta, recipient = null) => {
-        setData(prev => {
-            const prevCount = prev.stock[category] || 0;
-            const newCount = prevCount + delta;
-            if (newCount < 0) return prev;
-
-            // Trigger Email Alert when any category crosses below the low-stock threshold
-            if (prevCount >= LOW_STOCK_THRESHOLD && newCount < LOW_STOCK_THRESHOLD && delta < 0) {
-                sendLowStockAlert(category, newCount);
-            }
-
-            const newHistoryItem = {
-                id: Date.now(),
-                category,
-                delta,
-                count: newCount,
-                date: new Date(),
-                recipient // Add recipient tracking
-            };
-
-            return {
-                ...prev,
-                stock: { ...prev.stock, [category]: newCount },
-                history: [newHistoryItem, ...prev.history].slice(0, 50)
-            };
-        });
-    };
-
     const addLoan = (name, pcType, phoneType, accessories = { mouse: true, headset: true, bag: true }) => {
         setData(prev => {
             const stockUpdates = {};
@@ -239,6 +209,38 @@ export function useInventory() {
         });
     };
 
+    const addStock = (items) => {
+        setData(prev => {
+            const newStock = { ...prev.stock };
+            const addedItemsList = [];
+
+            // items is Array of { id, count }
+            for (const { id, count } of items) {
+                if (count <= 0) continue;
+                newStock[id] = (newStock[id] || 0) + count;
+                const itemLabel = count > 1 ? `${id} (x${count})` : id;
+                addedItemsList.push(itemLabel);
+            }
+
+            if (addedItemsList.length === 0) return prev;
+
+            const historyEntry = {
+                id: Date.now(),
+                category: 'Ajout Matériel',
+                delta: 1,
+                recipient: null,
+                details: addedItemsList,
+                date: new Date()
+            };
+
+            return {
+                ...prev,
+                stock: newStock,
+                history: [historyEntry, ...prev.history].slice(0, 50)
+            };
+        });
+    };
+
     const returnLoan = (loanId) => {
         setData(prev => {
             const loan = prev.loans.find(l => l.id === loanId);
@@ -328,9 +330,9 @@ export function useInventory() {
         stock: data.stock,
         history: data.history,
         loans: data.loans,
-        updateStock,
         addLoan,
         addWithdrawal,
+        addStock,
         removeLoan,
         returnLoan,
         quickReturnPC

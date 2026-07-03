@@ -207,6 +207,88 @@ input[type="checkbox"]:focus {
   color: #475569;
 }
 
+/* Add Materiel modal cards */
+.item-add-card {
+  border: 2px solid transparent;
+  border-radius: 16px;
+  padding: 10px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  background: white;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
+}
+
+.item-add-card .item-icon {
+  font-size: 1.5rem;
+}
+
+.item-add-card .item-name {
+  font-size: 0.9em;
+  font-weight: 600;
+  color: #475569;
+  text-align: center;
+}
+
+/* Quantity Stepper (+/- with long-press quick-jump popup) */
+.qty-stepper {
+  position: relative;
+}
+
+.qty-stepper-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.qty-stepper-value {
+  min-width: 20px;
+  text-align: center;
+  font-weight: 600;
+  font-size: 1rem;
+  color: #0f172a;
+}
+
+.qty-popup {
+  position: absolute;
+  bottom: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  margin-bottom: 8px;
+  background: #0f172a;
+  border-radius: 10px;
+  padding: 6px;
+  display: flex;
+  gap: 6px;
+  z-index: 10;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
+  white-space: nowrap;
+}
+
+.qty-popup button {
+  background: white;
+  color: #0f172a;
+  border: none;
+  border-radius: 6px;
+  padding: 6px 10px;
+  font-weight: 600;
+  font-size: 0.85rem;
+  cursor: pointer;
+}
+
+.qty-popup button:hover {
+  background: #e2e8f0;
+}
+
+.qty-popup-close {
+  background: transparent !important;
+  color: white !important;
+  font-size: 1rem !important;
+  padding: 6px 8px !important;
+}
+
 .tab-btn.active {
   color: #0f172a;
   border-bottom-color: #0f172a;
