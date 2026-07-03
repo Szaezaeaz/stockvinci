@@ -9,7 +9,7 @@ const DASHBOARD_ITEMS = [
     { type: 'single', id: 'Clavier', icon: '⌨️' },
     { type: 'single', id: 'Souris', icon: '🖱️' },
     { type: 'single', id: 'Sacoche', icon: '💼' },
-    { type: 'single', id: 'Chargeur', icon: '🔌' },
+    { type: 'single', id: 'Chargeur', icon: '🔋' },
     { type: 'single', id: 'Dock', icon: '⚙️' },
 ];
 
