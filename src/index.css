@@ -357,13 +357,14 @@ input[type="checkbox"]:focus {
   box-shadow: var(--shadow);
   display: flex;
   flex-direction: column;
-  justify-content: space-between;
+  justify-content: center;
   align-items: center;
+  gap: 6px;
   text-align: center;
   border: 1px solid var(--accent-gray);
   position: relative;
   overflow: hidden;
-  aspect-ratio: 1 / 1;
+  aspect-ratio: 1.7 / 1;
   height: 100%;
 }
 
@@ -690,8 +691,8 @@ input[type="checkbox"]:focus {
 /* Grid Spanning */
 .col-span-2 {
   grid-column: span 2;
-  aspect-ratio: 1.5 / 1;
-  /* Taller than before to fit 3 model rows per group card */
+  aspect-ratio: 2.3 / 1;
+  /* Rows no longer have +/- controls, so a shorter card fits 3 model rows */
 }
 
 /* On mobile (2 columns), span 2 means full width */
