@@ -1,8 +1,8 @@
 import { useCallback, useRef, useState } from 'react';
 
-const LONG_PRESS_DELAY = 1500;
+const LONG_PRESS_DELAY = 500;
 
-// Stepper +/- classique. Rester appuyé 1,5s sur un bouton fait apparaître un
+// Stepper +/- classique. Rester appuyé 0,5s sur un bouton fait apparaître un
 // petit popup proposant des sauts rapides (+5/+10 ou -5/-10 selon le bouton).
 export default function QuantityStepper({ value, onChange, min = 0 }) {
     const [popup, setPopup] = useState(null); // 'plus' | 'minus' | null
