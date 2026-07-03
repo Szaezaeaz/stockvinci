@@ -5,14 +5,11 @@ const TEMPLATE_ID = 'template_klus6n3';
 const PUBLIC_KEY = 'Aku_0MqsqAEqcrLBk';
 
 export const sendLowStockAlert = (item, count) => {
-    // Only send for Casques for now, as requested
-    if (item !== 'Casque') return;
-
     // Prevent spamming locally? (Optional, skipping for simplicity/reliability first)
     // We rely on the fact that this function is called only when stock updates.
 
     const templateParams = {
-        to_email: 'yaniscones893@gmail.com',
+        to_email: 'yanis.cones-ext@vinci-construction.com',
         subject: `ATTENTION ! Plus que ${count} ${item} dans le stock, prévoir une commande.`,
         item: item,
         count: count,

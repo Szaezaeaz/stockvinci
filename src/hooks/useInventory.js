@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { sendLowStockAlert } from '../services/email';
+import { LOW_STOCK_THRESHOLD } from '../config/thresholds';
 
 const STORAGE_KEY = 'vinci_inventory_v3';
 
@@ -77,9 +78,9 @@ export function useInventory() {
             const newCount = prevCount + delta;
             if (newCount < 0) return prev;
 
-            // Trigger Email Alert if Casque drops below 5 (Crossing the threshold)
-            if (category === 'Casque' && prevCount >= 5 && newCount < 5 && delta < 0) {
-                sendLowStockAlert('Casque', newCount);
+            // Trigger Email Alert when any category crosses below the low-stock threshold
+            if (prevCount >= LOW_STOCK_THRESHOLD && newCount < LOW_STOCK_THRESHOLD && delta < 0) {
+                sendLowStockAlert(category, newCount);
             }
 
             const newHistoryItem = {
@@ -118,8 +119,8 @@ export function useInventory() {
 
                 // Check for alert on this item (pre-calculation)
                 const newQty = currentQty - 1;
-                if (item === 'Casque' && currentQty >= 5 && newQty < 5) {
-                    sendLowStockAlert('Casque', newQty);
+                if (currentQty >= LOW_STOCK_THRESHOLD && newQty < LOW_STOCK_THRESHOLD) {
+                    sendLowStockAlert(item, newQty);
                 }
 
                 loanedItems.push(item);
@@ -189,8 +190,8 @@ export function useInventory() {
 
                 // Alerts logic
                 const newQty = currentStock - count;
-                if (id === 'Casque' && currentStock >= 5 && newQty < 5) {
-                    sendLowStockAlert('Casque', newQty);
+                if (currentStock >= LOW_STOCK_THRESHOLD && newQty < LOW_STOCK_THRESHOLD) {
+                    sendLowStockAlert(id, newQty);
                 }
 
                 // Add to list for history details

@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
 import GlobalWithdrawModal from './GlobalWithdrawModal';
 import ReturnModal from './ReturnModal';
+import LongPressButton from './LongPressButton';
+import { LOW_STOCK_THRESHOLD } from '../config/thresholds';
 
 const DASHBOARD_ITEMS = [
     { type: 'group', title: 'PC', items: ['650 G11 Neuf', '650 G11 Occasion', '850 G8 Occasion'], span: 2, icon: '💻' },
@@ -47,26 +49,26 @@ export default function StockDashboard({
                 const spanClass = item.span === 2 ? 'col-span-2' : '';
 
                 if (item.type === 'single') {
-                    const isLowStock = item.id === 'Casque' && (stock[item.id] || 0) < 5;
+                    const isLowStock = (stock[item.id] || 0) < LOW_STOCK_THRESHOLD;
                     return (
                         <div key={item.id} className={`stock-card ${spanClass} ${isLowStock ? 'low-stock' : ''}`}>
                             <h3>{item.icon} {item.id}</h3>
                             <div className={`stock-count ${isLowStock ? 'text-red' : ''}`}>{stock[item.id]}</div>
                             <div className="actions">
-                                <button
+                                <LongPressButton
                                     className="btn-circle btn-minus"
-                                    onClick={() => onUpdate(item.id, -1)}
-                                    aria-label={`Retirer ${item.id}`}
+                                    ariaLabel={`Retirer ${item.id}`}
+                                    onPress={(step) => onUpdate(item.id, -step)}
                                 >
                                     -
-                                </button>
-                                <button
+                                </LongPressButton>
+                                <LongPressButton
                                     className="btn-circle btn-plus"
-                                    onClick={() => onUpdate(item.id, 1)}
-                                    aria-label={`Ajouter ${item.id}`}
+                                    ariaLabel={`Ajouter ${item.id}`}
+                                    onPress={(step) => onUpdate(item.id, step)}
                                 >
                                     +
-                                </button>
+                                </LongPressButton>
                             </div>
                         </div>
                     );
@@ -79,19 +81,21 @@ export default function StockDashboard({
                                     <div key={subItem} className="group-row">
                                         <span className="group-label">{subItem}</span>
                                         <div className="group-controls">
-                                            <button
+                                            <LongPressButton
                                                 className="btn-mini btn-minus"
-                                                onClick={() => onUpdate(subItem, -1)}
+                                                ariaLabel={`Retirer ${subItem}`}
+                                                onPress={(step) => onUpdate(subItem, -step)}
                                             >
                                                 -
-                                            </button>
+                                            </LongPressButton>
                                             <span className="group-count">{stock[subItem]}</span>
-                                            <button
+                                            <LongPressButton
                                                 className="btn-mini btn-plus"
-                                                onClick={() => onUpdate(subItem, 1)}
+                                                ariaLabel={`Ajouter ${subItem}`}
+                                                onPress={(step) => onUpdate(subItem, step)}
                                             >
                                                 +
-                                            </button>
+                                            </LongPressButton>
                                         </div>
                                     </div>
                                 ))}
