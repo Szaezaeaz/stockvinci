@@ -44,7 +44,7 @@ export default function GlobalWithdrawModal({ isOpen, onClose, onConfirm, stock 
         <Modal
             isOpen={isOpen}
             onClose={onClose}
-            title="Nouveau Retrait"
+            title="Sortie Matériel"
         >
             <form onSubmit={handleSubmit} className="global-withdraw-form">
 

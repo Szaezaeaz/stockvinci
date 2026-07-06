@@ -19,4 +19,9 @@ export const ALL_STOCK_ITEMS = [
     { id: 'X360 Neuf', icon: '💻' },
     { id: 'Zbook Neuf', icon: '💻' },
     { id: 'Zbook Occasion', icon: '💻' },
+    { id: 'Coque+Vitre iPhone 16e', icon: '🛡️' },
+    { id: 'Coque+Vitre iPhone 17', icon: '🛡️' },
+    { id: 'Coque+Vitre Samsung A36', icon: '🛡️' },
+    { id: 'Coque Samsung XCOVER 7', icon: '🛡️' },
+    { id: 'Vitre Samsung XCOVER 7', icon: '🪟' },
 ];

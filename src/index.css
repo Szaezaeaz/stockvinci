@@ -336,7 +336,13 @@ input[type="checkbox"]:focus {
 /* Dashboard Grid */
 .dashboard-grid {
   display: grid;
-  grid-template-columns: repeat(2, 1fr);
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  /* minmax(0, 1fr) instead of 1fr so long labels (eg "Coque+Vitre iPhone 16e")
+     can't force a column wider than its share and overflow the grid */
+  align-items: start;
+  /* Without this, a tall col-span-2 card sharing a row with 1-column
+     cards stretches them to match its height; with aspect-ratio set,
+     that extra height then forces their width past the column too. */
   /* Mobile: 2x2 */
   gap: 15px;
   margin: 20px 0;
@@ -344,9 +350,23 @@ input[type="checkbox"]:focus {
 
 @media (min-width: 600px) {
   .dashboard-grid {
-    grid-template-columns: repeat(4, 1fr);
+    grid-template-columns: repeat(4, minmax(0, 1fr));
     /* Desktop: 4 in a row */
   }
+}
+
+/* Action buttons (Sortie/Entrée/Ajout) always share one row evenly,
+   regardless of how many columns the grid above is using. */
+.action-buttons-row {
+  grid-column: 1 / -1;
+  display: flex;
+  gap: 15px;
+}
+
+.action-buttons-row .stock-card {
+  flex: 1;
+  aspect-ratio: auto;
+  height: auto;
 }
 
 /* Dashboard Cards */
@@ -365,7 +385,6 @@ input[type="checkbox"]:focus {
   position: relative;
   overflow: hidden;
   aspect-ratio: 1.7 / 1;
-  height: 100%;
 }
 
 /* Pastel Accents for Cards */
@@ -651,6 +670,7 @@ input[type="checkbox"]:focus {
   background: #f1f5f9;
   padding: 6px 10px;
   border-radius: 8px;
+  gap: 8px;
 }
 
 .group-label {
@@ -658,6 +678,10 @@ input[type="checkbox"]:focus {
   font-size: 0.95rem;
   /* Larger font */
   color: #475569;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .group-controls {

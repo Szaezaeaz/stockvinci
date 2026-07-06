@@ -43,7 +43,7 @@ export default function ReturnModal({
         <Modal
             isOpen={isOpen}
             onClose={onClose}
-            title="Retour Matériel"
+            title="Entrée Matériel"
         >
             <div className="segmented-control" style={{ marginBottom: '20px' }}>
                 <button

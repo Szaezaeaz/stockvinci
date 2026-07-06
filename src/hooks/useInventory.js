@@ -23,7 +23,12 @@ const INITIAL_STATE = {
         'iPhone 16e': 5,
         'Samsung XCOVER 7': 5,
         'Samsung A36': 0,
-        'iPhone 17': 0
+        'iPhone 17': 0,
+        'Coque+Vitre iPhone 16e': 0,
+        'Coque+Vitre iPhone 17': 0,
+        'Coque+Vitre Samsung A36': 0,
+        'Coque Samsung XCOVER 7': 0,
+        'Vitre Samsung XCOVER 7': 0
     },
     history: [],
     loans: [] // Array of { id, name, date }

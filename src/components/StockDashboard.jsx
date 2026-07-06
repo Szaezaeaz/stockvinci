@@ -7,6 +7,13 @@ import { getLowStockThreshold } from '../config/thresholds';
 const DASHBOARD_ITEMS = [
     { type: 'group', title: 'PC', items: ['650 G11 Neuf', '650 G11 Occasion', '850 G8/G10 Occasion', 'X360 Neuf', 'Zbook Neuf', 'Zbook Occasion'], span: 2, icon: '💻' },
     { type: 'group', title: 'TÉLÉPHONES', items: ['iPhone 16e', 'Samsung XCOVER 7', 'Samsung A36', 'iPhone 17'], span: 2, icon: '📱' },
+    {
+        type: 'group',
+        title: 'COQUES & VITRES',
+        items: ['Coque+Vitre iPhone 16e', 'Coque+Vitre iPhone 17', 'Coque+Vitre Samsung A36', 'Coque Samsung XCOVER 7', 'Vitre Samsung XCOVER 7'],
+        span: 2,
+        icon: '🛡️'
+    },
     { type: 'single', id: 'Casque', icon: '🎧' },
     { type: 'single', id: 'Clavier', icon: '⌨️' },
     { type: 'single', id: 'Souris', icon: '🖱️' },
@@ -82,61 +89,63 @@ export default function StockDashboard({
                 return null;
             })}
 
-            {/* Global Withdrawal Card */}
-            <div
-                className="stock-card interactable-card"
-                style={{
-                    cursor: 'pointer',
-                    background: 'linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%)',
-                    border: '1px solid #bae6fd',
-                    display: 'flex',
-                    flexDirection: 'column',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    minHeight: '140px'
-                }}
-                onClick={() => setIsWithdrawModalOpen(true)}
-            >
-                <div style={{ fontSize: '2.5rem', marginBottom: '10px', color: '#0ea5e9' }}>📤</div>
-                <h3 style={{ margin: 0, color: '#0c4a6e', fontSize: '1.2rem', fontWeight: 600 }}>Retrait Matériel</h3>
-            </div>
+            {/* Action buttons row: spans the full grid width so the 3 cards
+                always share one row evenly, instead of the last one
+                wrapping alone onto a half-empty new row. */}
+            <div className="action-buttons-row">
+                <div
+                    className="stock-card interactable-card"
+                    style={{
+                        cursor: 'pointer',
+                        background: 'linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%)',
+                        border: '1px solid #bae6fd',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        minHeight: '140px'
+                    }}
+                    onClick={() => setIsWithdrawModalOpen(true)}
+                >
+                    <div style={{ fontSize: '2.5rem', marginBottom: '10px', color: '#0ea5e9' }}>📤</div>
+                    <h3 style={{ margin: 0, color: '#0c4a6e', fontSize: '1.2rem', fontWeight: 600 }}>Sortie Matériel</h3>
+                </div>
 
-            {/* Global Return Card */}
-            <div
-                className="stock-card interactable-card"
-                style={{
-                    cursor: 'pointer',
-                    background: 'linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%)', // Pastel Green
-                    border: '1px solid #bbf7d0',
-                    display: 'flex',
-                    flexDirection: 'column',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    minHeight: '140px'
-                }}
-                onClick={() => setIsReturnModalOpen(true)}
-            >
-                <div style={{ fontSize: '2.5rem', marginBottom: '10px', color: '#22c55e' }}>📥</div>
-                <h3 style={{ margin: 0, color: '#14532d', fontSize: '1.2rem', fontWeight: 600 }}>Retour Matériel</h3>
-            </div>
+                <div
+                    className="stock-card interactable-card"
+                    style={{
+                        cursor: 'pointer',
+                        background: 'linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%)', // Pastel Green
+                        border: '1px solid #bbf7d0',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        minHeight: '140px'
+                    }}
+                    onClick={() => setIsReturnModalOpen(true)}
+                >
+                    <div style={{ fontSize: '2.5rem', marginBottom: '10px', color: '#22c55e' }}>📥</div>
+                    <h3 style={{ margin: 0, color: '#14532d', fontSize: '1.2rem', fontWeight: 600 }}>Entrée Matériel</h3>
+                </div>
 
-            {/* Global Add Materiel Card */}
-            <div
-                className="stock-card interactable-card"
-                style={{
-                    cursor: 'pointer',
-                    background: 'linear-gradient(135deg, #fefce8 0%, #fef9c3 100%)',
-                    border: '1px solid #fde68a',
-                    display: 'flex',
-                    flexDirection: 'column',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    minHeight: '140px'
-                }}
-                onClick={() => setIsAddModalOpen(true)}
-            >
-                <div style={{ fontSize: '2.5rem', marginBottom: '10px', color: '#ca8a04' }}>➕</div>
-                <h3 style={{ margin: 0, color: '#713f12', fontSize: '1.2rem', fontWeight: 600 }}>Ajout Matériel</h3>
+                <div
+                    className="stock-card interactable-card"
+                    style={{
+                        cursor: 'pointer',
+                        background: 'linear-gradient(135deg, #fefce8 0%, #fef9c3 100%)',
+                        border: '1px solid #fde68a',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        minHeight: '140px'
+                    }}
+                    onClick={() => setIsAddModalOpen(true)}
+                >
+                    <div style={{ fontSize: '2.5rem', marginBottom: '10px', color: '#ca8a04' }}>➕</div>
+                    <h3 style={{ margin: 0, color: '#713f12', fontSize: '1.2rem', fontWeight: 600 }}>Ajout Matériel</h3>
+                </div>
             </div>
         </div>
     );
