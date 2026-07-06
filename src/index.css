@@ -20,7 +20,7 @@
   --pastel-pink: #fce7f3;
   /* Kept for header if used there */
 
-  --shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+  --shadow: 0 1px 2px rgba(15, 23, 42, 0.04), 0 6px 16px -4px rgba(15, 23, 42, 0.08);
   --radius: 16px;
 }
 
@@ -44,25 +44,69 @@ body {
   /* Leaves room for the fixed bottom nav so content isn't hidden behind it */
 }
 
-/* Header & Tabs */
+/* Header */
 header {
-  background: linear-gradient(135deg, #e0f2fe 0%, #fce7f3 100%);
-  /* Pastel Gradient */
-  padding: 30px 20px 10px 20px;
-  text-align: center;
+  background: var(--card-bg);
+  padding: 20px;
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
   border-bottom: 1px solid var(--accent-gray);
-  margin-bottom: 25px;
+  margin-bottom: 20px;
+}
+
+.header-badge {
+  flex-shrink: 0;
+  width: 52px;
+  height: 52px;
+  border-radius: 16px;
+  background: linear-gradient(135deg, #3b82f6, #1d4ed8);
+  color: white;
+  font-weight: 800;
+  font-size: 1.1rem;
+  letter-spacing: 0.02em;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 8px 16px -4px rgba(37, 99, 235, 0.45);
+}
+
+.header-text {
+  flex: 1;
+  min-width: 0;
 }
 
 h1 {
-  margin: 0 0 20px 0;
-  font-family: 'Outfit', sans-serif;
-  /* Minimalist IT style */
-  font-size: 2.5rem;
+  margin: 0;
+  font-size: 1.5rem;
   font-weight: 700;
-  color: #1e293b;
-  letter-spacing: -0.02em;
-  text-transform: uppercase;
+  color: #0f172a;
+  letter-spacing: -0.01em;
+}
+
+.header-subtitle {
+  margin: 2px 0 0 0;
+  font-size: 0.85rem;
+  color: #94a3b8;
+}
+
+.header-search-btn {
+  flex-shrink: 0;
+  width: 40px;
+  height: 40px;
+  margin-top: 2px;
+  border-radius: 12px;
+  border: none;
+  background: #f1f5f9;
+  color: #64748b;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+
+.header-search-btn:hover {
+  background: #e2e8f0;
 }
 
 input[type="checkbox"]:focus {

@@ -2,8 +2,9 @@ import React, { useMemo, useState } from 'react';
 import GlobalWithdrawModal from './GlobalWithdrawModal';
 import ReturnModal from './ReturnModal';
 import AddMaterielModal from './AddMaterielModal';
-import { getLowStockThreshold, getStockStatus } from '../config/thresholds';
+import { getStockStatus } from '../config/thresholds';
 import { PHONE_CASE_SHORT_LABELS } from '../config/phoneAccessories';
+import { getStockStats } from '../utils/stockStats';
 
 const DASHBOARD_SECTIONS = [
     {
@@ -57,16 +58,7 @@ export default function StockDashboard({
     const [isReturnModalOpen, setIsReturnModalOpen] = useState(false);
     const [isAddModalOpen, setIsAddModalOpen] = useState(false);
 
-    const stats = useMemo(() => {
-        const entries = Object.entries(stock);
-        const totalUnits = entries.reduce((sum, [, count]) => sum + (count || 0), 0);
-        const outOfStock = entries.filter(([, count]) => (count || 0) <= 0).length;
-        const lowStock = entries.filter(([key, count]) => {
-            const threshold = getLowStockThreshold(key);
-            return threshold > 0 && count > 0 && count < threshold;
-        }).length;
-        return { totalUnits, references: entries.length, outOfStock, lowStock };
-    }, [stock]);
+    const stats = useMemo(() => getStockStats(stock), [stock]);
 
     return (
         <div className="stock-view">
