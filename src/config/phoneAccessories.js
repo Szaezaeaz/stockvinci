@@ -8,17 +8,3 @@ export const PHONE_CASE_INFO = {
 };
 
 export const PHONE_MODEL_OPTIONS = Object.keys(PHONE_CASE_INFO);
-
-// Libellés courts pour l'affichage de la carte "Coques & Vitres" (le titre de
-// la carte dit déjà "Coques & Vitres", pas besoin de répéter "Coque+Vitre" sur
-// chaque ligne, et "Samsung" est superflu vu le contexte téléphones).
-export const PHONE_CASE_SHORT_LABELS = Object.entries(PHONE_CASE_INFO).reduce((labels, [phone, info]) => {
-    const shortPhone = phone.replace('Samsung ', '');
-    if (info.bundled) {
-        labels[info.comboItem] = shortPhone;
-    } else {
-        labels[info.caseItem] = `${shortPhone} — Coque`;
-        labels[info.screenItem] = `${shortPhone} — Vitre`;
-    }
-    return labels;
-}, {});

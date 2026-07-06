@@ -517,16 +517,28 @@ input[type="checkbox"]:focus {
   flex-direction: column;
 }
 
+.item-row-group {
+  border-top: 1px solid #f1f5f9;
+  padding: 10px 0;
+}
+
+.section-card-body .item-row-group:first-child {
+  border-top: none;
+  padding-top: 0;
+}
+
+.item-row-group:last-child {
+  padding-bottom: 0;
+}
+
 .item-row {
   display: flex;
   align-items: center;
   gap: 12px;
-  padding: 10px 0;
-  border-top: 1px solid #f1f5f9;
 }
 
-.section-card-body .item-row:first-child {
-  border-top: none;
+.item-row-group .item-subrows {
+  margin-top: 8px;
 }
 
 .item-row-icon {
@@ -598,6 +610,77 @@ input[type="checkbox"]:focus {
 
 .item-row-bar-fill.status-out {
   background: var(--minimalist-red);
+}
+
+/* Phone case/screen protector sub-rows, nested under their phone's row */
+.item-subrows {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding-left: 48px;
+  /* 36px icon + 12px gap, aligns under the phone's label above */
+}
+
+.item-subrow {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.item-subrow-label {
+  flex-shrink: 0;
+  width: 78px;
+  font-size: 0.78rem;
+  font-weight: 500;
+  color: #94a3b8;
+}
+
+.item-subrow-main {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.item-subrow-bar-track {
+  flex: 1;
+  height: 4px;
+  border-radius: 999px;
+  background: #f1f5f9;
+  overflow: hidden;
+}
+
+.item-subrow-bar-fill {
+  height: 100%;
+  border-radius: 999px;
+  background: var(--minimalist-green);
+  transition: width 0.2s;
+}
+
+.item-subrow-bar-fill.status-low {
+  background: #d97706;
+}
+
+.item-subrow-bar-fill.status-out {
+  background: var(--minimalist-red);
+}
+
+.item-subrow-count {
+  flex-shrink: 0;
+  min-width: 16px;
+  text-align: right;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: #64748b;
+}
+
+.item-subrow-count.status-low {
+  color: #d97706;
+}
+
+.item-subrow-count.status-out {
+  color: var(--minimalist-red);
 }
 
 /* Bottom tab navigation */

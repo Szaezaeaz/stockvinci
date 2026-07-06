@@ -3,7 +3,7 @@ import GlobalWithdrawModal from './GlobalWithdrawModal';
 import ReturnModal from './ReturnModal';
 import AddMaterielModal from './AddMaterielModal';
 import { getStockStatus } from '../config/thresholds';
-import { PHONE_CASE_SHORT_LABELS } from '../config/phoneAccessories';
+import { PHONE_CASE_INFO } from '../config/phoneAccessories';
 import { getStockStats } from '../utils/stockStats';
 
 const DASHBOARD_SECTIONS = [
@@ -17,13 +17,8 @@ const DASHBOARD_SECTIONS = [
         title: 'Téléphones',
         icon: '📱',
         unitLabel: 'modèles',
-        items: ['iPhone 16e', 'iPhone 17', 'Samsung XCOVER 7', 'Samsung A36']
-    },
-    {
-        title: 'Coques & Vitres',
-        icon: '🛡️',
-        unitLabel: 'articles',
-        items: ['Coque+Vitre iPhone 16e', 'Coque+Vitre iPhone 17', 'Coque+Vitre Samsung A36', 'Coque Samsung XCOVER 7', 'Vitre Samsung XCOVER 7']
+        items: ['iPhone 16e', 'iPhone 17', 'Samsung XCOVER 7', 'Samsung A36'],
+        withCases: true
     },
     {
         title: 'Accessoires',
@@ -42,8 +37,20 @@ function itemIcon(key, sectionIcon) {
     return ITEM_ICONS[key] || sectionIcon;
 }
 
-function itemLabel(key) {
-    return PHONE_CASE_SHORT_LABELS[key] || key;
+function CaseSubRow({ label, itemKey, stock }) {
+    const count = stock[itemKey] || 0;
+    const { status, percent } = getStockStatus(itemKey, count);
+    return (
+        <div className="item-subrow">
+            <span className="item-subrow-label">{label}</span>
+            <div className="item-subrow-main">
+                <div className="item-subrow-bar-track">
+                    <div className={`item-subrow-bar-fill status-${status}`} style={{ width: `${percent}%` }} />
+                </div>
+                <span className={`item-subrow-count status-${status}`}>{count}</span>
+            </div>
+        </div>
+    );
 }
 
 export default function StockDashboard({
@@ -123,18 +130,33 @@ export default function StockDashboard({
                         {section.items.map(key => {
                             const count = stock[key] || 0;
                             const { status, percent } = getStockStatus(key, count);
+                            const caseInfo = section.withCases ? PHONE_CASE_INFO[key] : null;
                             return (
-                                <div key={key} className="item-row">
-                                    <span className="item-row-icon">{itemIcon(key, section.icon)}</span>
-                                    <div className="item-row-main">
-                                        <div className="item-row-top">
-                                            <span className="item-row-label">{itemLabel(key)}</span>
-                                            <span className={`item-row-count status-${status}`}>{count}</span>
-                                        </div>
-                                        <div className="item-row-bar-track">
-                                            <div className={`item-row-bar-fill status-${status}`} style={{ width: `${percent}%` }} />
+                                <div key={key} className="item-row-group">
+                                    <div className="item-row">
+                                        <span className="item-row-icon">{itemIcon(key, section.icon)}</span>
+                                        <div className="item-row-main">
+                                            <div className="item-row-top">
+                                                <span className="item-row-label">{key}</span>
+                                                <span className={`item-row-count status-${status}`}>{count}</span>
+                                            </div>
+                                            <div className="item-row-bar-track">
+                                                <div className={`item-row-bar-fill status-${status}`} style={{ width: `${percent}%` }} />
+                                            </div>
                                         </div>
                                     </div>
+                                    {caseInfo && (
+                                        <div className="item-subrows">
+                                            {caseInfo.bundled ? (
+                                                <CaseSubRow label="Coque + Vitre" itemKey={caseInfo.comboItem} stock={stock} />
+                                            ) : (
+                                                <>
+                                                    <CaseSubRow label="Coque" itemKey={caseInfo.caseItem} stock={stock} />
+                                                    <CaseSubRow label="Vitre" itemKey={caseInfo.screenItem} stock={stock} />
+                                                </>
+                                            )}
+                                        </div>
+                                    )}
                                 </div>
                             );
                         })}
