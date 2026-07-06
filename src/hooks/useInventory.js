@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { sendLowStockAlert } from '../services/email';
 import { getLowStockThreshold } from '../config/thresholds';
+import { PHONE_CASE_INFO } from '../config/phoneAccessories';
 
 const STORAGE_KEY = 'vinci_inventory_v3';
 
@@ -80,7 +81,10 @@ export function useInventory() {
 
 
 
-    const addLoan = (name, pcType, phoneType, accessories = { mouse: true, headset: false, bag: true, backpack: false, screen: false, dock: false, keyboard: false }) => {
+    const addLoan = (name, pcType, phoneType, accessories = {
+        mouse: true, headset: false, bag: true, backpack: false, screen: false, dock: false, keyboard: false,
+        phoneCase: true, phoneScreen: true
+    }) => {
         setData(prev => {
             const stockUpdates = {};
             // We won't push individual history updates anymore.
@@ -117,10 +121,25 @@ export function useInventory() {
             const canDeductScreen = accessories.screen ? processDeduction('Écran') : true;
             const canDeductDock = accessories.dock ? processDeduction('Dock') : true;
             const canDeductKeyboard = accessories.keyboard ? processDeduction('Clavier') : true;
-            const canDeductPhone = phoneType !== 'Aucun' ? processDeduction(phoneType) : true;
+            const canDeductPhone = phoneType ? processDeduction(phoneType) : true;
+
+            // Coque/vitre du téléphone : un seul article si vendues ensemble
+            // (iPhone 16e/17, Samsung A36), deux articles distincts sinon (Xcover).
+            let canDeductPhoneCase = true;
+            let canDeductPhoneScreen = true;
+            if (phoneType) {
+                const caseInfo = PHONE_CASE_INFO[phoneType];
+                if (caseInfo?.bundled) {
+                    canDeductPhoneCase = accessories.phoneCase ? processDeduction(caseInfo.comboItem) : true;
+                } else if (caseInfo) {
+                    canDeductPhoneCase = accessories.phoneCase ? processDeduction(caseInfo.caseItem) : true;
+                    canDeductPhoneScreen = accessories.phoneScreen ? processDeduction(caseInfo.screenItem) : true;
+                }
+            }
 
             if (!canDeductPC || !canDeductMouse || !canDeductHeadset || !canDeductBag || !canDeductBackpack
-                || !canDeductScreen || !canDeductDock || !canDeductKeyboard || !canDeductPhone) {
+                || !canDeductScreen || !canDeductDock || !canDeductKeyboard || !canDeductPhone
+                || !canDeductPhoneCase || !canDeductPhoneScreen) {
                 alert("Stock insuffisant pour un ou plusieurs articles !");
                 return prev;
             }
@@ -134,7 +153,7 @@ export function useInventory() {
             // Create Single Composite History Entry
             const loanPackageEntry = {
                 id: Date.now(),
-                category: 'Prêt PC', // Special category for display
+                category: 'Prêt Matériel',
                 delta: -1, // Logical decrement (1 package out)
                 recipient: name,
                 details: loanedItems, // Array of what was in the package

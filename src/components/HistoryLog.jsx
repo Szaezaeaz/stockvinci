@@ -41,9 +41,7 @@ export default function HistoryLog({ history }) {
             const timeStr = dateObj.toLocaleTimeString();
             let details = item.category;
 
-            if (item.category === 'Prêt PC' && item.details) {
-                details += ` (${item.details.join(', ')})`;
-            } else if (item.details && Array.isArray(item.details)) {
+            if (item.details && Array.isArray(item.details)) {
                 details += ` (${item.details.join(', ')})`;
             }
 

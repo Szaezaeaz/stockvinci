@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import Modal from './Modal';
+import { PHONE_CASE_INFO, PHONE_MODEL_OPTIONS } from '../config/phoneAccessories';
 
 const PC_TYPE_OPTIONS = [
     '650 G11 Neuf',
@@ -10,15 +11,15 @@ const PC_TYPE_OPTIONS = [
     'Zbook Occasion'
 ];
 
-const PHONE_TYPE_OPTIONS = ['Aucun', 'iPhone 16e', 'iPhone 17', 'Samsung XCOVER 7', 'Samsung A36'];
-
 export default function LoanedPCs({ loans, onAdd, onRemove }) {
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [name, setName] = useState('');
-    const [pcType, setPcType] = useState('650 G11 Neuf');
-    const [phoneType, setPhoneType] = useState('Aucun');
     const [searchQuery, setSearchQuery] = useState('');
 
+    const [includePC, setIncludePC] = useState(false);
+    const [includePhone, setIncludePhone] = useState(false);
+
+    const [pcType, setPcType] = useState('650 G11 Neuf');
     const [includeMouse, setIncludeMouse] = useState(true);
     const [includeHeadset, setIncludeHeadset] = useState(false);
     const [includeBag, setIncludeBag] = useState(true);
@@ -27,11 +28,18 @@ export default function LoanedPCs({ loans, onAdd, onRemove }) {
     const [includeDock, setIncludeDock] = useState(false);
     const [includeKeyboard, setIncludeKeyboard] = useState(false);
 
+    const [phoneType, setPhoneType] = useState(PHONE_MODEL_OPTIONS[0]);
+    const [includePhoneCase, setIncludePhoneCase] = useState(true);
+    const [includePhoneScreen, setIncludePhoneScreen] = useState(true);
+
     const filteredLoans = loans.filter(loan =>
         (loan.name || loan.recipient || '').toLowerCase().includes(searchQuery.toLowerCase())
     );
 
-    const resetAccessories = () => {
+    const resetForm = () => {
+        setIncludePC(false);
+        setIncludePhone(false);
+        setPcType('650 G11 Neuf');
         setIncludeMouse(true);
         setIncludeHeadset(false);
         setIncludeBag(true);
@@ -39,40 +47,49 @@ export default function LoanedPCs({ loans, onAdd, onRemove }) {
         setIncludeScreen(false);
         setIncludeDock(false);
         setIncludeKeyboard(false);
+        setPhoneType(PHONE_MODEL_OPTIONS[0]);
+        setIncludePhoneCase(true);
+        setIncludePhoneScreen(true);
     };
 
     const handleSubmit = (e) => {
         e.preventDefault();
         if (!name.trim()) return;
-        onAdd(name.trim(), pcType, phoneType, {
+        if (!includePC && !includePhone) {
+            alert('Sélectionnez au moins PC ou Téléphone.');
+            return;
+        }
+        onAdd(name.trim(), includePC ? pcType : null, includePhone ? phoneType : null, {
             mouse: includeMouse,
             headset: includeHeadset,
             bag: includeBag,
             backpack: includeBackpack,
             screen: includeScreen,
             dock: includeDock,
-            keyboard: includeKeyboard
+            keyboard: includeKeyboard,
+            phoneCase: includePhoneCase,
+            phoneScreen: includePhoneScreen
         });
         setName('');
-        setPcType('650 G11 Neuf');
-        setPhoneType('Aucun');
-        resetAccessories();
+        resetForm();
         setIsModalOpen(false); // Close modal on success
     };
+
+    const phoneCaseInfo = PHONE_CASE_INFO[phoneType];
 
     return (
         <div className="loan-container">
             <div className="loan-header-actions">
-                <h2>PC Prêt</h2>
+                <h2>Matériel Prêt</h2>
                 <button className="btn-add-trigger" onClick={() => setIsModalOpen(true)}>
-                    + Nouveau PC Prêt
+                    + Nouveau Matériel Prêt
                 </button>
             </div>
 
             <Modal
                 isOpen={isModalOpen}
                 onClose={() => setIsModalOpen(false)}
-                title="Ajouter un PC Prêt"
+                title="Ajouter un Matériel Prêt"
             >
                 <form onSubmit={handleSubmit} className="loan-form-modal">
                     <div className="form-group">
@@ -88,92 +105,157 @@ export default function LoanedPCs({ loans, onAdd, onRemove }) {
                     </div>
 
                     <div className="form-group">
-                        <label>Type de PC</label>
-                        <select
-                            className="loan-input full-width"
-                            value={pcType}
-                            onChange={(e) => setPcType(e.target.value)}
-                        >
-                            {PC_TYPE_OPTIONS.map(option => (
-                                <option key={option} value={option}>{option}</option>
-                            ))}
-                        </select>
-                    </div>
-
-                    <div className="form-group">
-                        <label>Accessoires inclus</label>
-                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '12px 15px', marginTop: '5px' }}>
+                        <label>Matériel prêté</label>
+                        <div style={{ display: 'flex', gap: '15px', marginTop: '5px' }}>
                             <label style={{ display: 'flex', alignItems: 'center', fontWeight: 'normal', cursor: 'pointer' }}>
                                 <input
                                     type="checkbox"
-                                    checked={includeMouse}
-                                    onChange={(e) => setIncludeMouse(e.target.checked)}
+                                    checked={includePC}
+                                    onChange={(e) => setIncludePC(e.target.checked)}
                                 />
-                                Souris
+                                PC
                             </label>
                             <label style={{ display: 'flex', alignItems: 'center', fontWeight: 'normal', cursor: 'pointer' }}>
                                 <input
                                     type="checkbox"
-                                    checked={includeBag}
-                                    onChange={(e) => setIncludeBag(e.target.checked)}
+                                    checked={includePhone}
+                                    onChange={(e) => setIncludePhone(e.target.checked)}
                                 />
-                                Sacoche
-                            </label>
-                            <label style={{ display: 'flex', alignItems: 'center', fontWeight: 'normal', cursor: 'pointer' }}>
-                                <input
-                                    type="checkbox"
-                                    checked={includeBackpack}
-                                    onChange={(e) => setIncludeBackpack(e.target.checked)}
-                                />
-                                Sac à Dos
-                            </label>
-                            <label style={{ display: 'flex', alignItems: 'center', fontWeight: 'normal', cursor: 'pointer' }}>
-                                <input
-                                    type="checkbox"
-                                    checked={includeHeadset}
-                                    onChange={(e) => setIncludeHeadset(e.target.checked)}
-                                />
-                                Casque
-                            </label>
-                            <label style={{ display: 'flex', alignItems: 'center', fontWeight: 'normal', cursor: 'pointer' }}>
-                                <input
-                                    type="checkbox"
-                                    checked={includeScreen}
-                                    onChange={(e) => setIncludeScreen(e.target.checked)}
-                                />
-                                Écran
-                            </label>
-                            <label style={{ display: 'flex', alignItems: 'center', fontWeight: 'normal', cursor: 'pointer' }}>
-                                <input
-                                    type="checkbox"
-                                    checked={includeDock}
-                                    onChange={(e) => setIncludeDock(e.target.checked)}
-                                />
-                                Dock
-                            </label>
-                            <label style={{ display: 'flex', alignItems: 'center', fontWeight: 'normal', cursor: 'pointer' }}>
-                                <input
-                                    type="checkbox"
-                                    checked={includeKeyboard}
-                                    onChange={(e) => setIncludeKeyboard(e.target.checked)}
-                                />
-                                Clavier
+                                Téléphone
                             </label>
                         </div>
                     </div>
 
-                    <div className="form-group">
-                        <label>Téléphone</label>
-                        <select
-                            className="loan-input full-width"
-                            value={phoneType}
-                            onChange={(e) => setPhoneType(e.target.value)}
-                        >
-                            {PHONE_TYPE_OPTIONS.map(option => (
-                                <option key={option} value={option}>{option}</option>
-                            ))}
-                        </select>
-                    </div>
+                    {includePC && (
+                        <>
+                            <div className="form-group">
+                                <label>Type de PC</label>
+                                <select
+                                    className="loan-input full-width"
+                                    value={pcType}
+                                    onChange={(e) => setPcType(e.target.value)}
+                                >
+                                    {PC_TYPE_OPTIONS.map(option => (
+                                        <option key={option} value={option}>{option}</option>
+                                    ))}
+                                </select>
+                            </div>
+
+                            <div className="form-group">
+                                <label>Accessoires PC inclus</label>
+                                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '12px 15px', marginTop: '5px' }}>
+                                    <label style={{ display: 'flex', alignItems: 'center', fontWeight: 'normal', cursor: 'pointer' }}>
+                                        <input
+                                            type="checkbox"
+                                            checked={includeMouse}
+                                            onChange={(e) => setIncludeMouse(e.target.checked)}
+                                        />
+                                        Souris
+                                    </label>
+                                    <label style={{ display: 'flex', alignItems: 'center', fontWeight: 'normal', cursor: 'pointer' }}>
+                                        <input
+                                            type="checkbox"
+                                            checked={includeBag}
+                                            onChange={(e) => setIncludeBag(e.target.checked)}
+                                        />
+                                        Sacoche
+                                    </label>
+                                    <label style={{ display: 'flex', alignItems: 'center', fontWeight: 'normal', cursor: 'pointer' }}>
+                                        <input
+                                            type="checkbox"
+                                            checked={includeBackpack}
+                                            onChange={(e) => setIncludeBackpack(e.target.checked)}
+                                        />
+                                        Sac à Dos
+                                    </label>
+                                    <label style={{ display: 'flex', alignItems: 'center', fontWeight: 'normal', cursor: 'pointer' }}>
+                                        <input
+                                            type="checkbox"
+                                            checked={includeHeadset}
+                                            onChange={(e) => setIncludeHeadset(e.target.checked)}
+                                        />
+                                        Casque
+                                    </label>
+                                    <label style={{ display: 'flex', alignItems: 'center', fontWeight: 'normal', cursor: 'pointer' }}>
+                                        <input
+                                            type="checkbox"
+                                            checked={includeScreen}
+                                            onChange={(e) => setIncludeScreen(e.target.checked)}
+                                        />
+                                        Écran
+                                    </label>
+                                    <label style={{ display: 'flex', alignItems: 'center', fontWeight: 'normal', cursor: 'pointer' }}>
+                                        <input
+                                            type="checkbox"
+                                            checked={includeDock}
+                                            onChange={(e) => setIncludeDock(e.target.checked)}
+                                        />
+                                        Dock
+                                    </label>
+                                    <label style={{ display: 'flex', alignItems: 'center', fontWeight: 'normal', cursor: 'pointer' }}>
+                                        <input
+                                            type="checkbox"
+                                            checked={includeKeyboard}
+                                            onChange={(e) => setIncludeKeyboard(e.target.checked)}
+                                        />
+                                        Clavier
+                                    </label>
+                                </div>
+                            </div>
+                        </>
+                    )}
+
+                    {includePhone && (
+                        <>
+                            <div className="form-group">
+                                <label>Modèle de téléphone</label>
+                                <select
+                                    className="loan-input full-width"
+                                    value={phoneType}
+                                    onChange={(e) => setPhoneType(e.target.value)}
+                                >
+                                    {PHONE_MODEL_OPTIONS.map(option => (
+                                        <option key={option} value={option}>{option}</option>
+                                    ))}
+                                </select>
+                            </div>
+
+                            <div className="form-group">
+                                <label>Accessoires téléphone inclus</label>
+                                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '12px 15px', marginTop: '5px' }}>
+                                    {phoneCaseInfo?.bundled ? (
+                                        <label style={{ display: 'flex', alignItems: 'center', fontWeight: 'normal', cursor: 'pointer' }}>
+                                            <input
+                                                type="checkbox"
+                                                checked={includePhoneCase}
+                                                onChange={(e) => setIncludePhoneCase(e.target.checked)}
+                                            />
+                                            Coque + Vitre
+                                        </label>
+                                    ) : (
+                                        <>
+                                            <label style={{ display: 'flex', alignItems: 'center', fontWeight: 'normal', cursor: 'pointer' }}>
+                                                <input
+                                                    type="checkbox"
+                                                    checked={includePhoneCase}
+                                                    onChange={(e) => setIncludePhoneCase(e.target.checked)}
+                                                />
+                                                Coque
+                                            </label>
+                                            <label style={{ display: 'flex', alignItems: 'center', fontWeight: 'normal', cursor: 'pointer' }}>
+                                                <input
+                                                    type="checkbox"
+                                                    checked={includePhoneScreen}
+                                                    onChange={(e) => setIncludePhoneScreen(e.target.checked)}
+                                                />
+                                                Vitre
+                                            </label>
+                                        </>
+                                    )}
+                                </div>
+                            </div>
+                        </>
+                    )}
 
                     <button type="submit" className="btn-add full-width-btn">Confirmer</button>
                 </form>
@@ -183,7 +265,7 @@ export default function LoanedPCs({ loans, onAdd, onRemove }) {
                 <input
                     type="text"
                     className="loan-input"
-                    placeholder="Rechercher un PC..."
+                    placeholder="Rechercher..."
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
                 />
@@ -205,7 +287,7 @@ export default function LoanedPCs({ loans, onAdd, onRemove }) {
                         <button
                             className="btn-circle btn-remove-loan"
                             onClick={() => onRemove(loan.id)}
-                            aria-label="Retourner le PC"
+                            aria-label="Retourner le matériel"
                         >
                             ×
                         </button>

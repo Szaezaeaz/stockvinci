@@ -25,7 +25,7 @@ function App() {
           className={`tab-btn ${activeTab === 'loans' ? 'active' : ''}`}
           onClick={() => setActiveTab('loans')}
         >
-          PC Prêt
+          Matériel Prêt
         </button>
       </div>
 
