@@ -40,6 +40,8 @@ body {
   max-width: 800px;
   margin: 0 auto;
   padding: 20px;
+  padding-bottom: calc(90px + env(safe-area-inset-bottom));
+  /* Leaves room for the fixed bottom nav so content isn't hidden behind it */
 }
 
 /* Header & Tabs */
@@ -61,24 +63,6 @@ h1 {
   color: #1e293b;
   letter-spacing: -0.02em;
   text-transform: uppercase;
-}
-
-.tabs {
-  display: flex;
-  justify-content: center;
-  gap: 10px;
-}
-
-.tab-btn {
-  padding: 12px 24px;
-  border: none;
-  background: transparent;
-  font-size: 1rem;
-  font-weight: 500;
-  color: #64748b;
-  cursor: pointer;
-  border-bottom: 3px solid transparent;
-  transition: all 0.2s;
 }
 
 input[type="checkbox"]:focus {
@@ -289,12 +273,6 @@ input[type="checkbox"]:focus {
   padding: 6px 8px !important;
 }
 
-.tab-btn.active {
-  color: #0f172a;
-  border-bottom-color: #0f172a;
-  font-weight: 600;
-}
-
 /* Segmented Control */
 .segmented-control {
   display: flex;
@@ -333,92 +311,289 @@ input[type="checkbox"]:focus {
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
 }
 
-/* Dashboard Grid */
-.dashboard-grid {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  /* minmax(0, 1fr) instead of 1fr so long labels (eg "Coque+Vitre iPhone 16e")
-     can't force a column wider than its share and overflow the grid */
-  align-items: start;
-  /* Without this, a tall col-span-2 card sharing a row with 1-column
-     cards stretches them to match its height; with aspect-ratio set,
-     that extra height then forces their width past the column too. */
-  /* Mobile: 2x2 */
-  gap: 15px;
+/* Stock view (new section-based layout) */
+.stock-view {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
   margin: 20px 0;
 }
 
-@media (min-width: 600px) {
-  .dashboard-grid {
-    grid-template-columns: repeat(4, minmax(0, 1fr));
-    /* Desktop: 4 in a row */
-  }
-}
-
-/* Action buttons (Sortie/Entrée/Ajout) always share one row evenly,
-   regardless of how many columns the grid above is using. */
+/* Action buttons: Entrée / Sortie / Ajout, always sharing one row evenly */
 .action-buttons-row {
-  grid-column: 1 / -1;
   display: flex;
-  gap: 15px;
+  gap: 10px;
 }
 
-.action-buttons-row .stock-card {
+.action-pill {
   flex: 1;
-  aspect-ratio: auto;
-  height: auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 14px 10px;
+  border-radius: 999px;
+  border: 1px solid var(--accent-gray);
+  background: white;
+  color: #0f172a;
+  font-weight: 600;
+  font-size: 0.95rem;
+  cursor: pointer;
+  transition: transform 0.1s, box-shadow 0.2s;
 }
 
-/* Dashboard Cards */
-.stock-card {
-  background: var(--card-bg);
+.action-pill:hover {
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.08);
+  transform: translateY(-1px);
+}
+
+.action-pill:active {
+  transform: translateY(0);
+}
+
+.action-pill-icon {
+  font-weight: 700;
+}
+
+.action-pill-primary {
+  background: linear-gradient(135deg, #2563eb, #1d4ed8);
+  border-color: #1d4ed8;
+  color: white;
+  flex: 1.3;
+}
+
+/* Stats row: Unités en stock / Rupture / Faible */
+.stats-row {
+  display: grid;
+  grid-template-columns: 1.4fr 1fr 1fr;
+  gap: 10px;
+}
+
+.stat-card {
+  background: white;
   border-radius: var(--radius);
-  padding: 15px;
+  border: 1px solid var(--accent-gray);
   box-shadow: var(--shadow);
+  padding: 14px;
   display: flex;
   flex-direction: column;
-  justify-content: center;
+  gap: 2px;
+}
+
+.stat-card-primary {
+  background: linear-gradient(135deg, #2563eb, #1d4ed8);
+  border-color: #1d4ed8;
+  color: white;
+}
+
+.stat-card-label {
+  font-size: 0.7rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: #64748b;
+  display: flex;
   align-items: center;
   gap: 6px;
-  text-align: center;
-  border: 1px solid var(--accent-gray);
-  position: relative;
-  overflow: hidden;
-  aspect-ratio: 1.7 / 1;
 }
 
-/* Pastel Accents for Cards */
-/* Minimalist Accent for Cards - Removed Gradient */
-.stock-card::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  height: 4px;
-  background: var(--minimalist-border);
+.stat-card-primary .stat-card-label {
+  color: rgba(255, 255, 255, 0.85);
 }
 
-.stock-card h3 {
-  margin: 5px 0 0 0;
-  font-size: 1rem;
-  font-weight: 600;
-  color: #64748b;
-}
-
-.stock-count {
-  font-size: 2.5rem;
-  font-weight: 500;
-  margin: 10px 0;
+.stat-card-value {
+  font-size: 1.8rem;
+  font-weight: 700;
   color: #0f172a;
 }
 
-/* Actions */
-.actions {
+.stat-card-primary .stat-card-value {
+  color: white;
+}
+
+.stat-card-sub {
+  font-size: 0.75rem;
+  color: rgba(255, 255, 255, 0.75);
+}
+
+.stat-value-out {
+  color: var(--minimalist-red);
+}
+
+.stat-value-low {
+  color: #d97706;
+}
+
+.stat-card-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  display: inline-block;
+}
+
+.stat-dot-out {
+  background: var(--minimalist-red);
+}
+
+.stat-dot-low {
+  background: #d97706;
+}
+
+/* Section cards (PC portables, Téléphones, Coques & Vitres, Accessoires) */
+.section-card {
+  background: white;
+  border-radius: var(--radius);
+  border: 1px solid var(--accent-gray);
+  box-shadow: var(--shadow);
+  padding: 16px;
+}
+
+.section-card-header {
   display: flex;
-  gap: 15px;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 10px;
+}
+
+.section-card-header h3 {
+  margin: 0;
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.section-card-count {
+  font-size: 0.8rem;
+  color: #94a3b8;
+  font-weight: 600;
+}
+
+.section-card-body {
+  display: flex;
+  flex-direction: column;
+}
+
+.item-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 0;
+  border-top: 1px solid #f1f5f9;
+}
+
+.section-card-body .item-row:first-child {
+  border-top: none;
+}
+
+.item-row-icon {
+  flex-shrink: 0;
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  background: #f1f5f9;
+  display: flex;
+  align-items: center;
   justify-content: center;
-  width: 100%;
+  font-size: 1.1rem;
+}
+
+.item-row-main {
+  flex: 1;
+  min-width: 0;
+}
+
+.item-row-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 8px;
+  margin-bottom: 6px;
+}
+
+.item-row-label {
+  font-weight: 600;
+  font-size: 0.92rem;
+  color: #334155;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.item-row-count {
+  font-weight: 700;
+  font-size: 0.95rem;
+  color: #0f172a;
+  flex-shrink: 0;
+}
+
+.item-row-count.status-out {
+  color: var(--minimalist-red);
+}
+
+.item-row-count.status-low {
+  color: #d97706;
+}
+
+.item-row-bar-track {
+  height: 6px;
+  border-radius: 999px;
+  background: #f1f5f9;
+  overflow: hidden;
+}
+
+.item-row-bar-fill {
+  height: 100%;
+  border-radius: 999px;
+  background: var(--minimalist-green);
+  transition: width 0.2s;
+}
+
+.item-row-bar-fill.status-low {
+  background: #d97706;
+}
+
+.item-row-bar-fill.status-out {
+  background: var(--minimalist-red);
+}
+
+/* Bottom tab navigation */
+.bottom-nav {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  display: flex;
+  justify-content: center;
+  gap: 4px;
+  background: white;
+  border-top: 1px solid var(--accent-gray);
+  padding: 8px max(8px, env(safe-area-inset-left)) calc(8px + env(safe-area-inset-bottom));
+  z-index: 100;
+}
+
+.bottom-nav-btn {
+  flex: 1;
+  max-width: 140px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  padding: 8px 6px 6px;
+  border: none;
+  background: transparent;
+  color: #94a3b8;
+  border-radius: 14px;
+  cursor: pointer;
+}
+
+.bottom-nav-btn.active {
+  color: #1d4ed8;
+  background: #eff6ff;
+}
+
+.bottom-nav-label {
+  font-size: 0.72rem;
+  font-weight: 600;
 }
 
 /* Buttons */
@@ -645,61 +820,6 @@ input[type="checkbox"]:focus {
   color: var(--minimalist-red);
 }
 
-/* Group Card Styles */
-.group-card {
-  padding: 10px;
-  justify-content: flex-start;
-  gap: 10px;
-}
-
-.group-content {
-  width: 100%;
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  flex: 1;
-  justify-content: flex-start;
-  overflow-y: auto;
-  min-height: 0;
-}
-
-.group-row {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  background: #f1f5f9;
-  padding: 6px 10px;
-  border-radius: 8px;
-  gap: 8px;
-}
-
-.group-label {
-  font-weight: 600;
-  font-size: 0.95rem;
-  /* Larger font */
-  color: #475569;
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.group-controls {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  /* Slightly tighter gap */
-}
-
-.group-count {
-  font-weight: 500;
-  font-size: 1.1rem;
-  /* Larger count */
-  color: #0f172a;
-  min-width: 18px;
-  text-align: center;
-}
-
 .btn-mini {
   width: 28px;
   height: 28px;
@@ -712,20 +832,6 @@ input[type="checkbox"]:focus {
   justify-content: center;
   padding: 0;
   line-height: 1;
-}
-
-/* Grid Spanning */
-.col-span-2 {
-  grid-column: span 2;
-  aspect-ratio: 1.75 / 1;
-  /* Fixed height comfortable for ~4 rows; group-content scrolls internally
-     if a group grows beyond that instead of the card growing forever. */
-}
-
-/* On mobile (2 columns), span 2 means full width */
-.col-span-2 {
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-  font-weight: 600;
 }
 
 .full-width-btn {
@@ -917,17 +1023,6 @@ input[type="checkbox"]:focus {
   font-size: 0.95rem;
 }
 
-/* Low Stock Card Styles */
-.stock-card.low-stock {
-  border: 2px solid var(--minimalist-red);
-  background: white;
-  animation: pulseBorder 2s infinite;
-}
-
-.text-red {
-  color: #ef4444 !important;
-}
-
 /* CSV Export Controls */
 .csv-controls {
   display: flex;
@@ -997,23 +1092,6 @@ input[type="checkbox"]:focus {
 
 .btn-download-csv:active {
   transform: translateY(0);
-}
-
-@keyframes pulseBorder {
-  0% {
-    border-color: var(--minimalist-red);
-    box-shadow: 0 0 0 0 rgba(185, 28, 28, 0.4);
-  }
-
-  70% {
-    border-color: var(--minimalist-red);
-    box-shadow: 0 0 0 6px rgba(185, 28, 28, 0);
-  }
-
-  100% {
-    border-color: var(--minimalist-red);
-    box-shadow: 0 0 0 0 rgba(185, 28, 28, 0);
-  }
 }
 
 @keyframes fadeIn {

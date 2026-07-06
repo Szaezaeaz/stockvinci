@@ -3,49 +3,39 @@ import Layout from './components/Layout';
 import StockDashboard from './components/StockDashboard';
 import HistoryLog from './components/HistoryLog';
 import LoanedPCs from './components/LoanedPCs';
+import BottomNav from './components/BottomNav';
 import { useInventory } from './hooks/useInventory';
 
 import AlertBanner from './components/AlertBanner';
 
 function App() {
   const { stock, history, loans, addLoan, removeLoan, addWithdrawal, addStock, returnLoan, quickReturnPC } = useInventory();
-  const [activeTab, setActiveTab] = useState('stock'); // 'stock' or 'loans'
+  const [activeTab, setActiveTab] = useState('stock'); // 'stock' | 'loans' | 'history'
 
   return (
     <Layout>
       <AlertBanner stock={stock} />
-      <div className="tabs">
-        <button
-          className={`tab-btn ${activeTab === 'stock' ? 'active' : ''}`}
-          onClick={() => setActiveTab('stock')}
-        >
-          Stock
-        </button>
-        <button
-          className={`tab-btn ${activeTab === 'loans' ? 'active' : ''}`}
-          onClick={() => setActiveTab('loans')}
-        >
-          Matériel Prêt
-        </button>
-      </div>
 
-      <div style={{ marginTop: '20px' }} className="fade-in" key={activeTab}>
-        {activeTab === 'stock' ? (
-          <>
-            <StockDashboard
-              stock={stock}
-              onWithdraw={addWithdrawal}
-              onAddStock={addStock}
-              loans={loans}
-              onReturnLoan={returnLoan}
-              onQuickReturnPC={quickReturnPC}
-            />
-            <HistoryLog history={history} />
-          </>
-        ) : (
+      <div className="fade-in" key={activeTab}>
+        {activeTab === 'stock' && (
+          <StockDashboard
+            stock={stock}
+            onWithdraw={addWithdrawal}
+            onAddStock={addStock}
+            loans={loans}
+            onReturnLoan={returnLoan}
+            onQuickReturnPC={quickReturnPC}
+          />
+        )}
+        {activeTab === 'loans' && (
           <LoanedPCs loans={loans} onAdd={addLoan} onRemove={removeLoan} />
         )}
+        {activeTab === 'history' && (
+          <HistoryLog history={history} />
+        )}
       </div>
+
+      <BottomNav activeTab={activeTab} onChange={setActiveTab} />
     </Layout>
   );
 }

@@ -1,28 +1,49 @@
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import GlobalWithdrawModal from './GlobalWithdrawModal';
 import ReturnModal from './ReturnModal';
 import AddMaterielModal from './AddMaterielModal';
-import { getLowStockThreshold } from '../config/thresholds';
+import { getLowStockThreshold, getStockStatus } from '../config/thresholds';
+import { PHONE_CASE_SHORT_LABELS } from '../config/phoneAccessories';
 
-const DASHBOARD_ITEMS = [
-    { type: 'group', title: 'PC', items: ['650 G11 Neuf', '650 G11 Occasion', '850 G8/G10 Occasion', 'X360 Neuf', 'Zbook Neuf', 'Zbook Occasion'], span: 2, icon: '💻' },
-    { type: 'group', title: 'TÉLÉPHONES', items: ['iPhone 16e', 'Samsung XCOVER 7', 'Samsung A36', 'iPhone 17'], span: 2, icon: '📱' },
+const DASHBOARD_SECTIONS = [
     {
-        type: 'group',
-        title: 'COQUES & VITRES',
-        items: ['Coque+Vitre iPhone 16e', 'Coque+Vitre iPhone 17', 'Coque+Vitre Samsung A36', 'Coque Samsung XCOVER 7', 'Vitre Samsung XCOVER 7'],
-        span: 2,
-        icon: '🛡️'
+        title: 'PC portables',
+        icon: '💻',
+        unitLabel: 'modèles',
+        items: ['650 G11 Neuf', '650 G11 Occasion', '850 G8/G10 Occasion', 'X360 Neuf', 'Zbook Neuf', 'Zbook Occasion']
     },
-    { type: 'single', id: 'Casque', icon: '🎧' },
-    { type: 'single', id: 'Clavier', icon: '⌨️' },
-    { type: 'single', id: 'Souris', icon: '🖱️' },
-    { type: 'single', id: 'Sacoche', icon: '💼' },
-    { type: 'single', id: 'Sac à Dos', icon: '🎒' },
-    { type: 'single', id: 'Écran', icon: '🖥️' },
-    { type: 'single', id: 'Chargeur', icon: '🔌' },
-    { type: 'single', id: 'Dock', icon: '📦' },
+    {
+        title: 'Téléphones',
+        icon: '📱',
+        unitLabel: 'modèles',
+        items: ['iPhone 16e', 'iPhone 17', 'Samsung XCOVER 7', 'Samsung A36']
+    },
+    {
+        title: 'Coques & Vitres',
+        icon: '🛡️',
+        unitLabel: 'articles',
+        items: ['Coque+Vitre iPhone 16e', 'Coque+Vitre iPhone 17', 'Coque+Vitre Samsung A36', 'Coque Samsung XCOVER 7', 'Vitre Samsung XCOVER 7']
+    },
+    {
+        title: 'Accessoires',
+        icon: '🎒',
+        unitLabel: 'articles',
+        items: ['Casque', 'Clavier', 'Souris', 'Sacoche', 'Sac à Dos', 'Écran', 'Chargeur', 'Dock']
+    }
 ];
+
+const ITEM_ICONS = {
+    'Casque': '🎧', 'Clavier': '⌨️', 'Souris': '🖱️', 'Sacoche': '💼', 'Sac à Dos': '🎒',
+    'Écran': '🖥️', 'Chargeur': '🔌', 'Dock': '📦'
+};
+
+function itemIcon(key, sectionIcon) {
+    return ITEM_ICONS[key] || sectionIcon;
+}
+
+function itemLabel(key) {
+    return PHONE_CASE_SHORT_LABELS[key] || key;
+}
 
 export default function StockDashboard({
     stock,
@@ -36,8 +57,19 @@ export default function StockDashboard({
     const [isReturnModalOpen, setIsReturnModalOpen] = useState(false);
     const [isAddModalOpen, setIsAddModalOpen] = useState(false);
 
+    const stats = useMemo(() => {
+        const entries = Object.entries(stock);
+        const totalUnits = entries.reduce((sum, [, count]) => sum + (count || 0), 0);
+        const outOfStock = entries.filter(([, count]) => (count || 0) <= 0).length;
+        const lowStock = entries.filter(([key, count]) => {
+            const threshold = getLowStockThreshold(key);
+            return threshold > 0 && count > 0 && count < threshold;
+        }).length;
+        return { totalUnits, references: entries.length, outOfStock, lowStock };
+    }, [stock]);
+
     return (
-        <div className="dashboard-grid">
+        <div className="stock-view">
             <GlobalWithdrawModal
                 isOpen={isWithdrawModalOpen}
                 onClose={() => setIsWithdrawModalOpen(false)}
@@ -59,94 +91,64 @@ export default function StockDashboard({
                 onConfirm={onAddStock}
             />
 
-            {DASHBOARD_ITEMS.map((item) => {
-                const spanClass = item.span === 2 ? 'col-span-2' : '';
-
-                if (item.type === 'single') {
-                    const threshold = getLowStockThreshold(item.id);
-                    const isLowStock = threshold > 0 && (stock[item.id] || 0) < threshold;
-                    return (
-                        <div key={item.id} className={`stock-card ${spanClass} ${isLowStock ? 'low-stock' : ''}`}>
-                            <h3>{item.icon} {item.id}</h3>
-                            <div className={`stock-count ${isLowStock ? 'text-red' : ''}`}>{stock[item.id]}</div>
-                        </div>
-                    );
-                } else if (item.type === 'group') {
-                    return (
-                        <div key={item.title} className={`stock-card group-card ${spanClass}`}>
-                            <h3>{item.icon} {item.title}</h3>
-                            <div className="group-content">
-                                {item.items.map(subItem => (
-                                    <div key={subItem} className="group-row">
-                                        <span className="group-label">{subItem}</span>
-                                        <span className="group-count">{stock[subItem]}</span>
-                                    </div>
-                                ))}
-                            </div>
-                        </div>
-                    );
-                }
-                return null;
-            })}
-
-            {/* Action buttons row: spans the full grid width so the 3 cards
-                always share one row evenly, instead of the last one
-                wrapping alone onto a half-empty new row. */}
             <div className="action-buttons-row">
-                <div
-                    className="stock-card interactable-card"
-                    style={{
-                        cursor: 'pointer',
-                        background: 'linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%)',
-                        border: '1px solid #bae6fd',
-                        display: 'flex',
-                        flexDirection: 'column',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        minHeight: '140px'
-                    }}
-                    onClick={() => setIsWithdrawModalOpen(true)}
-                >
-                    <div style={{ fontSize: '2.5rem', marginBottom: '10px', color: '#0ea5e9' }}>📤</div>
-                    <h3 style={{ margin: 0, color: '#0c4a6e', fontSize: '1.2rem', fontWeight: 600 }}>Sortie Matériel</h3>
-                </div>
+                <button type="button" className="action-pill" onClick={() => setIsReturnModalOpen(true)}>
+                    <span className="action-pill-icon">↓</span> Entrée
+                </button>
+                <button type="button" className="action-pill" onClick={() => setIsWithdrawModalOpen(true)}>
+                    <span className="action-pill-icon">↑</span> Sortie
+                </button>
+                <button type="button" className="action-pill action-pill-primary" onClick={() => setIsAddModalOpen(true)}>
+                    <span className="action-pill-icon">+</span> Ajout
+                </button>
+            </div>
 
-                <div
-                    className="stock-card interactable-card"
-                    style={{
-                        cursor: 'pointer',
-                        background: 'linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%)', // Pastel Green
-                        border: '1px solid #bbf7d0',
-                        display: 'flex',
-                        flexDirection: 'column',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        minHeight: '140px'
-                    }}
-                    onClick={() => setIsReturnModalOpen(true)}
-                >
-                    <div style={{ fontSize: '2.5rem', marginBottom: '10px', color: '#22c55e' }}>📥</div>
-                    <h3 style={{ margin: 0, color: '#14532d', fontSize: '1.2rem', fontWeight: 600 }}>Entrée Matériel</h3>
+            <div className="stats-row">
+                <div className="stat-card stat-card-primary">
+                    <span className="stat-card-label">Unités en stock</span>
+                    <span className="stat-card-value">{stats.totalUnits}</span>
+                    <span className="stat-card-sub">{stats.references} références</span>
                 </div>
-
-                <div
-                    className="stock-card interactable-card"
-                    style={{
-                        cursor: 'pointer',
-                        background: 'linear-gradient(135deg, #fefce8 0%, #fef9c3 100%)',
-                        border: '1px solid #fde68a',
-                        display: 'flex',
-                        flexDirection: 'column',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        minHeight: '140px'
-                    }}
-                    onClick={() => setIsAddModalOpen(true)}
-                >
-                    <div style={{ fontSize: '2.5rem', marginBottom: '10px', color: '#ca8a04' }}>➕</div>
-                    <h3 style={{ margin: 0, color: '#713f12', fontSize: '1.2rem', fontWeight: 600 }}>Ajout Matériel</h3>
+                <div className="stat-card">
+                    <span className="stat-card-dot stat-dot-out" />
+                    <span className="stat-card-label">Rupture</span>
+                    <span className="stat-card-value stat-value-out">{stats.outOfStock}</span>
+                </div>
+                <div className="stat-card">
+                    <span className="stat-card-dot stat-dot-low" />
+                    <span className="stat-card-label">Faible</span>
+                    <span className="stat-card-value stat-value-low">{stats.lowStock}</span>
                 </div>
             </div>
+
+            {DASHBOARD_SECTIONS.map(section => (
+                <div key={section.title} className="section-card">
+                    <div className="section-card-header">
+                        <h3>{section.icon} {section.title}</h3>
+                        <span className="section-card-count">{section.items.length} {section.unitLabel}</span>
+                    </div>
+                    <div className="section-card-body">
+                        {section.items.map(key => {
+                            const count = stock[key] || 0;
+                            const { status, percent } = getStockStatus(key, count);
+                            return (
+                                <div key={key} className="item-row">
+                                    <span className="item-row-icon">{itemIcon(key, section.icon)}</span>
+                                    <div className="item-row-main">
+                                        <div className="item-row-top">
+                                            <span className="item-row-label">{itemLabel(key)}</span>
+                                            <span className={`item-row-count status-${status}`}>{count}</span>
+                                        </div>
+                                        <div className="item-row-bar-track">
+                                            <div className={`item-row-bar-fill status-${status}`} style={{ width: `${percent}%` }} />
+                                        </div>
+                                    </div>
+                                </div>
+                            );
+                        })}
+                    </div>
+                </div>
+            ))}
         </div>
     );
 }

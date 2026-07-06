@@ -25,3 +25,18 @@ const DEFAULT_THRESHOLD = 10;
 export function getLowStockThreshold(category) {
     return category in CATEGORY_THRESHOLDS ? CATEGORY_THRESHOLDS[category] : DEFAULT_THRESHOLD;
 }
+
+// Statut visuel d'une catégorie (couleur + longueur de la barre de niveau).
+// Sert de repère "santé du stock" à l'écran, indépendant du seuil d'alerte
+// email (un seuil à 0 désactive l'email mais on garde un repère visuel).
+export function getStockStatus(category, count) {
+    const threshold = getLowStockThreshold(category);
+    const reference = threshold > 0 ? threshold * 2 : DEFAULT_THRESHOLD;
+    const percent = Math.min(100, Math.round((count / reference) * 100));
+
+    let status = 'ok';
+    if (count <= 0) status = 'out';
+    else if (threshold > 0 && count < threshold) status = 'low';
+
+    return { status, percent: Math.max(percent, count > 0 ? 4 : 0) };
+}
