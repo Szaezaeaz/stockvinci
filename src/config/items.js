@@ -10,10 +10,13 @@ export const ALL_STOCK_ITEMS = [
     { id: 'Dock', icon: '📦' },
     { id: 'Écran', icon: '🖥️' },
     { id: 'iPhone 16e', icon: '📱' },
+    { id: 'iPhone 17', icon: '📱' },
     { id: 'Samsung XCOVER 7', icon: '📱' },
     { id: 'Samsung A36', icon: '📱' },
     { id: '650 G11 Neuf', icon: '💻' },
     { id: '650 G11 Occasion', icon: '💻' },
     { id: '850 G8/G10 Occasion', icon: '💻' },
     { id: 'X360 Neuf', icon: '💻' },
+    { id: 'Zbook Neuf', icon: '💻' },
+    { id: 'Zbook Occasion', icon: '💻' },
 ];

@@ -639,7 +639,9 @@ input[type="checkbox"]:focus {
   flex-direction: column;
   gap: 8px;
   flex: 1;
-  justify-content: center;
+  justify-content: flex-start;
+  overflow-y: auto;
+  min-height: 0;
 }
 
 .group-row {
@@ -692,7 +694,8 @@ input[type="checkbox"]:focus {
 .col-span-2 {
   grid-column: span 2;
   aspect-ratio: 1.75 / 1;
-  /* PC group now has 4 model rows (650 G11 Neuf/Occasion, 850 G8/G10, X360) */
+  /* Fixed height comfortable for ~4 rows; group-content scrolls internally
+     if a group grows beyond that instead of the card growing forever. */
 }
 
 /* On mobile (2 columns), span 2 means full width */

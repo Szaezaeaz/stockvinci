@@ -128,6 +128,13 @@ export default function ReturnModal({
                             >
                                 850 G8/G10 Occ.
                             </button>
+                            <button
+                                type="button"
+                                className={`segment-btn ${quickPcModel === 'Zbook Occasion' ? 'active' : ''}`}
+                                onClick={() => setQuickPcModel('Zbook Occasion')}
+                            >
+                                Zbook Occ.
+                            </button>
                         </div>
                     </div>
 

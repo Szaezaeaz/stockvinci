@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { sendLowStockAlert } from '../services/email';
-import { LOW_STOCK_THRESHOLD } from '../config/thresholds';
+import { getLowStockThreshold } from '../config/thresholds';
 
 const STORAGE_KEY = 'vinci_inventory_v3';
 
@@ -10,6 +10,8 @@ const INITIAL_STATE = {
         '650 G11 Occasion': 5,
         '850 G8/G10 Occasion': 0,
         'X360 Neuf': 0,
+        'Zbook Neuf': 0,
+        'Zbook Occasion': 0,
         Casque: 10,
         Souris: 20,
         Clavier: 10,
@@ -20,7 +22,8 @@ const INITIAL_STATE = {
         Écran: 0,
         'iPhone 16e': 5,
         'Samsung XCOVER 7': 5,
-        'Samsung A36': 0
+        'Samsung A36': 0,
+        'iPhone 17': 0
     },
     history: [],
     loans: [] // Array of { id, name, date }
@@ -72,7 +75,7 @@ export function useInventory() {
 
 
 
-    const addLoan = (name, pcType, phoneType, accessories = { mouse: true, headset: true, bag: true }) => {
+    const addLoan = (name, pcType, phoneType, accessories = { mouse: true, headset: false, bag: true, backpack: false, screen: false, dock: false, keyboard: false }) => {
         setData(prev => {
             const stockUpdates = {};
             // We won't push individual history updates anymore.
@@ -91,7 +94,8 @@ export function useInventory() {
 
                 // Check for alert on this item (pre-calculation)
                 const newQty = currentQty - 1;
-                if (currentQty >= LOW_STOCK_THRESHOLD && newQty < LOW_STOCK_THRESHOLD) {
+                const threshold = getLowStockThreshold(item);
+                if (threshold > 0 && currentQty >= threshold && newQty < threshold) {
                     sendLowStockAlert(item, newQty);
                 }
 
@@ -104,9 +108,14 @@ export function useInventory() {
             const canDeductMouse = accessories.mouse ? processDeduction('Souris') : true;
             const canDeductHeadset = accessories.headset ? processDeduction('Casque') : true;
             const canDeductBag = accessories.bag ? processDeduction('Sacoche') : true;
+            const canDeductBackpack = accessories.backpack ? processDeduction('Sac à Dos') : true;
+            const canDeductScreen = accessories.screen ? processDeduction('Écran') : true;
+            const canDeductDock = accessories.dock ? processDeduction('Dock') : true;
+            const canDeductKeyboard = accessories.keyboard ? processDeduction('Clavier') : true;
             const canDeductPhone = phoneType !== 'Aucun' ? processDeduction(phoneType) : true;
 
-            if (!canDeductPC || !canDeductMouse || !canDeductHeadset || !canDeductBag || !canDeductPhone) {
+            if (!canDeductPC || !canDeductMouse || !canDeductHeadset || !canDeductBag || !canDeductBackpack
+                || !canDeductScreen || !canDeductDock || !canDeductKeyboard || !canDeductPhone) {
                 alert("Stock insuffisant pour un ou plusieurs articles !");
                 return prev;
             }
@@ -162,7 +171,8 @@ export function useInventory() {
 
                 // Alerts logic
                 const newQty = currentStock - count;
-                if (currentStock >= LOW_STOCK_THRESHOLD && newQty < LOW_STOCK_THRESHOLD) {
+                const threshold = getLowStockThreshold(id);
+                if (threshold > 0 && currentStock >= threshold && newQty < threshold) {
                     sendLowStockAlert(id, newQty);
                 }
 

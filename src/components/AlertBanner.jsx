@@ -1,8 +1,11 @@
 import React from 'react';
-import { LOW_STOCK_THRESHOLD } from '../config/thresholds';
+import { getLowStockThreshold } from '../config/thresholds';
 
 export default function AlertBanner({ stock }) {
-    const lowItems = Object.entries(stock).filter(([, count]) => (count || 0) < LOW_STOCK_THRESHOLD);
+    const lowItems = Object.entries(stock).filter(([name, count]) => {
+        const threshold = getLowStockThreshold(name);
+        return threshold > 0 && (count || 0) < threshold;
+    });
 
     if (lowItems.length === 0) return null;
 

@@ -2,11 +2,11 @@ import React, { useState } from 'react';
 import GlobalWithdrawModal from './GlobalWithdrawModal';
 import ReturnModal from './ReturnModal';
 import AddMaterielModal from './AddMaterielModal';
-import { LOW_STOCK_THRESHOLD } from '../config/thresholds';
+import { getLowStockThreshold } from '../config/thresholds';
 
 const DASHBOARD_ITEMS = [
-    { type: 'group', title: 'PC', items: ['650 G11 Neuf', '650 G11 Occasion', '850 G8/G10 Occasion', 'X360 Neuf'], span: 2, icon: '💻' },
-    { type: 'group', title: 'TÉLÉPHONES', items: ['iPhone 16e', 'Samsung XCOVER 7', 'Samsung A36'], span: 2, icon: '📱' },
+    { type: 'group', title: 'PC', items: ['650 G11 Neuf', '650 G11 Occasion', '850 G8/G10 Occasion', 'X360 Neuf', 'Zbook Neuf', 'Zbook Occasion'], span: 2, icon: '💻' },
+    { type: 'group', title: 'TÉLÉPHONES', items: ['iPhone 16e', 'Samsung XCOVER 7', 'Samsung A36', 'iPhone 17'], span: 2, icon: '📱' },
     { type: 'single', id: 'Casque', icon: '🎧' },
     { type: 'single', id: 'Clavier', icon: '⌨️' },
     { type: 'single', id: 'Souris', icon: '🖱️' },
@@ -56,7 +56,8 @@ export default function StockDashboard({
                 const spanClass = item.span === 2 ? 'col-span-2' : '';
 
                 if (item.type === 'single') {
-                    const isLowStock = (stock[item.id] || 0) < LOW_STOCK_THRESHOLD;
+                    const threshold = getLowStockThreshold(item.id);
+                    const isLowStock = threshold > 0 && (stock[item.id] || 0) < threshold;
                     return (
                         <div key={item.id} className={`stock-card ${spanClass} ${isLowStock ? 'low-stock' : ''}`}>
                             <h3>{item.icon} {item.id}</h3>

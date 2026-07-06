@@ -1,6 +1,17 @@
 import React, { useState } from 'react';
 import Modal from './Modal';
 
+const PC_TYPE_OPTIONS = [
+    '650 G11 Neuf',
+    '650 G11 Occasion',
+    '850 G8/G10 Occasion',
+    'X360 Neuf',
+    'Zbook Neuf',
+    'Zbook Occasion'
+];
+
+const PHONE_TYPE_OPTIONS = ['Aucun', 'iPhone 16e', 'iPhone 17', 'Samsung XCOVER 7', 'Samsung A36'];
+
 export default function LoanedPCs({ loans, onAdd, onRemove }) {
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [name, setName] = useState('');
@@ -9,12 +20,26 @@ export default function LoanedPCs({ loans, onAdd, onRemove }) {
     const [searchQuery, setSearchQuery] = useState('');
 
     const [includeMouse, setIncludeMouse] = useState(true);
-    const [includeHeadset, setIncludeHeadset] = useState(true);
+    const [includeHeadset, setIncludeHeadset] = useState(false);
     const [includeBag, setIncludeBag] = useState(true);
+    const [includeBackpack, setIncludeBackpack] = useState(false);
+    const [includeScreen, setIncludeScreen] = useState(false);
+    const [includeDock, setIncludeDock] = useState(false);
+    const [includeKeyboard, setIncludeKeyboard] = useState(false);
 
     const filteredLoans = loans.filter(loan =>
         (loan.name || loan.recipient || '').toLowerCase().includes(searchQuery.toLowerCase())
     );
+
+    const resetAccessories = () => {
+        setIncludeMouse(true);
+        setIncludeHeadset(false);
+        setIncludeBag(true);
+        setIncludeBackpack(false);
+        setIncludeScreen(false);
+        setIncludeDock(false);
+        setIncludeKeyboard(false);
+    };
 
     const handleSubmit = (e) => {
         e.preventDefault();
@@ -22,15 +47,16 @@ export default function LoanedPCs({ loans, onAdd, onRemove }) {
         onAdd(name.trim(), pcType, phoneType, {
             mouse: includeMouse,
             headset: includeHeadset,
-            bag: includeBag
+            bag: includeBag,
+            backpack: includeBackpack,
+            screen: includeScreen,
+            dock: includeDock,
+            keyboard: includeKeyboard
         });
         setName('');
         setPcType('650 G11 Neuf');
         setPhoneType('Aucun');
-        // Reset defaults
-        setIncludeMouse(true);
-        setIncludeHeadset(true);
-        setIncludeBag(true);
+        resetAccessories();
         setIsModalOpen(false); // Close modal on success
     };
 
@@ -63,41 +89,20 @@ export default function LoanedPCs({ loans, onAdd, onRemove }) {
 
                     <div className="form-group">
                         <label>Type de PC</label>
-                        <div className="segmented-control">
-                            <button
-                                type="button"
-                                className={`segment-btn ${pcType === '650 G11 Neuf' ? 'active' : ''}`}
-                                onClick={() => setPcType('650 G11 Neuf')}
-                            >
-                                650 G11 Neuf
-                            </button>
-                            <button
-                                type="button"
-                                className={`segment-btn ${pcType === '650 G11 Occasion' ? 'active' : ''}`}
-                                onClick={() => setPcType('650 G11 Occasion')}
-                            >
-                                650 G11 Occ.
-                            </button>
-                            <button
-                                type="button"
-                                className={`segment-btn ${pcType === '850 G8/G10 Occasion' ? 'active' : ''}`}
-                                onClick={() => setPcType('850 G8/G10 Occasion')}
-                            >
-                                850 G8/G10 Occ.
-                            </button>
-                            <button
-                                type="button"
-                                className={`segment-btn ${pcType === 'X360 Neuf' ? 'active' : ''}`}
-                                onClick={() => setPcType('X360 Neuf')}
-                            >
-                                X360 Neuf
-                            </button>
-                        </div>
+                        <select
+                            className="loan-input full-width"
+                            value={pcType}
+                            onChange={(e) => setPcType(e.target.value)}
+                        >
+                            {PC_TYPE_OPTIONS.map(option => (
+                                <option key={option} value={option}>{option}</option>
+                            ))}
+                        </select>
                     </div>
 
                     <div className="form-group">
                         <label>Accessoires inclus</label>
-                        <div style={{ display: 'flex', gap: '15px', marginTop: '5px' }}>
+                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '12px 15px', marginTop: '5px' }}>
                             <label style={{ display: 'flex', alignItems: 'center', fontWeight: 'normal', cursor: 'pointer' }}>
                                 <input
                                     type="checkbox"
@@ -105,6 +110,22 @@ export default function LoanedPCs({ loans, onAdd, onRemove }) {
                                     onChange={(e) => setIncludeMouse(e.target.checked)}
                                 />
                                 Souris
+                            </label>
+                            <label style={{ display: 'flex', alignItems: 'center', fontWeight: 'normal', cursor: 'pointer' }}>
+                                <input
+                                    type="checkbox"
+                                    checked={includeBag}
+                                    onChange={(e) => setIncludeBag(e.target.checked)}
+                                />
+                                Sacoche
+                            </label>
+                            <label style={{ display: 'flex', alignItems: 'center', fontWeight: 'normal', cursor: 'pointer' }}>
+                                <input
+                                    type="checkbox"
+                                    checked={includeBackpack}
+                                    onChange={(e) => setIncludeBackpack(e.target.checked)}
+                                />
+                                Sac à Dos
                             </label>
                             <label style={{ display: 'flex', alignItems: 'center', fontWeight: 'normal', cursor: 'pointer' }}>
                                 <input
@@ -117,46 +138,41 @@ export default function LoanedPCs({ loans, onAdd, onRemove }) {
                             <label style={{ display: 'flex', alignItems: 'center', fontWeight: 'normal', cursor: 'pointer' }}>
                                 <input
                                     type="checkbox"
-                                    checked={includeBag}
-                                    onChange={(e) => setIncludeBag(e.target.checked)}
+                                    checked={includeScreen}
+                                    onChange={(e) => setIncludeScreen(e.target.checked)}
                                 />
-                                Sacoche
+                                Écran
+                            </label>
+                            <label style={{ display: 'flex', alignItems: 'center', fontWeight: 'normal', cursor: 'pointer' }}>
+                                <input
+                                    type="checkbox"
+                                    checked={includeDock}
+                                    onChange={(e) => setIncludeDock(e.target.checked)}
+                                />
+                                Dock
+                            </label>
+                            <label style={{ display: 'flex', alignItems: 'center', fontWeight: 'normal', cursor: 'pointer' }}>
+                                <input
+                                    type="checkbox"
+                                    checked={includeKeyboard}
+                                    onChange={(e) => setIncludeKeyboard(e.target.checked)}
+                                />
+                                Clavier
                             </label>
                         </div>
                     </div>
 
                     <div className="form-group">
                         <label>Téléphone</label>
-                        <div className="segmented-control">
-                            <button
-                                type="button"
-                                className={`segment-btn ${phoneType === 'Aucun' ? 'active' : ''}`}
-                                onClick={() => setPhoneType('Aucun')}
-                            >
-                                Aucun
-                            </button>
-                            <button
-                                type="button"
-                                className={`segment-btn ${phoneType === 'iPhone 16e' ? 'active' : ''}`}
-                                onClick={() => setPhoneType('iPhone 16e')}
-                            >
-                                iPhone 16e
-                            </button>
-                            <button
-                                type="button"
-                                className={`segment-btn ${phoneType === 'Samsung XCOVER 7' ? 'active' : ''}`}
-                                onClick={() => setPhoneType('Samsung XCOVER 7')}
-                            >
-                                XCOVER 7
-                            </button>
-                            <button
-                                type="button"
-                                className={`segment-btn ${phoneType === 'Samsung A36' ? 'active' : ''}`}
-                                onClick={() => setPhoneType('Samsung A36')}
-                            >
-                                A36
-                            </button>
-                        </div>
+                        <select
+                            className="loan-input full-width"
+                            value={phoneType}
+                            onChange={(e) => setPhoneType(e.target.value)}
+                        >
+                            {PHONE_TYPE_OPTIONS.map(option => (
+                                <option key={option} value={option}>{option}</option>
+                            ))}
+                        </select>
                     </div>
 
                     <button type="submit" className="btn-add full-width-btn">Confirmer</button>
