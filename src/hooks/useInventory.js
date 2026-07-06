@@ -8,7 +8,8 @@ const INITIAL_STATE = {
     stock: {
         '650 G11 Neuf': 5,
         '650 G11 Occasion': 5,
-        '850 G8 Occasion': 0,
+        '850 G8/G10 Occasion': 0,
+        'X360 Neuf': 0,
         Casque: 10,
         Souris: 20,
         Clavier: 10,
@@ -32,7 +33,8 @@ const LEGACY_KEY_MIGRATIONS = {
     'PC Neuf': '650 G11 Neuf',
     'PC Occasion': '650 G11 Occasion',
     Iphone: 'iPhone 16e',
-    Xcover: 'Samsung XCOVER 7'
+    Xcover: 'Samsung XCOVER 7',
+    '850 G8 Occasion': '850 G8/G10 Occasion'
 };
 
 function migrateLegacyStock(stock) {

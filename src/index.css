@@ -691,8 +691,8 @@ input[type="checkbox"]:focus {
 /* Grid Spanning */
 .col-span-2 {
   grid-column: span 2;
-  aspect-ratio: 2.3 / 1;
-  /* Rows no longer have +/- controls, so a shorter card fits 3 model rows */
+  aspect-ratio: 1.75 / 1;
+  /* PC group now has 4 model rows (650 G11 Neuf/Occasion, 850 G8/G10, X360) */
 }
 
 /* On mobile (2 columns), span 2 means full width */

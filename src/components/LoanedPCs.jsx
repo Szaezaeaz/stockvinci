@@ -80,10 +80,17 @@ export default function LoanedPCs({ loans, onAdd, onRemove }) {
                             </button>
                             <button
                                 type="button"
-                                className={`segment-btn ${pcType === '850 G8 Occasion' ? 'active' : ''}`}
-                                onClick={() => setPcType('850 G8 Occasion')}
+                                className={`segment-btn ${pcType === '850 G8/G10 Occasion' ? 'active' : ''}`}
+                                onClick={() => setPcType('850 G8/G10 Occasion')}
                             >
-                                850 G8 Occ.
+                                850 G8/G10 Occ.
+                            </button>
+                            <button
+                                type="button"
+                                className={`segment-btn ${pcType === 'X360 Neuf' ? 'active' : ''}`}
+                                onClick={() => setPcType('X360 Neuf')}
+                            >
+                                X360 Neuf
                             </button>
                         </div>
                     </div>

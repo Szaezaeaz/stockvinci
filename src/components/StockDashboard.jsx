@@ -5,7 +5,7 @@ import AddMaterielModal from './AddMaterielModal';
 import { LOW_STOCK_THRESHOLD } from '../config/thresholds';
 
 const DASHBOARD_ITEMS = [
-    { type: 'group', title: 'PC', items: ['650 G11 Neuf', '650 G11 Occasion', '850 G8 Occasion'], span: 2, icon: '💻' },
+    { type: 'group', title: 'PC', items: ['650 G11 Neuf', '650 G11 Occasion', '850 G8/G10 Occasion', 'X360 Neuf'], span: 2, icon: '💻' },
     { type: 'group', title: 'TÉLÉPHONES', items: ['iPhone 16e', 'Samsung XCOVER 7', 'Samsung A36'], span: 2, icon: '📱' },
     { type: 'single', id: 'Casque', icon: '🎧' },
     { type: 'single', id: 'Clavier', icon: '⌨️' },

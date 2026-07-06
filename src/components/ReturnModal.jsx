@@ -123,10 +123,10 @@ export default function ReturnModal({
                             </button>
                             <button
                                 type="button"
-                                className={`segment-btn ${quickPcModel === '850 G8 Occasion' ? 'active' : ''}`}
-                                onClick={() => setQuickPcModel('850 G8 Occasion')}
+                                className={`segment-btn ${quickPcModel === '850 G8/G10 Occasion' ? 'active' : ''}`}
+                                onClick={() => setQuickPcModel('850 G8/G10 Occasion')}
                             >
-                                850 G8 Occ.
+                                850 G8/G10 Occ.
                             </button>
                         </div>
                     </div>

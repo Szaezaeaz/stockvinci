@@ -14,5 +14,6 @@ export const ALL_STOCK_ITEMS = [
     { id: 'Samsung A36', icon: '📱' },
     { id: '650 G11 Neuf', icon: '💻' },
     { id: '650 G11 Occasion', icon: '💻' },
-    { id: '850 G8 Occasion', icon: '💻' },
+    { id: '850 G8/G10 Occasion', icon: '💻' },
+    { id: 'X360 Neuf', icon: '💻' },
 ];
