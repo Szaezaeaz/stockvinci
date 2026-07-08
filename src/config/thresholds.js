@@ -1,43 +1,65 @@
-// Seuil de stock bas par catégorie : en dessous de cette valeur, l'article
-// est affiché en alerte et un email est envoyé. Un seuil de 0 désactive
-// l'alerte pour cette catégorie (ex: PC d'occasion, pas besoin de recommander).
-const CATEGORY_THRESHOLDS = {
+import { PHONE_CASE_INFO } from './phoneAccessories';
+
+// Seuils par catégorie : { max, threshold }.
+// - threshold ("seuil critique") : en dessous, l'article est affiché en
+//   alerte et un email est envoyé. 0 désactive l'alerte (ex: PC d'occasion).
+// - max ("seuil max") : plafond utilisé dans Ajout Matériel et pour la
+//   longueur des barres de niveau.
+const CATEGORY_LIMITS = {
     // PC
-    '650 G11 Neuf': 5,
-    '650 G11 Occasion': 0,
-    '850 G8/G10 Occasion': 0,
-    'Zbook Neuf': 5,
-    'Zbook Occasion': 0,
-    'X360 Neuf': 2,
+    '650 G11 Neuf': { max: 50, threshold: 30 },
+    '650 G11 Occasion': { max: 50, threshold: 30 },
+    '850 G8/G10 Occasion': { max: 50, threshold: 0 },
+    'X360 Neuf': { max: 4, threshold: 1 },
+    'Zbook Neuf': { max: 4, threshold: 2 },
+    'Zbook Occasion': { max: 4, threshold: 2 },
     // Téléphones
-    'iPhone 16e': 5,
-    'iPhone 17': 1,
-    'Samsung XCOVER 7': 5,
-    'Samsung A36': 3,
+    'iPhone 16e': { max: 15, threshold: 5 },
+    'iPhone 17': { max: 2, threshold: 1 },
+    'Samsung XCOVER 7': { max: 20, threshold: 5 },
+    'Samsung A36': { max: 5, threshold: 2 },
     // Accessoires
-    Écran: 3,
+    Casque: { max: 10, threshold: 2 },
+    Clavier: { max: 10, threshold: 2 },
+    Sacoche: { max: 20, threshold: 6 },
+    Souris: { max: 20, threshold: 6 },
+    'Sac à Dos': { max: 5, threshold: 1 },
+    Dock: { max: 10, threshold: 3 },
+    Écran: { max: 10, threshold: 3 },
+    Chargeur: { max: 20, threshold: 6 },
 };
 
-// Seuil par défaut pour toute catégorie non listée ci-dessus (matériel
-// classique : Casque, Clavier, Souris, Sacoche, Sac à Dos, Chargeur, Dock).
-const DEFAULT_THRESHOLD = 10;
-
-export function getLowStockThreshold(category) {
-    return category in CATEGORY_THRESHOLDS ? CATEGORY_THRESHOLDS[category] : DEFAULT_THRESHOLD;
+// Coques/vitres : mêmes seuils que le téléphone associé.
+for (const [phone, info] of Object.entries(PHONE_CASE_INFO)) {
+    const phoneLimits = CATEGORY_LIMITS[phone];
+    if (!phoneLimits) continue;
+    if (info.bundled) {
+        CATEGORY_LIMITS[info.comboItem] = phoneLimits;
+    } else {
+        CATEGORY_LIMITS[info.caseItem] = phoneLimits;
+        CATEGORY_LIMITS[info.screenItem] = phoneLimits;
+    }
 }
 
-// Quantité "max" recommandée par catégorie = seuil x 4 (seuil par défaut pour
-// les catégories dont l'alerte est désactivée, ex: PC d'occasion, pour garder
-// un plafond raisonnable même sans seuil d'alerte).
+// Seuils par défaut pour toute catégorie non listée ci-dessus.
+const DEFAULT_LIMITS = { max: 40, threshold: 10 };
+
+function getLimits(category) {
+    return CATEGORY_LIMITS[category] || DEFAULT_LIMITS;
+}
+
+export function getLowStockThreshold(category) {
+    return getLimits(category).threshold;
+}
+
 export function getMaxStock(category) {
-    const threshold = getLowStockThreshold(category);
-    return (threshold > 0 ? threshold : DEFAULT_THRESHOLD) * 4;
+    return getLimits(category).max;
 }
 
 // Statut visuel d'une catégorie (couleur + longueur de la barre de niveau,
-// désormais exprimée par rapport au max recommandé = seuil x4). Le statut
-// reste basé sur le seuil d'alerte (indépendant du max), un seuil à 0
-// désactive l'email mais on garde quand même un repère visuel.
+// exprimée par rapport au max). Le statut reste basé sur le seuil critique
+// (indépendant du max) ; un seuil à 0 désactive l'email mais on garde
+// quand même un repère visuel.
 export function getStockStatus(category, count) {
     const threshold = getLowStockThreshold(category);
     const max = getMaxStock(category);

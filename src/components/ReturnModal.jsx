@@ -106,11 +106,6 @@ export default function ReturnModal({
                 </div>
             ) : (
                 <form onSubmit={handleQuickSubmit}>
-                    <div className="alert-box" style={{ background: '#f0fdf4', borderColor: '#bbf7d0', color: '#166534', marginBottom: '15px' }}>
-                        Ce formulaire ajoute : <br />
-                        <strong>+1 {quickPcModel}</strong> + Accessoires cochés.
-                    </div>
-
                     <div className="form-group">
                         <label>Modèle de PC rendu</label>
                         <div className="segmented-control" style={{ marginTop: '5px', marginBottom: '15px' }}>
@@ -176,7 +171,7 @@ export default function ReturnModal({
                         </div>
                     </div>
 
-                    <button type="submit" className="btn-add full-width-btn" style={{ background: '#22c55e', marginTop: '20px' }}>
+                    <button type="submit" className="btn-add full-width-btn" style={{ background: 'linear-gradient(135deg, #3b82f6, #1d4ed8)', marginTop: '20px' }}>
                         Valider le Retour
                     </button>
                 </form>
