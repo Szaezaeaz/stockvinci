@@ -34,13 +34,14 @@ export function getMaxStock(category) {
     return (threshold > 0 ? threshold : DEFAULT_THRESHOLD) * 4;
 }
 
-// Statut visuel d'une catégorie (couleur + longueur de la barre de niveau).
-// Sert de repère "santé du stock" à l'écran, indépendant du seuil d'alerte
-// email (un seuil à 0 désactive l'email mais on garde un repère visuel).
+// Statut visuel d'une catégorie (couleur + longueur de la barre de niveau,
+// désormais exprimée par rapport au max recommandé = seuil x4). Le statut
+// reste basé sur le seuil d'alerte (indépendant du max), un seuil à 0
+// désactive l'email mais on garde quand même un repère visuel.
 export function getStockStatus(category, count) {
     const threshold = getLowStockThreshold(category);
-    const reference = threshold > 0 ? threshold * 2 : DEFAULT_THRESHOLD;
-    const percent = Math.min(100, Math.round((count / reference) * 100));
+    const max = getMaxStock(category);
+    const percent = Math.min(100, Math.round((count / max) * 100));
 
     let status = 'ok';
     if (count <= 0) status = 'out';

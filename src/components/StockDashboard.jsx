@@ -2,7 +2,7 @@ import React, { useMemo, useState } from 'react';
 import GlobalWithdrawModal from './GlobalWithdrawModal';
 import ReturnModal from './ReturnModal';
 import AddMaterielModal from './AddMaterielModal';
-import { getStockStatus } from '../config/thresholds';
+import { getMaxStock, getStockStatus } from '../config/thresholds';
 import { PHONE_CASE_INFO } from '../config/phoneAccessories';
 import { getStockStats } from '../utils/stockStats';
 
@@ -39,6 +39,7 @@ function itemIcon(key, sectionIcon) {
 
 function CaseSubRow({ label, itemKey, stock }) {
     const count = stock[itemKey] || 0;
+    const max = getMaxStock(itemKey);
     const { status, percent } = getStockStatus(itemKey, count);
     return (
         <div className="item-subrow">
@@ -47,7 +48,9 @@ function CaseSubRow({ label, itemKey, stock }) {
                 <div className="item-subrow-bar-track">
                     <div className={`item-subrow-bar-fill status-${status}`} style={{ width: `${percent}%` }} />
                 </div>
-                <span className={`item-subrow-count status-${status}`}>{count}</span>
+                <span className={`item-subrow-count status-${status}`}>
+                    {count}<span className="item-count-max"> / {max}</span>
+                </span>
             </div>
         </div>
     );
@@ -130,6 +133,7 @@ export default function StockDashboard({
                     <div className="section-card-body">
                         {section.items.map(key => {
                             const count = stock[key] || 0;
+                            const max = getMaxStock(key);
                             const { status, percent } = getStockStatus(key, count);
                             const caseInfo = section.withCases ? PHONE_CASE_INFO[key] : null;
                             return (
@@ -139,7 +143,9 @@ export default function StockDashboard({
                                         <div className="item-row-main">
                                             <div className="item-row-top">
                                                 <span className="item-row-label">{key}</span>
-                                                <span className={`item-row-count status-${status}`}>{count}</span>
+                                                <span className={`item-row-count status-${status}`}>
+                                                    {count}<span className="item-count-max"> / {max}</span>
+                                                </span>
                                             </div>
                                             <div className="item-row-bar-track">
                                                 <div className={`item-row-bar-fill status-${status}`} style={{ width: `${percent}%` }} />
