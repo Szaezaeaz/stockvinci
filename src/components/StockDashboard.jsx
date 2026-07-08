@@ -47,24 +47,13 @@ function itemIcon(key, sectionIcon) {
 }
 
 // Sous-ligne nichée sous un article principal (coque/vitre d'un téléphone,
-// ou PC d'occasion sous son modèle Neuf). Sans seuil/max (PC d'occasion),
-// elle n'affiche que le libellé et la quantité, sans barre ni "/ max".
+// ou PC d'occasion sous son modèle Neuf). Les catégories sans seuil/max
+// (PC d'occasion) affichent quand même une barre (pleine à 20 unités),
+// juste sans le "/ max".
 function SubRow({ label, itemKey, stock }) {
     const count = stock[itemKey] || 0;
     const limited = hasStockLimits(itemKey);
-
-    if (!limited) {
-        return (
-            <div className="item-subrow">
-                <span className="item-subrow-label">{label}</span>
-                <div className="item-subrow-main item-subrow-main-simple">
-                    <span className="item-subrow-count">{count}</span>
-                </div>
-            </div>
-        );
-    }
-
-    const max = getMaxStock(itemKey);
+    const max = limited ? getMaxStock(itemKey) : null;
     const { status, percent } = getStockStatus(itemKey, count);
     return (
         <div className="item-subrow">
@@ -74,7 +63,7 @@ function SubRow({ label, itemKey, stock }) {
                     <div className={`item-subrow-bar-fill status-${status}`} style={{ width: `${percent}%` }} />
                 </div>
                 <span className={`item-subrow-count status-${status}`}>
-                    {count}<span className="item-count-max"> / {max}</span>
+                    {count}{limited && <span className="item-count-max"> / {max}</span>}
                 </span>
             </div>
         </div>
@@ -174,11 +163,9 @@ export default function StockDashboard({
                                                     {count}{limited && <span className="item-count-max"> / {max}</span>}
                                                 </span>
                                             </div>
-                                            {limited && (
-                                                <div className="item-row-bar-track">
-                                                    <div className={`item-row-bar-fill status-${status}`} style={{ width: `${percent}%` }} />
-                                                </div>
-                                            )}
+                                            <div className="item-row-bar-track">
+                                                <div className={`item-row-bar-fill status-${status}`} style={{ width: `${percent}%` }} />
+                                            </div>
                                         </div>
                                     </div>
                                     {(caseInfo || occasionKey) && (

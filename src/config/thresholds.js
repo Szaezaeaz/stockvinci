@@ -69,14 +69,20 @@ export function getMaxStock(category) {
     return getLimits(category).max;
 }
 
+// Échelle utilisée pour la barre des catégories sans limite (PC d'occasion) :
+// la barre est pleine à partir de 20 unités, sans qu'aucun seuil ne soit
+// affiché ni appliqué (juste un repère visuel de remplissage).
+const UNLIMITED_BAR_SCALE = 20;
+
 // Statut visuel d'une catégorie (couleur + longueur de la barre de niveau,
 // exprimée par rapport au max). Le statut reste basé sur le seuil critique
 // (indépendant du max) ; un seuil à 0 désactive l'email mais on garde
 // quand même un repère visuel. Les catégories sans limite (PC d'occasion)
-// n'ont pas de barre significative : on renvoie juste rupture ou non.
+// n'ont pas de seuil critique : seul un état "rupture" (0) est possible.
 export function getStockStatus(category, count) {
     if (UNLIMITED_CATEGORIES.has(category)) {
-        return { status: count <= 0 ? 'out' : 'ok', percent: 0 };
+        const percent = Math.min(100, Math.round((count / UNLIMITED_BAR_SCALE) * 100));
+        return { status: count <= 0 ? 'out' : 'ok', percent: Math.max(percent, count > 0 ? 4 : 0) };
     }
 
     const threshold = getLowStockThreshold(category);
