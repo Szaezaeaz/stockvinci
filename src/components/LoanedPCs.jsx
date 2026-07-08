@@ -7,6 +7,7 @@ const PC_TYPE_OPTIONS = [
     '650 G11 Occasion',
     '850 G8/G10 Occasion',
     'X360 Neuf',
+    'X360 Occasion',
     'Zbook Neuf',
     'Zbook Occasion'
 ];

@@ -2,7 +2,7 @@ import React, { useMemo, useState } from 'react';
 import GlobalWithdrawModal from './GlobalWithdrawModal';
 import ReturnModal from './ReturnModal';
 import AddMaterielModal from './AddMaterielModal';
-import { getMaxStock, getStockStatus } from '../config/thresholds';
+import { getMaxStock, getStockStatus, hasStockLimits } from '../config/thresholds';
 import { PHONE_CASE_INFO } from '../config/phoneAccessories';
 import { getStockStats } from '../utils/stockStats';
 
@@ -11,7 +11,8 @@ const DASHBOARD_SECTIONS = [
         title: 'PC portables',
         icon: '💻',
         unitLabel: 'modèles',
-        items: ['650 G11 Neuf', '650 G11 Occasion', '850 G8/G10 Occasion', 'X360 Neuf', 'Zbook Neuf', 'Zbook Occasion']
+        items: ['650 G11 Neuf', '850 G8/G10 Occasion', 'X360 Neuf', 'Zbook Neuf'],
+        withOccasion: true
     },
     {
         title: 'Téléphones',
@@ -28,6 +29,14 @@ const DASHBOARD_SECTIONS = [
     }
 ];
 
+// PC Neuf -> PC Occasion correspondant, affiché en sous-ligne (le 850 G8/G10
+// n'a pas d'équivalent Neuf, il reste une ligne principale à part).
+const PC_OCCASION_PAIRS = {
+    '650 G11 Neuf': '650 G11 Occasion',
+    'X360 Neuf': 'X360 Occasion',
+    'Zbook Neuf': 'Zbook Occasion'
+};
+
 const ITEM_ICONS = {
     'Casque': '🎧', 'Clavier': '⌨️', 'Souris': '🖱️', 'Sacoche': '💼', 'Sac à Dos': '🎒',
     'Écran': '🖥️', 'Chargeur': '🔌', 'Dock': '📦'
@@ -37,8 +46,24 @@ function itemIcon(key, sectionIcon) {
     return ITEM_ICONS[key] || sectionIcon;
 }
 
-function CaseSubRow({ label, itemKey, stock }) {
+// Sous-ligne nichée sous un article principal (coque/vitre d'un téléphone,
+// ou PC d'occasion sous son modèle Neuf). Sans seuil/max (PC d'occasion),
+// elle n'affiche que le libellé et la quantité, sans barre ni "/ max".
+function SubRow({ label, itemKey, stock }) {
     const count = stock[itemKey] || 0;
+    const limited = hasStockLimits(itemKey);
+
+    if (!limited) {
+        return (
+            <div className="item-subrow">
+                <span className="item-subrow-label">{label}</span>
+                <div className="item-subrow-main item-subrow-main-simple">
+                    <span className="item-subrow-count">{count}</span>
+                </div>
+            </div>
+        );
+    }
+
     const max = getMaxStock(itemKey);
     const { status, percent } = getStockStatus(itemKey, count);
     return (
@@ -133,9 +158,11 @@ export default function StockDashboard({
                     <div className="section-card-body">
                         {section.items.map(key => {
                             const count = stock[key] || 0;
-                            const max = getMaxStock(key);
+                            const limited = hasStockLimits(key);
+                            const max = limited ? getMaxStock(key) : null;
                             const { status, percent } = getStockStatus(key, count);
                             const caseInfo = section.withCases ? PHONE_CASE_INFO[key] : null;
+                            const occasionKey = section.withOccasion ? PC_OCCASION_PAIRS[key] : null;
                             return (
                                 <div key={key} className="item-row-group">
                                     <div className="item-row">
@@ -144,23 +171,30 @@ export default function StockDashboard({
                                             <div className="item-row-top">
                                                 <span className="item-row-label">{key}</span>
                                                 <span className={`item-row-count status-${status}`}>
-                                                    {count}<span className="item-count-max"> / {max}</span>
+                                                    {count}{limited && <span className="item-count-max"> / {max}</span>}
                                                 </span>
                                             </div>
-                                            <div className="item-row-bar-track">
-                                                <div className={`item-row-bar-fill status-${status}`} style={{ width: `${percent}%` }} />
-                                            </div>
+                                            {limited && (
+                                                <div className="item-row-bar-track">
+                                                    <div className={`item-row-bar-fill status-${status}`} style={{ width: `${percent}%` }} />
+                                                </div>
+                                            )}
                                         </div>
                                     </div>
-                                    {caseInfo && (
+                                    {(caseInfo || occasionKey) && (
                                         <div className="item-subrows">
-                                            {caseInfo.bundled ? (
-                                                <CaseSubRow label="Coque + Vitre" itemKey={caseInfo.comboItem} stock={stock} />
-                                            ) : (
-                                                <>
-                                                    <CaseSubRow label="Coque" itemKey={caseInfo.caseItem} stock={stock} />
-                                                    <CaseSubRow label="Vitre" itemKey={caseInfo.screenItem} stock={stock} />
-                                                </>
+                                            {caseInfo && (
+                                                caseInfo.bundled ? (
+                                                    <SubRow label="Coque + Vitre" itemKey={caseInfo.comboItem} stock={stock} />
+                                                ) : (
+                                                    <>
+                                                        <SubRow label="Coque" itemKey={caseInfo.caseItem} stock={stock} />
+                                                        <SubRow label="Vitre" itemKey={caseInfo.screenItem} stock={stock} />
+                                                    </>
+                                                )
+                                            )}
+                                            {occasionKey && (
+                                                <SubRow label="Occasion" itemKey={occasionKey} stock={stock} />
                                             )}
                                         </div>
                                     )}

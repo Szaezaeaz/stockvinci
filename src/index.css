@@ -640,6 +640,10 @@ input[type="checkbox"]:focus {
   min-width: 0;
 }
 
+.item-subrow-main-simple {
+  justify-content: flex-end;
+}
+
 .item-subrow-bar-track {
   flex: 1;
   height: 4px;

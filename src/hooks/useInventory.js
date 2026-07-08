@@ -11,6 +11,7 @@ const INITIAL_STATE = {
         '650 G11 Occasion': 5,
         '850 G8/G10 Occasion': 0,
         'X360 Neuf': 0,
+        'X360 Occasion': 0,
         'Zbook Neuf': 0,
         'Zbook Occasion': 0,
         Casque: 10,

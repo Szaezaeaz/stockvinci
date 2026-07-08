@@ -17,6 +17,7 @@ export const ALL_STOCK_ITEMS = [
     { id: '650 G11 Occasion', icon: '💻' },
     { id: '850 G8/G10 Occasion', icon: '💻' },
     { id: 'X360 Neuf', icon: '💻' },
+    { id: 'X360 Occasion', icon: '💻' },
     { id: 'Zbook Neuf', icon: '💻' },
     { id: 'Zbook Occasion', icon: '💻' },
     { id: 'Coque+Vitre iPhone 16e', icon: '🛡️' },

@@ -125,6 +125,13 @@ export default function ReturnModal({
                             </button>
                             <button
                                 type="button"
+                                className={`segment-btn ${quickPcModel === 'X360 Occasion' ? 'active' : ''}`}
+                                onClick={() => setQuickPcModel('X360 Occasion')}
+                            >
+                                X360 Occ.
+                            </button>
+                            <button
+                                type="button"
                                 className={`segment-btn ${quickPcModel === 'Zbook Occasion' ? 'active' : ''}`}
                                 onClick={() => setQuickPcModel('Zbook Occasion')}
                             >

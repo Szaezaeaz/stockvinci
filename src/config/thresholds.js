@@ -2,17 +2,15 @@ import { PHONE_CASE_INFO } from './phoneAccessories';
 
 // Seuils par catégorie : { max, threshold }.
 // - threshold ("seuil critique") : en dessous, l'article est affiché en
-//   alerte et un email est envoyé. 0 désactive l'alerte (ex: PC d'occasion).
+//   alerte et un email est envoyé. 0 désactive l'alerte.
 // - max ("seuil max") : plafond utilisé dans Ajout Matériel et pour la
 //   longueur des barres de niveau.
 const CATEGORY_LIMITS = {
-    // PC
+    // PC (Neuf uniquement : les PC d'occasion n'ont ni seuil ni max, voir
+    // UNLIMITED_CATEGORIES ci-dessous)
     '650 G11 Neuf': { max: 50, threshold: 30 },
-    '650 G11 Occasion': { max: 50, threshold: 30 },
-    '850 G8/G10 Occasion': { max: 50, threshold: 0 },
     'X360 Neuf': { max: 4, threshold: 1 },
     'Zbook Neuf': { max: 4, threshold: 2 },
-    'Zbook Occasion': { max: 4, threshold: 2 },
     // Téléphones
     'iPhone 16e': { max: 15, threshold: 5 },
     'iPhone 17': { max: 2, threshold: 1 },
@@ -41,6 +39,15 @@ for (const [phone, info] of Object.entries(PHONE_CASE_INFO)) {
     }
 }
 
+// PC d'occasion : ni seuil critique ni stock max, juste un suivi de
+// quantité simple (affiché en sous-ligne sous leur modèle Neuf).
+const UNLIMITED_CATEGORIES = new Set([
+    '650 G11 Occasion',
+    '850 G8/G10 Occasion',
+    'X360 Occasion',
+    'Zbook Occasion',
+]);
+
 // Seuils par défaut pour toute catégorie non listée ci-dessus.
 const DEFAULT_LIMITS = { max: 40, threshold: 10 };
 
@@ -48,19 +55,30 @@ function getLimits(category) {
     return CATEGORY_LIMITS[category] || DEFAULT_LIMITS;
 }
 
+export function hasStockLimits(category) {
+    return !UNLIMITED_CATEGORIES.has(category);
+}
+
 export function getLowStockThreshold(category) {
+    if (UNLIMITED_CATEGORIES.has(category)) return 0;
     return getLimits(category).threshold;
 }
 
 export function getMaxStock(category) {
+    if (UNLIMITED_CATEGORIES.has(category)) return Infinity;
     return getLimits(category).max;
 }
 
 // Statut visuel d'une catégorie (couleur + longueur de la barre de niveau,
 // exprimée par rapport au max). Le statut reste basé sur le seuil critique
 // (indépendant du max) ; un seuil à 0 désactive l'email mais on garde
-// quand même un repère visuel.
+// quand même un repère visuel. Les catégories sans limite (PC d'occasion)
+// n'ont pas de barre significative : on renvoie juste rupture ou non.
 export function getStockStatus(category, count) {
+    if (UNLIMITED_CATEGORIES.has(category)) {
+        return { status: count <= 0 ? 'out' : 'ok', percent: 0 };
+    }
+
     const threshold = getLowStockThreshold(category);
     const max = getMaxStock(category);
     const percent = Math.min(100, Math.round((count / max) * 100));

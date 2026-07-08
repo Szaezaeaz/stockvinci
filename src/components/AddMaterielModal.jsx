@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import Modal from './Modal';
 import QuantityStepper from './QuantityStepper';
 import { ALL_STOCK_ITEMS } from '../config/items';
-import { getMaxStock } from '../config/thresholds';
+import { getMaxStock, hasStockLimits } from '../config/thresholds';
 
 export default function AddMaterielModal({ isOpen, onClose, onConfirm, stock }) {
     const [quantities, setQuantities] = useState({});
@@ -39,16 +39,19 @@ export default function AddMaterielModal({ isOpen, onClose, onConfirm, stock }) 
                     <div className="items-grid-selection">
                         {ALL_STOCK_ITEMS.map(item => {
                             const currentStock = stock[item.id] || 0;
+                            const limited = hasStockLimits(item.id);
                             const maxStock = getMaxStock(item.id);
                             return (
                                 <div key={item.id} className="item-add-card">
                                     <div className="item-icon">{item.icon}</div>
                                     <div className="item-name">{item.id}</div>
-                                    <div className="item-current-stock">Stock : <strong>{currentStock}</strong> / {maxStock}</div>
+                                    <div className="item-current-stock">
+                                        Stock : <strong>{currentStock}</strong>{limited && <> / {maxStock}</>}
+                                    </div>
                                     <QuantityStepper
                                         value={quantities[item.id] || 0}
                                         onChange={(v) => setQty(item.id, v)}
-                                        max={Math.max(0, maxStock - currentStock)}
+                                        max={limited ? Math.max(0, maxStock - currentStock) : Infinity}
                                     />
                                 </div>
                             );
