@@ -26,6 +26,14 @@ export function getLowStockThreshold(category) {
     return category in CATEGORY_THRESHOLDS ? CATEGORY_THRESHOLDS[category] : DEFAULT_THRESHOLD;
 }
 
+// Quantité "max" recommandée par catégorie = seuil x 4 (seuil par défaut pour
+// les catégories dont l'alerte est désactivée, ex: PC d'occasion, pour garder
+// un plafond raisonnable même sans seuil d'alerte).
+export function getMaxStock(category) {
+    const threshold = getLowStockThreshold(category);
+    return (threshold > 0 ? threshold : DEFAULT_THRESHOLD) * 4;
+}
+
 // Statut visuel d'une catégorie (couleur + longueur de la barre de niveau).
 // Sert de repère "santé du stock" à l'écran, indépendant du seuil d'alerte
 // email (un seuil à 0 désactive l'email mais on garde un repère visuel).

@@ -241,6 +241,17 @@ input[type="checkbox"]:focus {
   text-align: center;
 }
 
+.item-add-card .item-current-stock {
+  font-size: 0.72em;
+  color: #94a3b8;
+  text-align: center;
+}
+
+.item-add-card .item-current-stock strong {
+  color: #64748b;
+  font-weight: 700;
+}
+
 /* Quantity Stepper (+/- with long-press quick-jump popup) */
 .qty-stepper {
   position: relative;
@@ -940,6 +951,11 @@ input[type="checkbox"]:focus {
   justify-content: center;
   padding: 0;
   line-height: 1;
+}
+
+.btn-mini:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
 }
 
 .full-width-btn {

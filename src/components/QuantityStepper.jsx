@@ -4,7 +4,7 @@ const LONG_PRESS_DELAY = 500;
 
 // Stepper +/- classique. Rester appuyé 0,5s sur un bouton fait apparaître un
 // petit popup proposant des sauts rapides (+5/+10 ou -5/-10 selon le bouton).
-export default function QuantityStepper({ value, onChange, min = 0 }) {
+export default function QuantityStepper({ value, onChange, min = 0, max = Infinity }) {
     const [popup, setPopup] = useState(null); // 'plus' | 'minus' | null
     const timerRef = useRef(null);
     const longPressFiredRef = useRef(false);
@@ -33,13 +33,13 @@ export default function QuantityStepper({ value, onChange, min = 0 }) {
             return;
         }
         const delta = which === 'plus' ? 1 : -1;
-        onChange(Math.max(min, value + delta));
-    }, [clearTimer, min, onChange, value]);
+        onChange(Math.min(max, Math.max(min, value + delta)));
+    }, [clearTimer, max, min, onChange, value]);
 
     const applyStep = useCallback((step) => {
-        onChange(Math.max(min, value + step));
+        onChange(Math.min(max, Math.max(min, value + step)));
         setPopup(null);
-    }, [min, onChange, value]);
+    }, [max, min, onChange, value]);
 
     return (
         <div className="qty-stepper">
@@ -47,6 +47,7 @@ export default function QuantityStepper({ value, onChange, min = 0 }) {
                 <button
                     type="button"
                     className="btn-mini btn-minus"
+                    disabled={value <= min}
                     onMouseDown={() => startPress('minus')}
                     onMouseUp={clearTimer}
                     onMouseLeave={clearTimer}
@@ -60,6 +61,7 @@ export default function QuantityStepper({ value, onChange, min = 0 }) {
                 <button
                     type="button"
                     className="btn-mini btn-plus"
+                    disabled={value >= max}
                     onMouseDown={() => startPress('plus')}
                     onMouseUp={clearTimer}
                     onMouseLeave={clearTimer}

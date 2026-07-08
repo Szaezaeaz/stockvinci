@@ -88,6 +88,7 @@ export default function StockDashboard({
                 isOpen={isAddModalOpen}
                 onClose={() => setIsAddModalOpen(false)}
                 onConfirm={onAddStock}
+                stock={stock}
             />
 
             <div className="action-buttons-row">
