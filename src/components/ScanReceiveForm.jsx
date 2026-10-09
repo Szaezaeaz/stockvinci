@@ -71,8 +71,7 @@ export default function ScanReceiveForm({ devices, onReceive, onDone }) {
         return () => clearTimeout(idleTimerRef.current);
     }, []);
 
-    const handleChange = (e) => {
-        const next = e.target.value;
+    const handleValue = (next) => {
         setValue(next);
 
         const now = Date.now();
@@ -84,6 +83,33 @@ export default function ScanReceiveForm({ devices, onReceive, onDone }) {
             idleTimerRef.current = setTimeout(() => addSerialRef.current(next), BURST_IDLE_MS);
         }
     };
+
+    const handleValueRef = useRef(handleValue);
+    useEffect(() => {
+        handleValueRef.current = handleValue;
+    });
+
+    // La douchette "tape" dans l'élément qui a le focus. Si c'est autre chose que
+    // le champ de scan (liste déroulante du modèle, bouton…), la première touche
+    // est redirigée vers le champ pour que le scan ne soit jamais perdu ni ne
+    // change le modèle par erreur.
+    useEffect(() => {
+        const onKeyDown = (e) => {
+            const input = inputRef.current;
+            if (!input || document.activeElement === input) return;
+            if (e.ctrlKey || e.metaKey || e.altKey || e.key.length !== 1) return;
+            const tag = e.target.tagName;
+            if (tag === 'INPUT' || tag === 'TEXTAREA') return;
+            e.preventDefault();
+            input.focus();
+            input.value += e.key;
+            handleValueRef.current(input.value);
+        };
+        window.addEventListener('keydown', onKeyDown, true);
+        return () => window.removeEventListener('keydown', onKeyDown, true);
+    }, []);
+
+    const handleChange = (e) => handleValue(e.target.value);
 
     const handleSubmit = (e) => {
         e.preventDefault();
@@ -118,7 +144,7 @@ export default function ScanReceiveForm({ devices, onReceive, onDone }) {
                 <select
                     className="loan-input"
                     value={model}
-                    onChange={(e) => setModel(e.target.value)}
+                    onChange={(e) => { setModel(e.target.value); e.target.blur(); refocus(); }}
                     disabled={serials.length > 0}
                 >
                     <optgroup label="PC portables">
