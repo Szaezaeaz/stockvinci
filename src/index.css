@@ -1414,3 +1414,90 @@ input[type="checkbox"]:focus {
   width: 100%;
   box-sizing: border-box;
 }
+
+/* Réception de stock par scan */
+.scan-form .form-group {
+  margin-bottom: 16px;
+}
+
+.scan-form .loan-input {
+  display: block;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.scan-input {
+  font-size: 1.1rem;
+  letter-spacing: 0.04em;
+}
+
+.scan-hint {
+  margin: 6px 0 0;
+  font-size: 0.8rem;
+  color: #64748b;
+}
+
+.scan-link {
+  margin-top: 8px;
+  padding: 0;
+  border: none;
+  background: none;
+  color: #2563eb;
+  font-size: 0.8rem;
+  cursor: pointer;
+}
+
+.scan-feedback {
+  margin: 8px 0 0;
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
+.scan-ok { color: #15803d; }
+.scan-error { color: #dc2626; }
+
+.scan-list-header {
+  font-size: 0.9rem;
+  color: #475569;
+  margin-bottom: 8px;
+}
+
+.scan-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  max-height: 220px;
+  overflow-y: auto;
+  border: 1px solid var(--accent-gray);
+  border-radius: 12px;
+}
+
+.scan-list:empty {
+  display: none;
+}
+
+.scan-list-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 12px;
+  border-bottom: 1px solid #f1f5f9;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 0.9rem;
+}
+
+.scan-list-item:last-child {
+  border-bottom: none;
+}
+
+.scan-remove {
+  border: none;
+  background: #f1f5f9;
+  color: #64748b;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  font-size: 1.1rem;
+  line-height: 1;
+  cursor: pointer;
+}

@@ -93,7 +93,8 @@ export default function StockDashboard({
     onReturnLoan,
     onQuickReturnPC,
     devices,
-    onEmployeeReturn
+    onEmployeeReturn,
+    onReceiveDevices
 }) {
     const [isWithdrawModalOpen, setIsWithdrawModalOpen] = useState(false);
     const [isReturnModalOpen, setIsReturnModalOpen] = useState(false);
@@ -135,6 +136,8 @@ export default function StockDashboard({
                 onClose={() => setIsAddModalOpen(false)}
                 onConfirm={onAddStock}
                 stock={stock}
+                devices={devices}
+                onReceiveDevices={onReceiveDevices}
             />
 
             <div className="action-buttons-row">

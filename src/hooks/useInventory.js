@@ -1,7 +1,8 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { sendLowStockAlert } from '../services/email';
 import { getLowStockThreshold } from '../config/thresholds';
-import { PHONE_CASE_INFO } from '../config/phoneAccessories';
+import { PHONE_CASE_INFO, PHONE_MODEL_OPTIONS } from '../config/phoneAccessories';
+import { normalizeSerial } from '../utils/serial';
 import { fetchCloud, pushCloud, getPasscode, savePasscode, loadSyncMeta, saveSyncMeta } from '../services/cloudSync';
 
 const STORAGE_KEY = 'vinci_inventory_v3';
@@ -93,7 +94,13 @@ function normalizeData(parsed) {
             ...loan,
             items: Array.isArray(loan.items) ? loan.items.map(migrateLoanItem) : loan.items
         })),
-        devices: parsed.devices || {}
+        // Fiches créées avant l'ajout du statut : elles viennent d'un retour, donc en stock.
+        devices: Object.fromEntries(
+            Object.entries(parsed.devices || {}).map(([serial, device]) => [
+                serial,
+                { status: 'stock', holder: null, ...device }
+            ])
+        )
     };
 }
 
@@ -573,10 +580,10 @@ export function useInventory() {
 
             const add = (item) => { stockUpdates[item] = (stockUpdates[item] || 0) + 1; };
             const track = (rawSerial, kind, model) => {
-                const serial = (rawSerial || '').trim().toUpperCase();
+                const serial = normalizeSerial(rawSerial);
                 if (!serial) return '';
                 const events = [{ date, action: 'Retour', person: name }, ...(devices[serial]?.events || [])].slice(0, 20);
-                devices[serial] = { serial, kind, model, events };
+                devices[serial] = { serial, kind, model, status: 'stock', holder: null, events };
                 return ` (S/N ${serial})`;
             };
 
@@ -622,6 +629,50 @@ export function useInventory() {
         });
     };
 
+    // Réception de matériel scanné : chaque n° de série devient une fiche
+    // d'appareil "en stock" et le stock du modèle augmente d'autant. Les n° de
+    // série déjà connus sont ignorés.
+    const receiveDevices = (model, serials) => {
+        setData(prev => {
+            const devices = { ...(prev.devices || {}) };
+            const date = new Date();
+            const kind = PHONE_MODEL_OPTIONS.includes(model) ? 'phone' : 'pc';
+            const added = [];
+
+            for (const raw of serials) {
+                const serial = normalizeSerial(raw);
+                if (!serial || devices[serial]) continue;
+                devices[serial] = {
+                    serial,
+                    kind,
+                    model,
+                    status: 'stock',
+                    holder: null,
+                    events: [{ date, action: 'Réception', person: null }]
+                };
+                added.push(serial);
+            }
+
+            if (added.length === 0) return prev;
+
+            const historyEntry = {
+                id: Date.now(),
+                category: 'Ajout Matériel',
+                delta: 1,
+                recipient: null,
+                details: added.map(serial => `${model} (S/N ${serial})`),
+                date
+            };
+
+            return {
+                ...prev,
+                stock: { ...prev.stock, [model]: (prev.stock[model] || 0) + added.length },
+                devices,
+                history: [historyEntry, ...prev.history].slice(0, 50)
+            };
+        });
+    };
+
     const removeLoan = (id) => {
         setData(prev => ({
             ...prev,
@@ -635,6 +686,7 @@ export function useInventory() {
         loans: data.loans,
         devices: data.devices,
         returnFromEmployee,
+        receiveDevices,
         addLoan,
         addWithdrawal,
         addStock,

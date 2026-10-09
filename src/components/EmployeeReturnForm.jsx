@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { PHONE_CASE_INFO, PHONE_MODEL_OPTIONS } from '../config/phoneAccessories';
+import { normalizeSerial } from '../utils/serial';
 
 // Le PC rendu rejoint le stock Occasion de son modèle.
 const PC_RETURN_OPTIONS = [
@@ -25,15 +26,16 @@ const noteStyle = { margin: '6px 0 0', fontSize: '0.8rem', color: '#64748b' };
 
 // Si le n° de série est déjà au registre, rappelle ce qu'on sait de cet appareil.
 function KnownDeviceNote({ devices, serial }) {
-    const key = serial.trim().toUpperCase();
+    const key = normalizeSerial(serial);
     const device = key ? devices?.[key] : null;
     if (!device) return null;
     const last = device.events?.[0];
     const when = last ? new Date(last.date).toLocaleDateString() : '';
+    const state = device.status === 'assigned' ? `attribué à ${device.holder || '?'}` : 'en stock';
     return (
         <p style={noteStyle}>
-            Déjà enregistré : {device.model}
-            {last ? ` · dernier mouvement : ${last.action} par ${last.person} le ${when}` : ''}
+            Déjà enregistré : {device.model} · {state}
+            {last ? ` · dernier mouvement : ${last.action}${last.person ? ` (${last.person})` : ''} le ${when}` : ''}
         </p>
     );
 }
