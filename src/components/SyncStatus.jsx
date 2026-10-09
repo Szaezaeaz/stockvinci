@@ -12,7 +12,7 @@ const LABELS = {
 
 // Pastille d'état de la sauvegarde cloud. Un clic force une synchro, ou
 // ouvre la saisie du code d'accès s'il manque / est incorrect.
-const describe = (s) => `${s.units} unités · ${s.loans} prêt(s) en cours · ${s.history} entrée(s) d'historique`;
+const describe = (s) => `${s.units} unités · ${s.loans} à récupérer · ${s.history} entrée(s) d'historique`;
 
 export default function SyncStatus({ status, choice, onSubmitCode, onSyncNow, onResolveChoice }) {
     const [isCodeOpen, setIsCodeOpen] = useState(false);

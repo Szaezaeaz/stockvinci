@@ -26,8 +26,8 @@ const CATEGORY_LIMITS = {
     Écran: { max: 10, threshold: 3 },
     'Chargeur USB-C': { max: 20, threshold: 6 },
     'Chargeur téléphone': { max: 20, threshold: 5 },
-    // Anciens chargeurs : barre sur 50, mais pas d'alerte (seuil 0) car on les écoule sans réapprovisionner
-    'Anciens chargeurs': { max: 50, threshold: 0 },
+    // Ancien chargeur : barre sur 50, mais pas d'alerte (seuil 0) car on les écoule sans réapprovisionner
+    'Ancien chargeur': { max: 50, threshold: 0 },
 };
 
 // Coques/vitres : mêmes seuils que le téléphone associé.

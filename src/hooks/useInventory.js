@@ -21,7 +21,7 @@ const INITIAL_STATE = {
         Sacoche: 15,
         'Sac à Dos': 0,
         'Chargeur USB-C': 20,
-        'Anciens chargeurs': 0,
+        'Ancien chargeur': 0,
         'Chargeur téléphone': 0,
         Dock: 10,
         Écran: 0,
@@ -48,7 +48,8 @@ const LEGACY_KEY_MIGRATIONS = {
     Iphone: 'iPhone 16e',
     Xcover: 'Samsung XCOVER 7',
     '850 G8 Occasion': '850 G8/G10 Occasion',
-    Chargeur: 'Chargeur USB-C'
+    Chargeur: 'Chargeur USB-C',
+    'Anciens chargeurs': 'Ancien chargeur'
 };
 
 function migrateLegacyStock(stock) {
@@ -62,11 +63,21 @@ function migrateLegacyStock(stock) {
     return migrated;
 }
 
+// Renomme un article d'un prêt (ex. "Chargeur (x2)" -> "Chargeur USB-C (x2)").
+function migrateLoanItem(itemStr) {
+    const match = itemStr.match(/^(.+?)( \(x\d+\))?$/);
+    const base = match ? match[1] : itemStr;
+    return (LEGACY_KEY_MIGRATIONS[base] || base) + (match?.[2] || '');
+}
+
 function normalizeData(parsed) {
     return {
         stock: { ...INITIAL_STATE.stock, ...migrateLegacyStock(parsed.stock || {}) },
         history: parsed.history || [],
-        loans: parsed.loans || []
+        loans: (parsed.loans || []).map(loan => ({
+            ...loan,
+            items: Array.isArray(loan.items) ? loan.items.map(migrateLoanItem) : loan.items
+        }))
     };
 }
 
@@ -330,7 +341,7 @@ export function useInventory() {
             // Create Single Composite History Entry
             const loanPackageEntry = {
                 id: Date.now(),
-                category: 'Prêt Matériel',
+                category: 'Matériel à récupérer',
                 delta: -1, // Logical decrement (1 package out)
                 recipient: name,
                 details: loanedItems, // Array of what was in the package
@@ -470,7 +481,7 @@ export function useInventory() {
                     id = match[1];
                     count = parseInt(match[2], 10);
                 }
-                // Prêts créés avant le découpage des chargeurs : on les remet dans la bonne catégorie.
+                // Entrées créées avant le découpage / renommage des chargeurs : on les remet dans la bonne catégorie.
                 id = LEGACY_KEY_MIGRATIONS[id] || id;
                 stockUpdates[id] = (stockUpdates[id] || 0) + count;
             });
@@ -484,7 +495,7 @@ export function useInventory() {
             // History Log
             const historyEntry = {
                 id: Date.now(),
-                category: 'Retour Prêt',
+                category: 'Retour matériel',
                 delta: 1,
                 recipient: loan.recipient,
                 details: loan.items,

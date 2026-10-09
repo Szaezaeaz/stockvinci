@@ -3,7 +3,7 @@ import { IconBox, IconClock, IconSwap } from './icons';
 
 const TABS = [
     { key: 'stock', label: 'Stock', Icon: IconBox },
-    { key: 'loans', label: 'Prêts', Icon: IconSwap },
+    { key: 'loans', label: 'À récupérer', Icon: IconSwap },
     { key: 'history', label: 'Historique', Icon: IconClock }
 ];
 

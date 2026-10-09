@@ -81,16 +81,16 @@ export default function LoanedPCs({ loans, onAdd, onRemove }) {
     return (
         <div className="loan-container">
             <div className="loan-header-actions">
-                <h2>Matériel Prêt</h2>
+                <h2>Matériel à récupérer</h2>
                 <button className="btn-add-trigger" onClick={() => setIsModalOpen(true)}>
-                    + Nouveau Matériel Prêt
+                    + Nouveau matériel à récupérer
                 </button>
             </div>
 
             <Modal
                 isOpen={isModalOpen}
                 onClose={() => setIsModalOpen(false)}
-                title="Ajouter un Matériel Prêt"
+                title="Ajouter du matériel à récupérer"
             >
                 <form onSubmit={handleSubmit} className="loan-form-modal">
                     <div className="form-group">
@@ -106,7 +106,7 @@ export default function LoanedPCs({ loans, onAdd, onRemove }) {
                     </div>
 
                     <div className="form-group">
-                        <label>Matériel prêté</label>
+                        <label>Matériel à remettre</label>
                         <div style={{ display: 'flex', gap: '15px', marginTop: '5px' }}>
                             <label style={{ display: 'flex', alignItems: 'center', fontWeight: 'normal', cursor: 'pointer' }}>
                                 <input
@@ -274,7 +274,7 @@ export default function LoanedPCs({ loans, onAdd, onRemove }) {
 
             <ul className="loan-list">
                 {filteredLoans.length === 0 && <p style={{ color: '#94a3b8', textAlign: 'center', padding: '20px' }}>
-                    {searchQuery ? 'Aucun résultat.' : 'Aucun prêt en cours.'}
+                    {searchQuery ? 'Aucun résultat.' : 'Aucun matériel à récupérer.'}
                 </p>}
 
                 {filteredLoans.map((loan) => (
