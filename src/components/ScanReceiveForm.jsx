@@ -1,4 +1,4 @@
-import React, { useRef, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { PHONE_MODEL_OPTIONS } from '../config/phoneAccessories';
 import { normalizeSerial } from '../utils/serial';
 
@@ -14,23 +14,36 @@ const PC_MODELS = [
 
 const STATUS_LABELS = { stock: 'en stock', assigned: 'attribué' };
 
-// Réception de stock par scan : une douchette en mode clavier (HID) "tape" le
-// n° de série puis Entrée dans le champ toujours actif ; chaque scan s'ajoute à
-// la liste, validée en une fois.
+// Une douchette "tape" les caractères en rafale (quelques ms entre deux) : on
+// repère cette rafale pour valider le scan même si la douchette n'envoie pas
+// Entrée à la fin. Une saisie à la main est trop lente pour déclencher ça.
+const BURST_GAP_MS = 60;
+const BURST_MIN_CHARS = 5;
+const BURST_IDLE_MS = 250;
+
+// Réception de stock par scan : une douchette en mode clavier (HID) saisit le
+// n° de série dans le champ toujours actif ; chaque scan s'ajoute à la liste,
+// validée en une fois.
 export default function ScanReceiveForm({ devices, onReceive, onDone }) {
     const [model, setModel] = useState(PC_MODELS[0]);
     const [serials, setSerials] = useState([]);
     const [value, setValue] = useState('');
     const [feedback, setFeedback] = useState(null); // { ok, text }
     const [useKeyboard, setUseKeyboard] = useState(false);
+    const [focused, setFocused] = useState(false);
     const inputRef = useRef(null);
+    const lastChangeRef = useRef(0);
+    const burstRef = useRef(0);
+    const idleTimerRef = useRef(null);
+    const addSerialRef = useRef(null);
 
     const refocus = () => setTimeout(() => inputRef.current?.focus(), 0);
 
-    const handleScan = (e) => {
-        e.preventDefault();
-        const serial = normalizeSerial(value);
+    const addSerial = (raw) => {
+        const serial = normalizeSerial(raw);
         setValue('');
+        burstRef.current = 0;
+        clearTimeout(idleTimerRef.current);
         refocus();
         if (!serial) return;
 
@@ -46,6 +59,43 @@ export default function ScanReceiveForm({ devices, onReceive, onDone }) {
         }
         setSerials(prev => [serial, ...prev]);
         setFeedback({ ok: true, text: `${serial} ajouté.` });
+    };
+
+    // Garde la dernière version de addSerial pour le minuteur de fin de rafale.
+    useEffect(() => {
+        addSerialRef.current = addSerial;
+    });
+
+    useEffect(() => {
+        inputRef.current?.focus();
+        return () => clearTimeout(idleTimerRef.current);
+    }, []);
+
+    const handleChange = (e) => {
+        const next = e.target.value;
+        setValue(next);
+
+        const now = Date.now();
+        burstRef.current = now - lastChangeRef.current < BURST_GAP_MS ? burstRef.current + 1 : 1;
+        lastChangeRef.current = now;
+
+        clearTimeout(idleTimerRef.current);
+        if (burstRef.current >= BURST_MIN_CHARS) {
+            idleTimerRef.current = setTimeout(() => addSerialRef.current(next), BURST_IDLE_MS);
+        }
+    };
+
+    const handleSubmit = (e) => {
+        e.preventDefault();
+        addSerial(value);
+    };
+
+    // Certaines douchettes terminent le scan par Tab au lieu d'Entrée.
+    const handleKeyDown = (e) => {
+        if (e.key === 'Tab' && value) {
+            e.preventDefault();
+            addSerial(value);
+        }
     };
 
     const removeSerial = (serial) => {
@@ -83,15 +133,18 @@ export default function ScanReceiveForm({ devices, onReceive, onDone }) {
                 )}
             </div>
 
-            <form onSubmit={handleScan} className="form-group">
+            <form onSubmit={handleSubmit} className="form-group">
                 <label>Scanner un n° de série</label>
                 <input
                     ref={inputRef}
                     type="text"
-                    className="loan-input scan-input"
+                    className={`loan-input scan-input${focused ? ' scan-input-active' : ''}`}
                     placeholder="Scanne le code-barres…"
                     value={value}
-                    onChange={(e) => setValue(e.target.value)}
+                    onChange={handleChange}
+                    onKeyDown={handleKeyDown}
+                    onFocus={() => setFocused(true)}
+                    onBlur={() => setFocused(false)}
                     inputMode={useKeyboard ? 'text' : 'none'}
                     autoFocus
                     autoCapitalize="characters"
@@ -99,12 +152,19 @@ export default function ScanReceiveForm({ devices, onReceive, onDone }) {
                     autoCorrect="off"
                     spellCheck={false}
                 />
+                <p className={`scan-status ${focused ? 'scan-status-ready' : 'scan-status-idle'}`}>
+                    {focused ? '● Prêt à scanner' : '○ Touche le champ ci-dessus pour activer le scan'}
+                </p>
                 <button type="button" className="scan-link" onClick={() => { setUseKeyboard(v => !v); refocus(); }}>
                     {useKeyboard ? 'Masquer le clavier de la tablette' : 'Saisir à la main (clavier de la tablette)'}
                 </button>
                 {feedback && (
                     <p className={`scan-feedback ${feedback.ok ? 'scan-ok' : 'scan-error'}`}>{feedback.text}</p>
                 )}
+                <p className="scan-hint">
+                    Rien ne s'affiche quand tu scannes ? Vérifie que la douchette est en mode clavier (HID) et connectée,
+                    puis teste-la dans une autre application (Notes).
+                </p>
             </form>
 
             <div className="scan-list-header">
