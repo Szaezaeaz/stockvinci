@@ -98,7 +98,8 @@ export default function StockDashboard({
     devices,
     onEmployeeReturn,
     onReceiveDevices,
-    onRemoveUntracked
+    onRemoveUntracked,
+    onDeleteDevice
 }) {
     const [isWithdrawModalOpen, setIsWithdrawModalOpen] = useState(false);
     const [isReturnModalOpen, setIsReturnModalOpen] = useState(false);
@@ -152,6 +153,7 @@ export default function StockDashboard({
                 stock={stock}
                 onClose={() => setDeviceModel(null)}
                 onRemoveUntracked={onRemoveUntracked}
+                onDeleteDevice={onDeleteDevice}
             />
 
             <div className="action-buttons-row">

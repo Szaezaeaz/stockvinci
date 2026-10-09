@@ -1753,3 +1753,18 @@ input[type="checkbox"]:focus {
   font-weight: 800;
   text-align: center;
 }
+
+.device-delete-row {
+  padding-top: 8px !important;
+}
+
+.device-delete {
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid #fecaca;
+  border-radius: 10px;
+  background: #fef2f2;
+  color: #b91c1c;
+  font-weight: 700;
+  cursor: pointer;
+}

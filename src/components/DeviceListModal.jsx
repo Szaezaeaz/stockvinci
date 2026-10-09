@@ -11,7 +11,7 @@ function statusLabel(device) {
 
 // Liste des appareils (n° de série) d'un modèle, avec leur état : en stock ou
 // attribué à une personne, plus l'historique de leurs mouvements.
-export default function DeviceListModal({ model, devices, stock, onClose, onRemoveUntracked }) {
+export default function DeviceListModal({ model, devices, stock, onClose, onRemoveUntracked, onDeleteDevice }) {
     const [query, setQuery] = useState('');
     const [openSerial, setOpenSerial] = useState(null);
 
@@ -29,6 +29,16 @@ export default function DeviceListModal({ model, devices, stock, onClose, onRemo
     const handleRemoveUntracked = () => {
         if (window.confirm(`Retirer du stock les ${untracked} ${model} sans n° de série ? Le stock affiché passera à ${inStock}.`)) {
             onRemoveUntracked(model);
+        }
+    };
+
+    const handleDelete = (device) => {
+        const message = device.status === 'assigned'
+            ? `${device.serial} est attribué à ${device.holder || '?'}. Supprimer sa fiche ? Le stock ne change pas.`
+            : `Supprimer ${device.serial} ? Le stock de ${model} passera de ${stock?.[model] || 0} à ${Math.max(0, (stock?.[model] || 0) - 1)}.`;
+        if (window.confirm(message)) {
+            onDeleteDevice(device.serial);
+            setOpenSerial(null);
         }
     };
 
@@ -81,6 +91,11 @@ export default function DeviceListModal({ model, devices, stock, onClose, onRemo
                                             {dateOf(event.date)} · {event.action}{event.person ? ` · ${event.person}` : ''}
                                         </li>
                                     ))}
+                                    <li className="device-delete-row">
+                                        <button type="button" className="device-delete" onClick={() => handleDelete(device)}>
+                                            Supprimer cet appareil
+                                        </button>
+                                    </li>
                                 </ul>
                             )}
                         </li>

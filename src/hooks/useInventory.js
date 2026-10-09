@@ -705,6 +705,39 @@ export function useInventory() {
         });
     };
 
+    // Supprime la fiche d'un appareil. S'il était en stock, le stock de son modèle
+    // diminue d'une unité ; s'il était attribué, le stock ne change pas (déjà sorti).
+    const deleteDevice = (serial) => {
+        setData(prev => {
+            const device = prev.devices?.[serial];
+            if (!device) return prev;
+
+            const devices = { ...prev.devices };
+            delete devices[serial];
+
+            const stock = { ...prev.stock };
+            if (device.status === 'stock') {
+                stock[device.model] = Math.max(0, (stock[device.model] || 0) - 1);
+            }
+
+            const historyEntry = {
+                id: Date.now(),
+                category: 'Suppression appareil',
+                delta: -1,
+                recipient: device.status === 'assigned' ? device.holder : null,
+                details: [`${device.model} (S/N ${serial})`],
+                date: new Date()
+            };
+
+            return {
+                ...prev,
+                stock,
+                devices,
+                history: [historyEntry, ...prev.history].slice(0, 50)
+            };
+        });
+    };
+
     // Retire du stock les unités d'un modèle qui n'ont pas de fiche (n° de série) :
     // le stock du modèle devient égal au nombre d'appareils "en stock" scannés.
     const removeUntrackedStock = (model) => {
@@ -747,6 +780,7 @@ export function useInventory() {
         returnFromEmployee,
         receiveDevices,
         removeUntrackedStock,
+        deleteDevice,
         addLoan,
         addWithdrawal,
         addStock,
