@@ -41,3 +41,17 @@ export function IconClock(props) {
         </svg>
     );
 }
+
+// Bloc chargeur secteur USB (chargeur de téléphone). Illustration en couleurs,
+// dimensionnée en em pour suivre la taille de police de l'endroit où elle est affichée.
+export function IconPhoneCharger(props) {
+    return (
+        <svg width="1em" height="1em" viewBox="0 0 24 24" style={{ verticalAlign: 'middle' }} aria-hidden="true" {...props}>
+            <rect x="8" y="1" width="2" height="5" rx="0.8" fill="#94a3b8" />
+            <rect x="14" y="1" width="2" height="5" rx="0.8" fill="#94a3b8" />
+            <rect x="5" y="5.5" width="14" height="17.5" rx="3" fill="#e2e8f0" stroke="#64748b" strokeWidth="1.4" />
+            <rect x="8.5" y="12" width="7" height="3.6" rx="0.9" fill="#334155" />
+            <rect x="10" y="13.2" width="4" height="1.2" rx="0.4" fill="#94a3b8" />
+        </svg>
+    );
+}

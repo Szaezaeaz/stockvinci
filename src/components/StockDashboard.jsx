@@ -5,6 +5,7 @@ import AddMaterielModal from './AddMaterielModal';
 import { getMaxStock, getStockStatus, hasStockLimits } from '../config/thresholds';
 import { PHONE_CASE_INFO } from '../config/phoneAccessories';
 import { getStockStats } from '../utils/stockStats';
+import { IconPhoneCharger } from './icons';
 
 const DASHBOARD_SECTIONS = [
     {
@@ -39,7 +40,7 @@ const PC_OCCASION_PAIRS = {
 
 const ITEM_ICONS = {
     'Casque': '🎧', 'Clavier': '⌨️', 'Souris': '🖱️', 'Sacoche': '💼', 'Sac à Dos': '🎒',
-    'Écran': '🖥️', 'Chargeur USB-C': '🔌', 'Anciens chargeurs': '🔌', 'Chargeur téléphone': '🔌', 'Dock': '📦'
+    'Écran': '🖥️', 'Chargeur USB-C': '🔌', 'Anciens chargeurs': '🔌', 'Chargeur téléphone': <IconPhoneCharger />, 'Dock': '📦'
 };
 
 function itemIcon(key, sectionIcon) {

@@ -1,3 +1,6 @@
+import React from 'react';
+import { IconPhoneCharger } from '../components/icons';
+
 // Liste partagée des articles de stock affichés dans les modales de
 // mouvement de matériel (Retrait, Ajout...).
 export const ALL_STOCK_ITEMS = [
@@ -8,7 +11,7 @@ export const ALL_STOCK_ITEMS = [
     { id: 'Sac à Dos', icon: '🎒' },
     { id: 'Chargeur USB-C', icon: '🔌' },
     { id: 'Anciens chargeurs', icon: '🔌' },
-    { id: 'Chargeur téléphone', icon: '🔌' },
+    { id: 'Chargeur téléphone', icon: <IconPhoneCharger /> },
     { id: 'Dock', icon: '📦' },
     { id: 'Écran', icon: '🖥️' },
     { id: 'iPhone 16e', icon: '📱' },
