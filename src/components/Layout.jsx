@@ -1,6 +1,6 @@
 import React from 'react';
 
-export default function Layout({ children, totalUnits }) {
+export default function Layout({ children, totalUnits, headerExtra }) {
     return (
         <div>
             <header>
@@ -9,6 +9,7 @@ export default function Layout({ children, totalUnits }) {
                     <h1>Inventaire</h1>
                     <p className="header-subtitle">Support informatique · {totalUnits} unités</p>
                 </div>
+                {headerExtra}
             </header>
             <main className="container">
                 {children}

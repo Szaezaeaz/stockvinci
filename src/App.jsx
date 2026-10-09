@@ -8,14 +8,26 @@ import { useInventory } from './hooks/useInventory';
 import { getStockStats } from './utils/stockStats';
 
 import AlertBanner from './components/AlertBanner';
+import SyncStatus from './components/SyncStatus';
 
 function App() {
-  const { stock, history, loans, addLoan, removeLoan, addWithdrawal, addStock, returnLoan, quickReturnPC } = useInventory();
+  const { stock, history, loans, addLoan, removeLoan, addWithdrawal, addStock, returnLoan, quickReturnPC,
+        syncStatus, syncNotice, submitPasscode, dismissSyncNotice, syncNow } = useInventory();
   const [activeTab, setActiveTab] = useState('stock'); // 'stock' | 'loans' | 'history'
   const { totalUnits } = useMemo(() => getStockStats(stock), [stock]);
 
   return (
-    <Layout totalUnits={totalUnits}>
+    <Layout
+      totalUnits={totalUnits}
+      headerExtra={<SyncStatus status={syncStatus} onSubmitCode={submitPasscode} onSyncNow={syncNow} />}
+    >
+      {syncNotice && (
+        <div className="sync-notice">
+          <span>{syncNotice}</span>
+          <button type="button" onClick={dismissSyncNotice} aria-label="Fermer">&times;</button>
+        </div>
+      )}
+
       <AlertBanner stock={stock} />
 
       <div className="fade-in" key={activeTab}>

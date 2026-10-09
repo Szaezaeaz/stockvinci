@@ -1263,3 +1263,53 @@ input[type="checkbox"]:focus {
     filter: blur(0);
   }
 }
+/* Sauvegarde cloud */
+.sync-pill {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 10px;
+  border: 1px solid var(--accent-gray);
+  border-radius: 999px;
+  background: #fff;
+  color: #64748b;
+  font-size: 0.75rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.sync-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #94a3b8;
+}
+
+.sync-synced .sync-dot { background: #22c55e; }
+.sync-syncing .sync-dot { background: #3b82f6; }
+.sync-offline .sync-dot,
+.sync-needs-code .sync-dot { background: #f59e0b; }
+.sync-error .sync-dot { background: #ef4444; }
+
+.sync-notice {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 16px;
+  padding: 12px 14px;
+  border-radius: 12px;
+  background: #eff6ff;
+  color: #1d4ed8;
+  font-size: 0.85rem;
+}
+
+.sync-notice button {
+  border: none;
+  background: transparent;
+  color: inherit;
+  font-size: 1.2rem;
+  line-height: 1;
+  cursor: pointer;
+}

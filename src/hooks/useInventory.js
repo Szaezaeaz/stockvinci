@@ -1,7 +1,8 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { sendLowStockAlert } from '../services/email';
 import { getLowStockThreshold } from '../config/thresholds';
 import { PHONE_CASE_INFO } from '../config/phoneAccessories';
+import { fetchCloud, pushCloud, getPasscode, savePasscode, loadSyncMeta, saveSyncMeta } from '../services/cloudSync';
 
 const STORAGE_KEY = 'vinci_inventory_v3';
 
@@ -58,17 +59,23 @@ function migrateLegacyStock(stock) {
     return migrated;
 }
 
+function normalizeData(parsed) {
+    return {
+        stock: { ...INITIAL_STATE.stock, ...migrateLegacyStock(parsed.stock || {}) },
+        history: parsed.history || [],
+        loans: parsed.loans || []
+    };
+}
+
+const SYNC_INTERVAL_MS = 60000;
+const PUSH_DELAY_MS = 1500;
+
 export function useInventory() {
     const [data, setData] = useState(() => {
         const saved = localStorage.getItem(STORAGE_KEY);
         if (saved) {
             try {
-                const parsed = JSON.parse(saved);
-                return {
-                    stock: { ...INITIAL_STATE.stock, ...migrateLegacyStock(parsed.stock || {}) },
-                    history: parsed.history || [],
-                    loans: parsed.loans || []
-                };
+                return normalizeData(JSON.parse(saved));
             } catch (e) {
                 console.error('Failed to parse inventory data', e);
             }
@@ -80,7 +87,127 @@ export function useInventory() {
         localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
     }, [data]);
 
+    // --- Synchronisation cloud -------------------------------------------
+    // syncStatus : 'off' (cloud non configuré) | 'needs-code' | 'syncing' |
+    //              'synced' | 'offline' | 'error'
+    const [syncStatus, setSyncStatus] = useState(getPasscode() ? 'syncing' : 'needs-code');
+    const [syncNotice, setSyncNotice] = useState('');
+    const dataRef = useRef(data);
+    const knownDataRef = useRef(data); // dernier état connu côté synchro (local initial ou cloud)
+    const metaRef = useRef(loadSyncMeta());
+    const busyRef = useRef(false);
+    const rerunRef = useRef(false);
+    const pushTimerRef = useRef(null);
 
+    useEffect(() => {
+        dataRef.current = data;
+    }, [data]);
+
+    const updateMeta = useCallback((patch) => {
+        metaRef.current = { ...metaRef.current, ...patch };
+        saveSyncMeta(metaRef.current);
+    }, []);
+
+    const adoptCloud = useCallback((cloud) => {
+        const next = normalizeData(cloud.data);
+        knownDataRef.current = next;
+        dataRef.current = next;
+        updateMeta({ rev: cloud.rev, dirty: false });
+        setData(next);
+    }, [updateMeta]);
+
+    const sync = useCallback(async () => {
+        if (!getPasscode()) {
+            setSyncStatus('needs-code');
+            return;
+        }
+        if (busyRef.current) {
+            rerunRef.current = true;
+            return;
+        }
+        busyRef.current = true;
+        setSyncStatus('syncing');
+        try {
+            let result;
+            if (metaRef.current.dirty) {
+                const snapshot = dataRef.current;
+                result = await pushCloud(snapshot, metaRef.current.rev);
+                if (result.status === 200) {
+                    // Si l'utilisateur a encore modifié pendant l'envoi, on garde "dirty".
+                    updateMeta({ rev: result.body.rev, dirty: dataRef.current !== snapshot });
+                    if (metaRef.current.dirty) rerunRef.current = true;
+                    setSyncStatus('synced');
+                    return;
+                }
+                if (result.status === 409) {
+                    adoptCloud(result.body);
+                    setSyncNotice("Un autre appareil a modifié le stock : vos dernières modifications ont été remplacées par la version à jour.");
+                    setSyncStatus('synced');
+                    return;
+                }
+            } else {
+                result = await fetchCloud();
+                if (result.status === 200) {
+                    const cloud = result.body;
+                    if (cloud.data == null) {
+                        // Cloud vide : on y envoie l'état de cet appareil.
+                        updateMeta({ dirty: true });
+                        rerunRef.current = true;
+                    } else if (cloud.rev !== metaRef.current.rev) {
+                        adoptCloud(cloud);
+                    }
+                    setSyncStatus('synced');
+                    return;
+                }
+            }
+            if (result.status === 503) setSyncStatus('off');
+            else if (result.status === 401) setSyncStatus('needs-code');
+            else if (result.status === 0) setSyncStatus('offline');
+            else setSyncStatus('error');
+        } finally {
+            busyRef.current = false;
+            if (rerunRef.current) {
+                rerunRef.current = false;
+                sync();
+            }
+        }
+    }, [adoptCloud, updateMeta]);
+
+    // Toute modification locale (pas celles reprises du cloud) marque l'appareil
+    // "dirty" et déclenche un envoi différé.
+    useEffect(() => {
+        if (data === knownDataRef.current) return;
+        knownDataRef.current = data;
+        updateMeta({ dirty: true });
+        clearTimeout(pushTimerRef.current);
+        pushTimerRef.current = setTimeout(sync, PUSH_DELAY_MS);
+    }, [data, sync, updateMeta]);
+
+    // Synchro au lancement, au retour sur l'appli / la connexion, puis toutes les minutes.
+    useEffect(() => {
+        const timeout = setTimeout(sync, 0);
+        const interval = setInterval(() => {
+            if (document.visibilityState === 'visible') sync();
+        }, SYNC_INTERVAL_MS);
+        const onVisible = () => {
+            if (document.visibilityState === 'visible') sync();
+        };
+        document.addEventListener('visibilitychange', onVisible);
+        window.addEventListener('online', sync);
+        return () => {
+            clearTimeout(timeout);
+            clearInterval(interval);
+            document.removeEventListener('visibilitychange', onVisible);
+            window.removeEventListener('online', sync);
+        };
+    }, [sync]);
+
+    const submitPasscode = (code) => {
+        savePasscode(code.trim());
+        sync();
+    };
+
+    const dismissSyncNotice = () => setSyncNotice('');
 
     const addLoan = (name, pcType, phoneType, accessories = {
         mouse: true, headset: false, bag: true, backpack: false, screen: false, dock: false, keyboard: false,
@@ -372,6 +499,11 @@ export function useInventory() {
         addStock,
         removeLoan,
         returnLoan,
-        quickReturnPC
+        quickReturnPC,
+        syncStatus,
+        syncNotice,
+        submitPasscode,
+        dismissSyncNotice,
+        syncNow: sync
     };
 }
