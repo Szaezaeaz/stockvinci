@@ -25,7 +25,7 @@ const DASHBOARD_SECTIONS = [
         title: 'Accessoires',
         icon: '🎒',
         unitLabel: 'articles',
-        items: ['Casque', 'Clavier', 'Souris', 'Sacoche', 'Sac à Dos', 'Écran', 'Chargeur', 'Dock']
+        items: ['Casque', 'Clavier', 'Souris', 'Sacoche', 'Sac à Dos', 'Écran', 'Chargeur USB-C', 'Anciens chargeurs', 'Chargeur téléphone', 'Dock']
     }
 ];
 
@@ -39,7 +39,7 @@ const PC_OCCASION_PAIRS = {
 
 const ITEM_ICONS = {
     'Casque': '🎧', 'Clavier': '⌨️', 'Souris': '🖱️', 'Sacoche': '💼', 'Sac à Dos': '🎒',
-    'Écran': '🖥️', 'Chargeur': '🔌', 'Dock': '📦'
+    'Écran': '🖥️', 'Chargeur USB-C': '🔌', 'Anciens chargeurs': '🔌', 'Chargeur téléphone': '🔋', 'Dock': '📦'
 };
 
 function itemIcon(key, sectionIcon) {

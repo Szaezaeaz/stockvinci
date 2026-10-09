@@ -24,7 +24,8 @@ const CATEGORY_LIMITS = {
     'Sac à Dos': { max: 5, threshold: 1 },
     Dock: { max: 10, threshold: 3 },
     Écran: { max: 10, threshold: 3 },
-    Chargeur: { max: 20, threshold: 6 },
+    'Chargeur USB-C': { max: 20, threshold: 6 },
+    'Chargeur téléphone': { max: 20, threshold: 6 },
 };
 
 // Coques/vitres : mêmes seuils que le téléphone associé.
@@ -39,13 +40,15 @@ for (const [phone, info] of Object.entries(PHONE_CASE_INFO)) {
     }
 }
 
-// PC d'occasion : ni seuil critique ni stock max, juste un suivi de
-// quantité simple (affiché en sous-ligne sous leur modèle Neuf).
+// Catégories sans seuil critique ni stock max : PC d'occasion (affichés en
+// sous-ligne sous leur modèle Neuf) et anciens chargeurs.
 const UNLIMITED_CATEGORIES = new Set([
     '650 G11 Occasion',
     '850 G8/G10 Occasion',
     'X360 Occasion',
     'Zbook Occasion',
+    // Anciens chargeurs : stock qu'on écoule sans le réapprovisionner
+    'Anciens chargeurs',
 ]);
 
 // Seuils par défaut pour toute catégorie non listée ci-dessus.

@@ -20,7 +20,9 @@ const INITIAL_STATE = {
         Clavier: 10,
         Sacoche: 15,
         'Sac à Dos': 0,
-        Chargeur: 20,
+        'Chargeur USB-C': 20,
+        'Anciens chargeurs': 0,
+        'Chargeur téléphone': 0,
         Dock: 10,
         Écran: 0,
         'iPhone 16e': 5,
@@ -45,7 +47,8 @@ const LEGACY_KEY_MIGRATIONS = {
     'PC Occasion': '650 G11 Occasion',
     Iphone: 'iPhone 16e',
     Xcover: 'Samsung XCOVER 7',
-    '850 G8 Occasion': '850 G8/G10 Occasion'
+    '850 G8 Occasion': '850 G8/G10 Occasion',
+    Chargeur: 'Chargeur USB-C'
 };
 
 function migrateLegacyStock(stock) {
@@ -467,6 +470,8 @@ export function useInventory() {
                     id = match[1];
                     count = parseInt(match[2], 10);
                 }
+                // Prêts créés avant le découpage des chargeurs : on les remet dans la bonne catégorie.
+                id = LEGACY_KEY_MIGRATIONS[id] || id;
                 stockUpdates[id] = (stockUpdates[id] || 0) + count;
             });
 
@@ -501,7 +506,7 @@ export function useInventory() {
             const returnedItemsLog = [pcModel];
 
             if (accessories.mouse) { stockUpdates['Souris'] = 1; returnedItemsLog.push('Souris'); }
-            if (accessories.charger) { stockUpdates['Chargeur'] = 1; returnedItemsLog.push('Chargeur'); }
+            if (accessories.charger) { stockUpdates['Chargeur USB-C'] = 1; returnedItemsLog.push('Chargeur USB-C'); }
             if (accessories.headset) { stockUpdates['Casque'] = 1; returnedItemsLog.push('Casque'); }
             if (accessories.bag) { stockUpdates['Sacoche'] = 1; returnedItemsLog.push('Sacoche'); }
 

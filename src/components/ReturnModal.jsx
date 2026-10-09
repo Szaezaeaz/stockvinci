@@ -157,7 +157,7 @@ export default function ReturnModal({
                                     checked={includeCharger}
                                     onChange={e => setIncludeCharger(e.target.checked)}
                                 />
-                                Chargeur
+                                Chargeur USB-C
                             </label>
                             <label className="checkbox-label">
                                 <input
