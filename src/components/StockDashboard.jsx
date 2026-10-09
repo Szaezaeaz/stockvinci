@@ -39,7 +39,7 @@ const PC_OCCASION_PAIRS = {
 
 const ITEM_ICONS = {
     'Casque': '🎧', 'Clavier': '⌨️', 'Souris': '🖱️', 'Sacoche': '💼', 'Sac à Dos': '🎒',
-    'Écran': '🖥️', 'Chargeur USB-C': '🔌', 'Anciens chargeurs': '🔌', 'Chargeur téléphone': '🔋', 'Dock': '📦'
+    'Écran': '🖥️', 'Chargeur USB-C': '🔌', 'Anciens chargeurs': '🔌', 'Chargeur téléphone': '🔌', 'Dock': '📦'
 };
 
 function itemIcon(key, sectionIcon) {

@@ -8,7 +8,7 @@ export const ALL_STOCK_ITEMS = [
     { id: 'Sac à Dos', icon: '🎒' },
     { id: 'Chargeur USB-C', icon: '🔌' },
     { id: 'Anciens chargeurs', icon: '🔌' },
-    { id: 'Chargeur téléphone', icon: '🔋' },
+    { id: 'Chargeur téléphone', icon: '🔌' },
     { id: 'Dock', icon: '📦' },
     { id: 'Écran', icon: '🖥️' },
     { id: 'iPhone 16e', icon: '📱' },
