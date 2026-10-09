@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import Modal from './Modal';
 import { PHONE_CASE_INFO, PHONE_MODEL_OPTIONS } from '../config/phoneAccessories';
+import { parseScan } from '../utils/scanParse';
 
 const PC_TYPE_OPTIONS = [
     '650 G11 Neuf',
@@ -12,8 +13,9 @@ const PC_TYPE_OPTIONS = [
     'Zbook Occasion'
 ];
 
-export default function LoanedPCs({ loans, onAdd, onRemove }) {
+export default function LoanedPCs({ loans, onAdd, onRemove, devices }) {
     const [isModalOpen, setIsModalOpen] = useState(false);
+    const [pcSerial, setPcSerial] = useState('');
     const [name, setName] = useState('');
     const [searchQuery, setSearchQuery] = useState('');
 
@@ -37,7 +39,11 @@ export default function LoanedPCs({ loans, onAdd, onRemove }) {
         (loan.name || loan.recipient || '').toLowerCase().includes(searchQuery.toLowerCase())
     );
 
+    // PC du modèle choisi déjà scannés et disponibles en stock.
+    const inStockDevices = Object.values(devices || {}).filter(d => d.model === pcType && d.status === 'stock');
+
     const resetForm = () => {
+        setPcSerial('');
         setIncludePC(false);
         setIncludePhone(false);
         setPcType('650 G11 Neuf');
@@ -60,6 +66,24 @@ export default function LoanedPCs({ loans, onAdd, onRemove }) {
             alert('Sélectionnez au moins PC ou Téléphone.');
             return;
         }
+        // Si des PC de ce modèle sont suivis par n° de série, on attribue un PC précis.
+        let serial = '';
+        if (includePC && inStockDevices.length > 0) {
+            serial = parseScan(pcSerial).serial;
+            const device = serial ? devices[serial] : null;
+            if (!device) {
+                alert("Indique le n° de série du PC remis : scanne son QR code ou choisis-le dans la liste.");
+                return;
+            }
+            if (device.status !== 'stock') {
+                alert(`Ce PC (${serial}) n'est pas en stock : ${device.status === 'assigned' ? `il est attribué à ${device.holder || '?'}` : 'état inconnu'}.`);
+                return;
+            }
+            if (device.model !== pcType) {
+                alert(`Ce PC (${serial}) est enregistré comme « ${device.model} ». Choisis ce modèle ou un autre PC.`);
+                return;
+            }
+        }
         onAdd(name.trim(), includePC ? pcType : null, includePhone ? phoneType : null, {
             mouse: includeMouse,
             headset: includeHeadset,
@@ -70,7 +94,7 @@ export default function LoanedPCs({ loans, onAdd, onRemove }) {
             keyboard: includeKeyboard,
             phoneCase: includePhoneCase,
             phoneScreen: includePhoneScreen
-        });
+        }, serial);
         setName('');
         resetForm();
         setIsModalOpen(false); // Close modal on success
@@ -134,13 +158,37 @@ export default function LoanedPCs({ loans, onAdd, onRemove }) {
                                 <select
                                     className="loan-input full-width"
                                     value={pcType}
-                                    onChange={(e) => setPcType(e.target.value)}
+                                    onChange={(e) => { setPcType(e.target.value); setPcSerial(''); }}
                                 >
                                     {PC_TYPE_OPTIONS.map(option => (
                                         <option key={option} value={option}>{option}</option>
                                     ))}
                                 </select>
                             </div>
+
+                            {inStockDevices.length > 0 && (
+                                <div className="form-group">
+                                    <label>N° de série du PC remis</label>
+                                    <input
+                                        type="text"
+                                        className="loan-input full-width"
+                                        list="pc-serials-in-stock"
+                                        placeholder="Scanne le QR code du PC…"
+                                        value={pcSerial}
+                                        onChange={(e) => setPcSerial(e.target.value)}
+                                        autoCapitalize="characters"
+                                        autoComplete="off"
+                                        autoCorrect="off"
+                                        spellCheck={false}
+                                    />
+                                    <datalist id="pc-serials-in-stock">
+                                        {inStockDevices.map(device => <option key={device.serial} value={device.serial} />)}
+                                    </datalist>
+                                    <p style={{ margin: '6px 0 0', fontSize: '0.8rem', color: '#64748b' }}>
+                                        {inStockDevices.length} {pcType} en stock avec n° de série.
+                                    </p>
+                                </div>
+                            )}
 
                             <div className="form-group">
                                 <label>Accessoires PC inclus</label>
@@ -283,6 +331,7 @@ export default function LoanedPCs({ loans, onAdd, onRemove }) {
                             <span className="loan-name">{loan.name || loan.recipient}</span>
                             <div className="loan-meta">
                                 {loan.items && loan.items.join(' • ')}
+                                {loan.pcSerial ? ` • S/N ${loan.pcSerial}` : ''}
                             </div>
                         </div>
                         <button

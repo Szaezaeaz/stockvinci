@@ -2,6 +2,8 @@ import React, { useMemo, useState } from 'react';
 import GlobalWithdrawModal from './GlobalWithdrawModal';
 import ReturnModal from './ReturnModal';
 import AddMaterielModal from './AddMaterielModal';
+import DeviceListModal from './DeviceListModal';
+import { TRACKED_MODELS } from '../config/trackedModels';
 import { getMaxStock, getStockStatus, hasStockLimits } from '../config/thresholds';
 import { PHONE_CASE_INFO } from '../config/phoneAccessories';
 import { getStockStats } from '../utils/stockStats';
@@ -53,13 +55,13 @@ function itemIcon(key, sectionIcon) {
 // ou PC d'occasion sous son modèle Neuf). Les catégories sans seuil/max
 // (PC d'occasion) affichent quand même une barre (pleine à 20 unités),
 // juste sans le "/ max".
-function SubRow({ label, itemKey, stock }) {
+function SubRow({ label, itemKey, stock, onOpen }) {
     const count = stock[itemKey] || 0;
     const limited = hasStockLimits(itemKey);
     const max = limited ? getMaxStock(itemKey) : null;
     const { status, percent } = getStockStatus(itemKey, count);
     return (
-        <div className="item-subrow">
+        <div className={`item-subrow${onOpen ? ' item-subrow-clickable' : ''}`} onClick={onOpen}>
             <span className="item-subrow-label">{label}</span>
             <div className="item-subrow-main">
                 <div className="item-subrow-bar-track">
@@ -67,6 +69,7 @@ function SubRow({ label, itemKey, stock }) {
                 </div>
                 <span className={`item-subrow-count status-${status}`}>
                     {count}{limited && <span className="item-count-max"> / {max}</span>}
+                    {onOpen && <span className="item-row-chevron">›</span>}
                 </span>
             </div>
         </div>
@@ -94,12 +97,14 @@ export default function StockDashboard({
     onQuickReturnPC,
     devices,
     onEmployeeReturn,
-    onReceiveDevices
+    onReceiveDevices,
+    onRemoveUntracked
 }) {
     const [isWithdrawModalOpen, setIsWithdrawModalOpen] = useState(false);
     const [isReturnModalOpen, setIsReturnModalOpen] = useState(false);
     const [isAddModalOpen, setIsAddModalOpen] = useState(false);
     const [query, setQuery] = useState('');
+    const [deviceModel, setDeviceModel] = useState(null); // modèle dont on consulte les n° de série
 
     const stats = useMemo(() => getStockStats(stock), [stock]);
 
@@ -138,6 +143,15 @@ export default function StockDashboard({
                 stock={stock}
                 devices={devices}
                 onReceiveDevices={onReceiveDevices}
+            />
+
+            <DeviceListModal
+                key={deviceModel || 'none'}
+                model={deviceModel}
+                devices={devices}
+                stock={stock}
+                onClose={() => setDeviceModel(null)}
+                onRemoveUntracked={onRemoveUntracked}
             />
 
             <div className="action-buttons-row">
@@ -190,13 +204,17 @@ export default function StockDashboard({
                             const occasionKey = section.withOccasion ? PC_OCCASION_PAIRS[key] : null;
                             return (
                                 <div key={key} className="item-row-group">
-                                    <div className="item-row">
+                                    <div
+                                        className={`item-row${TRACKED_MODELS.has(key) ? ' item-row-clickable' : ''}`}
+                                        onClick={TRACKED_MODELS.has(key) ? () => setDeviceModel(key) : undefined}
+                                    >
                                         <span className="item-row-icon">{itemIcon(key, section.icon)}</span>
                                         <div className="item-row-main">
                                             <div className="item-row-top">
                                                 <span className="item-row-label">{key}</span>
                                                 <span className={`item-row-count status-${status}`}>
                                                     {count}{limited && <span className="item-count-max"> / {max}</span>}
+                                                    {TRACKED_MODELS.has(key) && <span className="item-row-chevron">›</span>}
                                                 </span>
                                             </div>
                                             <div className="item-row-bar-track">
@@ -217,7 +235,7 @@ export default function StockDashboard({
                                                 )
                                             )}
                                             {occasionKey && (
-                                                <SubRow label="Occasion" itemKey={occasionKey} stock={stock} />
+                                                <SubRow label="Occasion" itemKey={occasionKey} stock={stock} onOpen={() => setDeviceModel(occasionKey)} />
                                             )}
                                         </div>
                                     )}

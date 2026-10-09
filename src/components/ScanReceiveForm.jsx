@@ -1,16 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { PHONE_MODEL_OPTIONS } from '../config/phoneAccessories';
-import { normalizeSerial } from '../utils/serial';
-
-const PC_MODELS = [
-    '650 G11 Neuf',
-    '650 G11 Occasion',
-    '850 G8/G10 Occasion',
-    'X360 Neuf',
-    'X360 Occasion',
-    'Zbook Neuf',
-    'Zbook Occasion'
-];
+import { PC_MODELS } from '../config/trackedModels';
+import { conditionOfModel, parseScan, stockModelForFamily } from '../utils/scanParse';
 
 const STATUS_LABELS = { stock: 'en stock', assigned: 'attribué' };
 
@@ -22,11 +13,12 @@ const BURST_MIN_CHARS = 5;
 const BURST_IDLE_MS = 250;
 
 // Réception de stock par scan : une douchette en mode clavier (HID) saisit le
-// n° de série dans le champ toujours actif ; chaque scan s'ajoute à la liste,
-// validée en une fois.
+// contenu du code dans le champ toujours actif. Le QR code d'un PC HP contient
+// n° de série, référence produit et nom du modèle : le modèle est alors reconnu
+// automatiquement. Chaque scan s'ajoute à la liste, validée en une fois.
 export default function ScanReceiveForm({ devices, onReceive, onDone }) {
     const [model, setModel] = useState(PC_MODELS[0]);
-    const [serials, setSerials] = useState([]);
+    const [entries, setEntries] = useState([]); // [{ serial, model, modelName, productId }]
     const [value, setValue] = useState('');
     const [feedback, setFeedback] = useState(null); // { ok, text }
     const [useKeyboard, setUseKeyboard] = useState(false);
@@ -40,14 +32,15 @@ export default function ScanReceiveForm({ devices, onReceive, onDone }) {
     const refocus = () => setTimeout(() => inputRef.current?.focus(), 0);
 
     const addSerial = (raw) => {
-        const serial = normalizeSerial(raw);
+        const scan = parseScan(raw);
+        const { serial } = scan;
         setValue('');
         burstRef.current = 0;
         clearTimeout(idleTimerRef.current);
         refocus();
         if (!serial) return;
 
-        if (serials.includes(serial)) {
+        if (entries.some(entry => entry.serial === serial)) {
             setFeedback({ ok: false, text: `${serial} : déjà scanné dans cette liste.` });
             return;
         }
@@ -57,8 +50,17 @@ export default function ScanReceiveForm({ devices, onReceive, onDone }) {
             setFeedback({ ok: false, text: `${serial} : déjà enregistré (${known.model}${status ? `, ${status}` : ''}).` });
             return;
         }
-        setSerials(prev => [serial, ...prev]);
-        setFeedback({ ok: true, text: `${serial} ajouté.` });
+
+        // Modèle reconnu depuis le QR code (en gardant l'état Neuf/Occasion choisi),
+        // sinon le modèle sélectionné.
+        const entryModel = scan.family ? stockModelForFamily(scan.family, conditionOfModel(model)) : model;
+
+        setEntries(prev => [{ serial, model: entryModel, modelName: scan.modelName, productId: scan.productId }, ...prev]);
+        if (scan.modelName && !scan.family) {
+            setFeedback({ ok: true, text: `${serial} ajouté en ${entryModel} (modèle « ${scan.modelName} » non reconnu, à vérifier).` });
+        } else {
+            setFeedback({ ok: true, text: `${serial} ajouté · ${entryModel}` });
+        }
     };
 
     // Garde la dernière version de addSerial pour le minuteur de fin de rafale.
@@ -124,15 +126,15 @@ export default function ScanReceiveForm({ devices, onReceive, onDone }) {
         }
     };
 
-    const removeSerial = (serial) => {
-        setSerials(prev => prev.filter(s => s !== serial));
+    const removeEntry = (serial) => {
+        setEntries(prev => prev.filter(entry => entry.serial !== serial));
         refocus();
     };
 
     const handleConfirm = () => {
-        if (serials.length === 0) return;
-        onReceive(model, serials);
-        setSerials([]);
+        if (entries.length === 0) return;
+        onReceive(entries);
+        setEntries([]);
         setFeedback(null);
         onDone();
     };
@@ -140,12 +142,11 @@ export default function ScanReceiveForm({ devices, onReceive, onDone }) {
     return (
         <div className="scan-form">
             <div className="form-group">
-                <label>Modèle réceptionné</label>
+                <label>Modèle par défaut</label>
                 <select
                     className="loan-input"
                     value={model}
                     onChange={(e) => { setModel(e.target.value); e.target.blur(); refocus(); }}
-                    disabled={serials.length > 0}
                 >
                     <optgroup label="PC portables">
                         {PC_MODELS.map(option => <option key={option} value={option}>{option}</option>)}
@@ -154,18 +155,20 @@ export default function ScanReceiveForm({ devices, onReceive, onDone }) {
                         {PHONE_MODEL_OPTIONS.map(option => <option key={option} value={option}>{option}</option>)}
                     </optgroup>
                 </select>
-                {serials.length > 0 && (
-                    <p className="scan-hint">Valide ou vide la liste pour changer de modèle.</p>
-                )}
+                <p className="scan-hint">
+                    Le modèle est reconnu automatiquement quand tu scannes le QR code du PC (la liste ci-dessous
+                    l'indique pour chaque appareil). Choisis ici s'il est Neuf ou Occasion, ou le modèle à
+                    utiliser quand il n'est pas reconnu.
+                </p>
             </div>
 
             <form onSubmit={handleSubmit} className="form-group">
-                <label>Scanner un n° de série</label>
+                <label>Scanner le QR code (ou code-barres) du PC</label>
                 <input
                     ref={inputRef}
                     type="text"
                     className={`loan-input scan-input${focused ? ' scan-input-active' : ''}`}
-                    placeholder="Scanne le code-barres…"
+                    placeholder="Scanne le code…"
                     value={value}
                     onChange={handleChange}
                     onKeyDown={handleKeyDown}
@@ -187,20 +190,19 @@ export default function ScanReceiveForm({ devices, onReceive, onDone }) {
                 {feedback && (
                     <p className={`scan-feedback ${feedback.ok ? 'scan-ok' : 'scan-error'}`}>{feedback.text}</p>
                 )}
-                <p className="scan-hint">
-                    Rien ne s'affiche quand tu scannes ? Vérifie que la douchette est en mode clavier (HID) et connectée,
-                    puis teste-la dans une autre application (Notes).
-                </p>
             </form>
 
             <div className="scan-list-header">
-                <strong>{serials.length}</strong> appareil{serials.length > 1 ? 's' : ''} à ajouter
+                <strong>{entries.length}</strong> appareil{entries.length > 1 ? 's' : ''} à ajouter
             </div>
             <ul className="scan-list">
-                {serials.map(serial => (
-                    <li key={serial} className="scan-list-item">
-                        <span>{serial}</span>
-                        <button type="button" className="scan-remove" onClick={() => removeSerial(serial)} aria-label={`Retirer ${serial}`}>
+                {entries.map(entry => (
+                    <li key={entry.serial} className="scan-list-item">
+                        <span className="scan-list-serial">
+                            {entry.serial}
+                            <small>{entry.model}</small>
+                        </span>
+                        <button type="button" className="scan-remove" onClick={() => removeEntry(entry.serial)} aria-label={`Retirer ${entry.serial}`}>
                             &times;
                         </button>
                     </li>
@@ -210,11 +212,11 @@ export default function ScanReceiveForm({ devices, onReceive, onDone }) {
             <button
                 type="button"
                 className="btn-add full-width-btn"
-                style={{ marginTop: '16px', background: serials.length ? '#22c55e' : '#cbd5e1' }}
-                disabled={serials.length === 0}
+                style={{ marginTop: '16px', background: entries.length ? '#22c55e' : '#cbd5e1' }}
+                disabled={entries.length === 0}
                 onClick={handleConfirm}
             >
-                {serials.length ? `Ajouter ${serials.length} au stock` : 'Scanne un premier appareil'}
+                {entries.length ? `Ajouter ${entries.length} au stock` : 'Scanne un premier appareil'}
             </button>
         </div>
     );

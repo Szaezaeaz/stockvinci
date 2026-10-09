@@ -1516,3 +1516,134 @@ input[type="checkbox"]:focus {
 
 .scan-status-ready { color: #15803d; }
 .scan-status-idle { color: #b45309; }
+
+.scan-list-serial {
+  display: flex;
+  flex-direction: column;
+}
+
+.scan-list-serial small {
+  font-family: inherit;
+  font-size: 0.75rem;
+  color: #64748b;
+}
+
+/* Liste des appareils d'un modèle */
+.item-row-clickable,
+.item-subrow-clickable {
+  cursor: pointer;
+}
+
+.item-row-chevron {
+  margin-left: 6px;
+  color: #cbd5e1;
+  font-weight: 700;
+}
+
+.device-summary {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.device-chip {
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-size: 0.8rem;
+  font-weight: 700;
+}
+
+.device-chip-stock { background: #dcfce7; color: #166534; }
+.device-chip-assigned { background: #ffedd5; color: #9a3412; }
+
+.device-warning {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 12px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: #fffbeb;
+  color: #92400e;
+  font-size: 0.85rem;
+}
+
+.device-warning button {
+  flex-shrink: 0;
+  border: none;
+  border-radius: 10px;
+  padding: 8px 12px;
+  background: #f59e0b;
+  color: #fff;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.device-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  max-height: 340px;
+  overflow-y: auto;
+  border: 1px solid var(--accent-gray);
+  border-radius: 12px;
+}
+
+.device-list:empty { display: none; }
+
+.device-item { border-bottom: 1px solid #f1f5f9; }
+.device-item:last-child { border-bottom: none; }
+
+.device-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  width: 100%;
+  padding: 10px 12px;
+  border: none;
+  background: none;
+  text-align: left;
+  cursor: pointer;
+}
+
+.device-main {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.device-serial {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: #0f172a;
+  word-break: break-all;
+}
+
+.device-sub {
+  font-size: 0.75rem;
+  color: #94a3b8;
+}
+
+.device-badge {
+  flex-shrink: 0;
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  font-weight: 700;
+}
+
+.device-badge-stock { background: #dcfce7; color: #166534; }
+.device-badge-assigned { background: #ffedd5; color: #9a3412; }
+
+.device-events {
+  list-style: none;
+  margin: 0;
+  padding: 0 12px 10px;
+  font-size: 0.8rem;
+  color: #64748b;
+}
+
+.device-events li { padding: 2px 0; }

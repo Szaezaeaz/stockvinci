@@ -295,7 +295,7 @@ export function useInventory() {
     const addLoan = (name, pcType, phoneType, accessories = {
         mouse: true, headset: false, bag: true, backpack: false, screen: false, dock: false, keyboard: false,
         phoneCase: true, phoneScreen: true
-    }) => {
+    }, pcSerial = '') => {
         setData(prev => {
             const stockUpdates = {};
             // We won't push individual history updates anymore.
@@ -303,6 +303,7 @@ export function useInventory() {
 
             const loanedItems = [];
             const newDate = new Date();
+            const serial = normalizeSerial(pcSerial);
 
             // Helper to process deduction
             const processDeduction = (item) => {
@@ -367,7 +368,7 @@ export function useInventory() {
                 category: 'Matériel à récupérer',
                 delta: -1, // Logical decrement (1 package out)
                 recipient: name,
-                details: loanedItems, // Array of what was in the package
+                details: loanedItems.map(item => (item === pcType && serial ? `${item} (S/N ${serial})` : item)),
                 date: newDate
             };
 
@@ -375,12 +376,25 @@ export function useInventory() {
                 id: Date.now(),
                 name,
                 date: newDate,
-                items: loanedItems
+                items: loanedItems,
+                pcSerial: serial
             };
+
+            // Le PC précis passe "attribué" à la personne.
+            const devices = { ...(prev.devices || {}) };
+            if (serial && devices[serial]) {
+                devices[serial] = {
+                    ...devices[serial],
+                    status: 'assigned',
+                    holder: name,
+                    events: [{ date: newDate, action: 'Attribution', person: name }, ...(devices[serial].events || [])].slice(0, 20)
+                };
+            }
 
             return {
                 ...prev,
                 stock: newStock,
+                devices,
                 history: [loanPackageEntry, ...prev.history].slice(0, 50),
                 loans: [...prev.loans, newLoan]
             };
@@ -515,6 +529,18 @@ export function useInventory() {
                 newStock[id] = (newStock[id] || 0) + count;
             }
 
+            // Le PC attribué retourne "en stock".
+            const devices = { ...(prev.devices || {}) };
+            const returnedDate = new Date();
+            if (loan.pcSerial && devices[loan.pcSerial]) {
+                devices[loan.pcSerial] = {
+                    ...devices[loan.pcSerial],
+                    status: 'stock',
+                    holder: null,
+                    events: [{ date: returnedDate, action: 'Retour', person: loan.name || loan.recipient }, ...(devices[loan.pcSerial].events || [])].slice(0, 20)
+                };
+            }
+
             // History Log
             const historyEntry = {
                 id: Date.now(),
@@ -522,12 +548,13 @@ export function useInventory() {
                 delta: 1,
                 recipient: loan.recipient,
                 details: loan.items,
-                date: new Date()
+                date: returnedDate
             };
 
             return {
                 ...prev,
                 stock: newStock,
+                devices,
                 history: [historyEntry, ...prev.history].slice(0, 50),
                 loans: prev.loans.filter(l => l.id !== loanId) // Remove from active loans
             };
@@ -632,42 +659,74 @@ export function useInventory() {
     // Réception de matériel scanné : chaque n° de série devient une fiche
     // d'appareil "en stock" et le stock du modèle augmente d'autant. Les n° de
     // série déjà connus sont ignorés.
-    const receiveDevices = (model, serials) => {
+    // entries : [{ serial, model, modelName?, productId? }] — chaque appareil
+    // porte son propre modèle (reconnu depuis le QR code, ou choisi à la main).
+    const receiveDevices = (entries) => {
         setData(prev => {
             const devices = { ...(prev.devices || {}) };
+            const stock = { ...prev.stock };
             const date = new Date();
-            const kind = PHONE_MODEL_OPTIONS.includes(model) ? 'phone' : 'pc';
-            const added = [];
+            const details = [];
 
-            for (const raw of serials) {
-                const serial = normalizeSerial(raw);
+            for (const entry of entries) {
+                const serial = normalizeSerial(entry.serial);
                 if (!serial || devices[serial]) continue;
                 devices[serial] = {
                     serial,
-                    kind,
-                    model,
+                    kind: PHONE_MODEL_OPTIONS.includes(entry.model) ? 'phone' : 'pc',
+                    model: entry.model,
+                    modelName: entry.modelName || '',
+                    productId: entry.productId || '',
                     status: 'stock',
                     holder: null,
                     events: [{ date, action: 'Réception', person: null }]
                 };
-                added.push(serial);
+                stock[entry.model] = (stock[entry.model] || 0) + 1;
+                details.push(`${entry.model} (S/N ${serial})`);
             }
 
-            if (added.length === 0) return prev;
+            if (details.length === 0) return prev;
 
             const historyEntry = {
                 id: Date.now(),
                 category: 'Ajout Matériel',
                 delta: 1,
                 recipient: null,
-                details: added.map(serial => `${model} (S/N ${serial})`),
+                details,
                 date
             };
 
             return {
                 ...prev,
-                stock: { ...prev.stock, [model]: (prev.stock[model] || 0) + added.length },
+                stock,
                 devices,
+                history: [historyEntry, ...prev.history].slice(0, 50)
+            };
+        });
+    };
+
+    // Retire du stock les unités d'un modèle qui n'ont pas de fiche (n° de série) :
+    // le stock du modèle devient égal au nombre d'appareils "en stock" scannés.
+    const removeUntrackedStock = (model) => {
+        setData(prev => {
+            const tracked = Object.values(prev.devices || {})
+                .filter(device => device.model === model && device.status === 'stock').length;
+            const current = prev.stock[model] || 0;
+            const untracked = current - tracked;
+            if (untracked <= 0) return prev;
+
+            const historyEntry = {
+                id: Date.now(),
+                category: 'Ajustement stock',
+                delta: -1,
+                recipient: null,
+                details: [`${model} : ${untracked} unité${untracked > 1 ? 's' : ''} sans n° de série retirée${untracked > 1 ? 's' : ''}`],
+                date: new Date()
+            };
+
+            return {
+                ...prev,
+                stock: { ...prev.stock, [model]: tracked },
                 history: [historyEntry, ...prev.history].slice(0, 50)
             };
         });
@@ -687,6 +746,7 @@ export function useInventory() {
         devices: data.devices,
         returnFromEmployee,
         receiveDevices,
+        removeUntrackedStock,
         addLoan,
         addWithdrawal,
         addStock,
