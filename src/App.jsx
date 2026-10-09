@@ -12,6 +12,7 @@ import SyncStatus from './components/SyncStatus';
 
 function App() {
   const { stock, history, loans, addLoan, removeLoan, addWithdrawal, addStock, returnLoan, quickReturnPC,
+        devices, returnFromEmployee,
         syncStatus, syncNotice, submitPasscode, dismissSyncNotice, syncNow, syncChoice, resolveSyncChoice } = useInventory();
   const [activeTab, setActiveTab] = useState('stock'); // 'stock' | 'loans' | 'history'
   const { totalUnits } = useMemo(() => getStockStats(stock), [stock]);
@@ -39,6 +40,8 @@ function App() {
             loans={loans}
             onReturnLoan={returnLoan}
             onQuickReturnPC={quickReturnPC}
+            devices={devices}
+            onEmployeeReturn={returnFromEmployee}
           />
         )}
         {activeTab === 'loans' && (

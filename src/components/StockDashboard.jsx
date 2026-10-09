@@ -91,7 +91,9 @@ export default function StockDashboard({
     onAddStock,
     loans,
     onReturnLoan,
-    onQuickReturnPC
+    onQuickReturnPC,
+    devices,
+    onEmployeeReturn
 }) {
     const [isWithdrawModalOpen, setIsWithdrawModalOpen] = useState(false);
     const [isReturnModalOpen, setIsReturnModalOpen] = useState(false);
@@ -124,6 +126,8 @@ export default function StockDashboard({
                 loans={loans}
                 onReturnLoan={onReturnLoan}
                 onQuickReturnPC={onQuickReturnPC}
+                devices={devices}
+                onEmployeeReturn={onEmployeeReturn}
             />
 
             <AddMaterielModal

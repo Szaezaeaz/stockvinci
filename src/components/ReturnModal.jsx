@@ -1,12 +1,15 @@
 import React, { useState } from 'react';
 import Modal from './Modal';
+import EmployeeReturnForm from './EmployeeReturnForm';
 
 export default function ReturnModal({
     isOpen,
     onClose,
     loans,
     onReturnLoan,
-    onQuickReturnPC
+    onQuickReturnPC,
+    devices,
+    onEmployeeReturn
 }) {
     const [activeTab, setActiveTab] = useState('loans'); // 'loans' or 'quick'
     const [searchQuery, setSearchQuery] = useState('');
@@ -58,6 +61,12 @@ export default function ReturnModal({
                 >
                     Retour PC Rapide
                 </button>
+                <button
+                    className={`segment-btn ${activeTab === 'employee' ? 'active' : ''}`}
+                    onClick={() => setActiveTab('employee')}
+                >
+                    Retour collaborateur
+                </button>
             </div>
 
             {activeTab === 'loans' ? (
@@ -104,6 +113,12 @@ export default function ReturnModal({
                         ))}
                     </div>
                 </div>
+            ) : activeTab === 'employee' ? (
+                <EmployeeReturnForm
+                    devices={devices}
+                    onSubmit={onEmployeeReturn}
+                    onDone={onClose}
+                />
             ) : (
                 <form onSubmit={handleQuickSubmit}>
                     <div className="form-group">

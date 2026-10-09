@@ -1403,3 +1403,14 @@ input[type="checkbox"]:focus {
 .stock-view .search-bar {
   margin-bottom: 0;
 }
+
+/* Formulaire "Retour collaborateur" */
+.employee-return-form .form-group {
+  margin-bottom: 18px;
+}
+
+.employee-return-form .loan-input {
+  display: block;
+  width: 100%;
+  box-sizing: border-box;
+}

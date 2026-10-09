@@ -36,7 +36,10 @@ const INITIAL_STATE = {
         'Vitre Samsung XCOVER 7': 0
     },
     history: [],
-    loans: [] // Array of { id, name, date }
+    loans: [], // Array of { id, name, date }
+    // Registre des numéros de série saisis (PC / téléphones), indexé par n° de
+    // série : { serial, kind, model, events: [{ date, action, person }] }.
+    devices: {}
 };
 
 // Maps legacy generic category names (pre-model-tracking) to their closest
@@ -50,6 +53,18 @@ const LEGACY_KEY_MIGRATIONS = {
     '850 G8 Occasion': '850 G8/G10 Occasion',
     Chargeur: 'Chargeur USB-C',
     'Anciens chargeurs': 'Ancien chargeur'
+};
+
+// Accessoires récupérables avec un collaborateur : case à cocher -> article de stock.
+const RETURN_ACCESSORY_ITEMS = {
+    mouse: 'Souris',
+    charger: 'Chargeur USB-C',
+    headset: 'Casque',
+    bag: 'Sacoche',
+    backpack: 'Sac à Dos',
+    screen: 'Écran',
+    dock: 'Dock',
+    keyboard: 'Clavier'
 };
 
 function migrateLegacyStock(stock) {
@@ -77,7 +92,8 @@ function normalizeData(parsed) {
         loans: (parsed.loans || []).map(loan => ({
             ...loan,
             items: Array.isArray(loan.items) ? loan.items.map(migrateLoanItem) : loan.items
-        }))
+        })),
+        devices: parsed.devices || {}
     };
 }
 
@@ -545,6 +561,67 @@ export function useInventory() {
         });
     };
 
+    // Retour d'un collaborateur (départ CDI/CDD...) : le PC rejoint le stock
+    // Occasion de son modèle, le téléphone son stock, plus les accessoires.
+    // Les numéros de série saisis alimentent le registre `devices`.
+    const returnFromEmployee = (name, { pcModel, pcSerial, phoneModel, phoneSerial, phoneCase, accessories = {} }) => {
+        setData(prev => {
+            const stockUpdates = {};
+            const details = [];
+            const devices = { ...(prev.devices || {}) };
+            const date = new Date();
+
+            const add = (item) => { stockUpdates[item] = (stockUpdates[item] || 0) + 1; };
+            const track = (rawSerial, kind, model) => {
+                const serial = (rawSerial || '').trim().toUpperCase();
+                if (!serial) return '';
+                const events = [{ date, action: 'Retour', person: name }, ...(devices[serial]?.events || [])].slice(0, 20);
+                devices[serial] = { serial, kind, model, events };
+                return ` (S/N ${serial})`;
+            };
+
+            if (pcModel) {
+                add(pcModel);
+                details.push(pcModel + track(pcSerial, 'pc', pcModel));
+            }
+            if (phoneModel) {
+                add(phoneModel);
+                details.push(phoneModel + track(phoneSerial, 'phone', phoneModel));
+                const caseInfo = PHONE_CASE_INFO[phoneModel];
+                if (phoneCase && caseInfo) {
+                    const caseItems = caseInfo.bundled ? [caseInfo.comboItem] : [caseInfo.caseItem, caseInfo.screenItem];
+                    caseItems.forEach(item => { add(item); details.push(item); });
+                }
+            }
+            for (const [flag, item] of Object.entries(RETURN_ACCESSORY_ITEMS)) {
+                if (accessories[flag]) { add(item); details.push(item); }
+            }
+
+            if (details.length === 0) return prev;
+
+            const newStock = { ...prev.stock };
+            for (const [item, count] of Object.entries(stockUpdates)) {
+                newStock[item] = (newStock[item] || 0) + count;
+            }
+
+            const historyEntry = {
+                id: Date.now(),
+                category: 'Retour collaborateur',
+                delta: 1,
+                recipient: name,
+                details,
+                date
+            };
+
+            return {
+                ...prev,
+                stock: newStock,
+                devices,
+                history: [historyEntry, ...prev.history].slice(0, 50)
+            };
+        });
+    };
+
     const removeLoan = (id) => {
         setData(prev => ({
             ...prev,
@@ -556,6 +633,8 @@ export function useInventory() {
         stock: data.stock,
         history: data.history,
         loans: data.loans,
+        devices: data.devices,
+        returnFromEmployee,
         addLoan,
         addWithdrawal,
         addStock,
