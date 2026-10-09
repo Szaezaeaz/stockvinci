@@ -67,6 +67,14 @@ function normalizeData(parsed) {
     };
 }
 
+function summarize(data) {
+    return {
+        units: Object.values(data.stock || {}).reduce((sum, n) => sum + (n || 0), 0),
+        loans: (data.loans || []).length,
+        history: (data.history || []).length
+    };
+}
+
 const SYNC_INTERVAL_MS = 60000;
 const PUSH_DELAY_MS = 1500;
 
@@ -98,6 +106,10 @@ export function useInventory() {
     const busyRef = useRef(false);
     const rerunRef = useRef(false);
     const pushTimerRef = useRef(null);
+    // Premier lancement de la synchro sur cet appareil alors que le cloud contient
+    // déjà des données : on demande lesquelles garder au lieu de trancher seuls.
+    const [syncChoice, setSyncChoice] = useState(null); // { cloud, local } (résumés)
+    const pendingCloudRef = useRef(null);
 
     useEffect(() => {
         dataRef.current = data;
@@ -116,9 +128,19 @@ export function useInventory() {
         setData(next);
     }, [updateMeta]);
 
+    const askWhichToKeep = useCallback((cloud) => {
+        pendingCloudRef.current = cloud;
+        setSyncChoice({ cloud: summarize(cloud.data), local: summarize(dataRef.current) });
+        setSyncStatus('needs-choice');
+    }, []);
+
     const sync = useCallback(async () => {
         if (!getPasscode()) {
             setSyncStatus('needs-code');
+            return;
+        }
+        if (pendingCloudRef.current) {
+            setSyncStatus('needs-choice');
             return;
         }
         if (busyRef.current) {
@@ -139,6 +161,10 @@ export function useInventory() {
                     setSyncStatus('synced');
                     return;
                 }
+                if (result.status === 409 && metaRef.current.rev === 0 && result.body.data) {
+                    askWhichToKeep(result.body);
+                    return;
+                }
                 if (result.status === 409) {
                     adoptCloud(result.body);
                     setSyncNotice("Un autre appareil a modifié le stock : vos dernières modifications ont été remplacées par la version à jour.");
@@ -154,6 +180,10 @@ export function useInventory() {
                         updateMeta({ dirty: true });
                         rerunRef.current = true;
                     } else if (cloud.rev !== metaRef.current.rev) {
+                        if (metaRef.current.rev === 0) {
+                            askWhichToKeep(cloud);
+                            return;
+                        }
                         adoptCloud(cloud);
                     }
                     setSyncStatus('synced');
@@ -171,7 +201,7 @@ export function useInventory() {
                 sync();
             }
         }
-    }, [adoptCloud, updateMeta]);
+    }, [adoptCloud, askWhichToKeep, updateMeta]);
 
     // Toute modification locale (pas celles reprises du cloud) marque l'appareil
     // "dirty" et déclenche un envoi différé.
@@ -208,6 +238,22 @@ export function useInventory() {
     };
 
     const dismissSyncNotice = () => setSyncNotice('');
+
+    // choice : 'cloud' (cet appareil reprend le cloud) ou 'local' (le cloud est
+    // remplacé par les données de cet appareil).
+    const resolveSyncChoice = (choice) => {
+        const cloud = pendingCloudRef.current;
+        if (!cloud) return;
+        pendingCloudRef.current = null;
+        setSyncChoice(null);
+        if (choice === 'cloud') {
+            adoptCloud(cloud);
+            setSyncStatus('synced');
+        } else {
+            updateMeta({ rev: cloud.rev, dirty: true });
+            sync();
+        }
+    };
 
     const addLoan = (name, pcType, phoneType, accessories = {
         mouse: true, headset: false, bag: true, backpack: false, screen: false, dock: false, keyboard: false,
@@ -504,6 +550,8 @@ export function useInventory() {
         syncNotice,
         submitPasscode,
         dismissSyncNotice,
+        syncChoice,
+        resolveSyncChoice,
         syncNow: sync
     };
 }

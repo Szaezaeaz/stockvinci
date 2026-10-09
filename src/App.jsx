@@ -12,14 +12,14 @@ import SyncStatus from './components/SyncStatus';
 
 function App() {
   const { stock, history, loans, addLoan, removeLoan, addWithdrawal, addStock, returnLoan, quickReturnPC,
-        syncStatus, syncNotice, submitPasscode, dismissSyncNotice, syncNow } = useInventory();
+        syncStatus, syncNotice, submitPasscode, dismissSyncNotice, syncNow, syncChoice, resolveSyncChoice } = useInventory();
   const [activeTab, setActiveTab] = useState('stock'); // 'stock' | 'loans' | 'history'
   const { totalUnits } = useMemo(() => getStockStats(stock), [stock]);
 
   return (
     <Layout
       totalUnits={totalUnits}
-      headerExtra={<SyncStatus status={syncStatus} onSubmitCode={submitPasscode} onSyncNow={syncNow} />}
+      headerExtra={<SyncStatus status={syncStatus} choice={syncChoice} onSubmitCode={submitPasscode} onSyncNow={syncNow} onResolveChoice={resolveSyncChoice} />}
     >
       {syncNotice && (
         <div className="sync-notice">
