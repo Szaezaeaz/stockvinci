@@ -6,6 +6,8 @@ import { getMaxStock, getStockStatus, hasStockLimits } from '../config/threshold
 import { PHONE_CASE_INFO } from '../config/phoneAccessories';
 import { getStockStats } from '../utils/stockStats';
 import { IconPhoneCharger } from './icons';
+import SearchBar from './SearchBar';
+import { matchesQuery } from '../utils/search';
 
 const DASHBOARD_SECTIONS = [
     {
@@ -71,6 +73,18 @@ function SubRow({ label, itemKey, stock }) {
     );
 }
 
+// Textes supplémentaires retrouvables via la recherche (sous-lignes de l'article).
+function searchTerms(section, key) {
+    const caseInfo = section.withCases ? PHONE_CASE_INFO[key] : null;
+    if (caseInfo) {
+        return caseInfo.bundled
+            ? [caseInfo.comboItem, 'Coque', 'Vitre']
+            : [caseInfo.caseItem, caseInfo.screenItem, 'Coque', 'Vitre'];
+    }
+    const occasionKey = section.withOccasion ? PC_OCCASION_PAIRS[key] : null;
+    return occasionKey ? [occasionKey, 'Occasion'] : [];
+}
+
 export default function StockDashboard({
     stock,
     onWithdraw,
@@ -82,8 +96,18 @@ export default function StockDashboard({
     const [isWithdrawModalOpen, setIsWithdrawModalOpen] = useState(false);
     const [isReturnModalOpen, setIsReturnModalOpen] = useState(false);
     const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+    const [query, setQuery] = useState('');
 
     const stats = useMemo(() => getStockStats(stock), [stock]);
+
+    // Une ligne reste affichée si la recherche correspond à l'article ou à l'une
+    // de ses sous-lignes (coque, vitre, occasion) ; on garde alors tout le bloc.
+    const visibleSections = DASHBOARD_SECTIONS
+        .map(section => ({
+            ...section,
+            visibleItems: section.items.filter(key => matchesQuery(query, [key, ...searchTerms(section, key)]))
+        }))
+        .filter(section => section.visibleItems.length > 0);
 
     return (
         <div className="stock-view">
@@ -139,14 +163,18 @@ export default function StockDashboard({
                 </div>
             </div>
 
-            {DASHBOARD_SECTIONS.map(section => (
+            <SearchBar value={query} onChange={setQuery} placeholder="Rechercher dans le stock…" />
+
+            {visibleSections.length === 0 && <div className="search-empty">Aucun article trouvé.</div>}
+
+            {visibleSections.map(section => (
                 <div key={section.title} className="section-card">
                     <div className="section-card-header">
                         <h3>{section.icon} {section.title}</h3>
-                        <span className="section-card-count">{section.items.length} {section.unitLabel}</span>
+                        <span className="section-card-count">{section.visibleItems.length} {section.unitLabel}</span>
                     </div>
                     <div className="section-card-body">
-                        {section.items.map(key => {
+                        {section.visibleItems.map(key => {
                             const count = stock[key] || 0;
                             const limited = hasStockLimits(key);
                             const max = limited ? getMaxStock(key) : null;
