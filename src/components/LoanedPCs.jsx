@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import Modal from './Modal';
 import { PHONE_CASE_INFO, PHONE_MODEL_OPTIONS } from '../config/phoneAccessories';
 import { parseScan } from '../utils/scanParse';
+import PcPicker from './PcPicker';
 
 const PC_TYPE_OPTIONS = [
     '650 G11 Neuf',
@@ -41,6 +42,8 @@ export default function LoanedPCs({ loans, onAdd, onRemove, devices }) {
 
     // PC du modèle choisi déjà scannés et disponibles en stock.
     const inStockDevices = Object.values(devices || {}).filter(d => d.model === pcType && d.status === 'stock');
+    // Au moins un PC scanné est en stock (tous modèles) : on propose de choisir un PC précis.
+    const anyTrackedPcInStock = Object.values(devices || {}).some(d => d.kind === 'pc' && d.status === 'stock');
 
     const resetForm = () => {
         setPcSerial('');
@@ -158,7 +161,11 @@ export default function LoanedPCs({ loans, onAdd, onRemove, devices }) {
                                 <select
                                     className="loan-input full-width"
                                     value={pcType}
-                                    onChange={(e) => { setPcType(e.target.value); setPcSerial(''); }}
+                                    onChange={(e) => {
+                                        setPcType(e.target.value);
+                                        // Le PC choisi ne correspond plus au modèle : on le désélectionne.
+                                        if (pcSerial && devices?.[pcSerial]?.model !== e.target.value) setPcSerial('');
+                                    }}
                                 >
                                     {PC_TYPE_OPTIONS.map(option => (
                                         <option key={option} value={option}>{option}</option>
@@ -166,28 +173,14 @@ export default function LoanedPCs({ loans, onAdd, onRemove, devices }) {
                                 </select>
                             </div>
 
-                            {inStockDevices.length > 0 && (
-                                <div className="form-group">
-                                    <label>N° de série du PC remis</label>
-                                    <input
-                                        type="text"
-                                        className="loan-input full-width"
-                                        list="pc-serials-in-stock"
-                                        placeholder="Scanne le QR code du PC…"
-                                        value={pcSerial}
-                                        onChange={(e) => setPcSerial(e.target.value)}
-                                        autoCapitalize="characters"
-                                        autoComplete="off"
-                                        autoCorrect="off"
-                                        spellCheck={false}
-                                    />
-                                    <datalist id="pc-serials-in-stock">
-                                        {inStockDevices.map(device => <option key={device.serial} value={device.serial} />)}
-                                    </datalist>
-                                    <p style={{ margin: '6px 0 0', fontSize: '0.8rem', color: '#64748b' }}>
-                                        {inStockDevices.length} {pcType} en stock avec n° de série.
-                                    </p>
-                                </div>
+                            {anyTrackedPcInStock && (
+                                <PcPicker
+                                    devices={devices}
+                                    pcType={pcType}
+                                    onModelChange={setPcType}
+                                    selected={pcSerial}
+                                    onSelect={setPcSerial}
+                                />
                             )}
 
                             <div className="form-group">

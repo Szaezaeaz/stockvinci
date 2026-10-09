@@ -1,42 +1,27 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useState } from 'react';
 import { PHONE_MODEL_OPTIONS } from '../config/phoneAccessories';
 import { PC_MODELS } from '../config/trackedModels';
 import { conditionOfModel, parseScan, stockModelForFamily } from '../utils/scanParse';
+import { useScanCapture } from '../hooks/useScanCapture';
 
 const STATUS_LABELS = { stock: 'en stock', assigned: 'attribué' };
-
-// Une douchette "tape" les caractères en rafale (quelques ms entre deux) : on
-// repère cette rafale pour valider le scan même si la douchette n'envoie pas
-// Entrée à la fin. Une saisie à la main est trop lente pour déclencher ça.
-const BURST_GAP_MS = 60;
-const BURST_MIN_CHARS = 5;
-const BURST_IDLE_MS = 250;
 
 // Réception de stock par scan : une douchette en mode clavier (HID) saisit le
 // contenu du code dans le champ toujours actif. Le QR code d'un PC HP contient
 // n° de série, référence produit et nom du modèle : le modèle est alors reconnu
-// automatiquement. Chaque scan s'ajoute à la liste, validée en une fois.
+// et sélectionné automatiquement dans la liste. Chaque scan s'ajoute à la
+// liste, validée en une fois.
 export default function ScanReceiveForm({ devices, onReceive, onDone }) {
     const [model, setModel] = useState(PC_MODELS[0]);
     const [entries, setEntries] = useState([]); // [{ serial, model, modelName, productId }]
     const [value, setValue] = useState('');
     const [feedback, setFeedback] = useState(null); // { ok, text }
     const [useKeyboard, setUseKeyboard] = useState(false);
-    const [focused, setFocused] = useState(false);
-    const inputRef = useRef(null);
-    const lastChangeRef = useRef(0);
-    const burstRef = useRef(0);
-    const idleTimerRef = useRef(null);
-    const addSerialRef = useRef(null);
-
-    const refocus = () => setTimeout(() => inputRef.current?.focus(), 0);
 
     const addSerial = (raw) => {
         const scan = parseScan(raw);
         const { serial } = scan;
         setValue('');
-        burstRef.current = 0;
-        clearTimeout(idleTimerRef.current);
         refocus();
         if (!serial) return;
 
@@ -51,9 +36,10 @@ export default function ScanReceiveForm({ devices, onReceive, onDone }) {
             return;
         }
 
-        // Modèle reconnu depuis le QR code (en gardant l'état Neuf/Occasion choisi),
-        // sinon le modèle sélectionné.
+        // Modèle reconnu depuis le QR code (en gardant l'état Neuf/Occasion choisi) :
+        // il est sélectionné dans la liste. Sinon on garde le modèle sélectionné.
         const entryModel = scan.family ? stockModelForFamily(scan.family, conditionOfModel(model)) : model;
+        if (scan.family) setModel(entryModel);
 
         setEntries(prev => [{ serial, model: entryModel, modelName: scan.modelName, productId: scan.productId }, ...prev]);
         if (scan.modelName && !scan.family) {
@@ -63,68 +49,12 @@ export default function ScanReceiveForm({ devices, onReceive, onDone }) {
         }
     };
 
-    // Garde la dernière version de addSerial pour le minuteur de fin de rafale.
-    useEffect(() => {
-        addSerialRef.current = addSerial;
+    const { focused, refocus, inputProps } = useScanCapture({
+        value,
+        setValue,
+        onScan: addSerial,
+        redirectKeys: true
     });
-
-    useEffect(() => {
-        inputRef.current?.focus();
-        return () => clearTimeout(idleTimerRef.current);
-    }, []);
-
-    const handleValue = (next) => {
-        setValue(next);
-
-        const now = Date.now();
-        burstRef.current = now - lastChangeRef.current < BURST_GAP_MS ? burstRef.current + 1 : 1;
-        lastChangeRef.current = now;
-
-        clearTimeout(idleTimerRef.current);
-        if (burstRef.current >= BURST_MIN_CHARS) {
-            idleTimerRef.current = setTimeout(() => addSerialRef.current(next), BURST_IDLE_MS);
-        }
-    };
-
-    const handleValueRef = useRef(handleValue);
-    useEffect(() => {
-        handleValueRef.current = handleValue;
-    });
-
-    // La douchette "tape" dans l'élément qui a le focus. Si c'est autre chose que
-    // le champ de scan (liste déroulante du modèle, bouton…), la première touche
-    // est redirigée vers le champ pour que le scan ne soit jamais perdu ni ne
-    // change le modèle par erreur.
-    useEffect(() => {
-        const onKeyDown = (e) => {
-            const input = inputRef.current;
-            if (!input || document.activeElement === input) return;
-            if (e.ctrlKey || e.metaKey || e.altKey || e.key.length !== 1) return;
-            const tag = e.target.tagName;
-            if (tag === 'INPUT' || tag === 'TEXTAREA') return;
-            e.preventDefault();
-            input.focus();
-            input.value += e.key;
-            handleValueRef.current(input.value);
-        };
-        window.addEventListener('keydown', onKeyDown, true);
-        return () => window.removeEventListener('keydown', onKeyDown, true);
-    }, []);
-
-    const handleChange = (e) => handleValue(e.target.value);
-
-    const handleSubmit = (e) => {
-        e.preventDefault();
-        addSerial(value);
-    };
-
-    // Certaines douchettes terminent le scan par Tab au lieu d'Entrée.
-    const handleKeyDown = (e) => {
-        if (e.key === 'Tab' && value) {
-            e.preventDefault();
-            addSerial(value);
-        }
-    };
 
     const removeEntry = (serial) => {
         setEntries(prev => prev.filter(entry => entry.serial !== serial));
@@ -142,7 +72,7 @@ export default function ScanReceiveForm({ devices, onReceive, onDone }) {
     return (
         <div className="scan-form">
             <div className="form-group">
-                <label>Modèle par défaut</label>
+                <label>Modèle</label>
                 <select
                     className="loan-input"
                     value={model}
@@ -156,24 +86,18 @@ export default function ScanReceiveForm({ devices, onReceive, onDone }) {
                     </optgroup>
                 </select>
                 <p className="scan-hint">
-                    Le modèle est reconnu automatiquement quand tu scannes le QR code du PC (la liste ci-dessous
-                    l'indique pour chaque appareil). Choisis ici s'il est Neuf ou Occasion, ou le modèle à
-                    utiliser quand il n'est pas reconnu.
+                    Le modèle se sélectionne tout seul quand tu scannes le QR code d'un PC. Choisis ici Neuf ou
+                    Occasion, ou le modèle à utiliser quand il n'est pas reconnu.
                 </p>
             </div>
 
-            <form onSubmit={handleSubmit} className="form-group">
+            <div className="form-group">
                 <label>Scanner le QR code (ou code-barres) du PC</label>
                 <input
-                    ref={inputRef}
+                    {...inputProps}
                     type="text"
                     className={`loan-input scan-input${focused ? ' scan-input-active' : ''}`}
                     placeholder="Scanne le code…"
-                    value={value}
-                    onChange={handleChange}
-                    onKeyDown={handleKeyDown}
-                    onFocus={() => setFocused(true)}
-                    onBlur={() => setFocused(false)}
                     inputMode={useKeyboard ? 'text' : 'none'}
                     autoFocus
                     autoCapitalize="characters"
@@ -190,7 +114,7 @@ export default function ScanReceiveForm({ devices, onReceive, onDone }) {
                 {feedback && (
                     <p className={`scan-feedback ${feedback.ok ? 'scan-ok' : 'scan-error'}`}>{feedback.text}</p>
                 )}
-            </form>
+            </div>
 
             <div className="scan-list-header">
                 <strong>{entries.length}</strong> appareil{entries.length > 1 ? 's' : ''} à ajouter

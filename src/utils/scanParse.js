@@ -19,6 +19,11 @@ export function stockModelForFamily(family, condition) {
     return `${family} ${condition === 'Occasion' ? 'Occasion' : 'Neuf'}`;
 }
 
+// "650 G11 Neuf" -> "650 G11" (famille d'un modèle de stock).
+export function familyOfModel(model) {
+    return String(model || '').replace(/ (Neuf|Occasion)$/, '');
+}
+
 export function conditionOfModel(model) {
     return String(model).endsWith('Occasion') ? 'Occasion' : 'Neuf';
 }

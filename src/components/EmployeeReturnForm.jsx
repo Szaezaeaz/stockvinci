@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
 import { PHONE_CASE_INFO, PHONE_MODEL_OPTIONS } from '../config/phoneAccessories';
 import { normalizeSerial } from '../utils/serial';
+import { familyOfModel, parseScan, stockModelForFamily } from '../utils/scanParse';
+import { useScanCapture } from '../hooks/useScanCapture';
 
 // Le PC rendu rejoint le stock Occasion de son modèle.
 const PC_RETURN_OPTIONS = [
@@ -53,6 +55,44 @@ export default function EmployeeReturnForm({ devices, onSubmit, onDone }) {
     const [phoneCase, setPhoneCase] = useState(false);
 
     const [accessories, setAccessories] = useState({});
+    const [pcDetected, setPcDetected] = useState('');
+    const [phoneDetected, setPhoneDetected] = useState('');
+
+    // Scan du PC : le n° de série remplit le champ et le modèle se sélectionne
+    // tout seul (QR code HP, ou appareil déjà connu du registre).
+    const pcScan = useScanCapture({
+        value: pcSerial,
+        setValue: setPcSerial,
+        onScan: (raw) => {
+            const scan = parseScan(raw);
+            setPcSerial(scan.serial);
+            const family = scan.family || (devices?.[scan.serial] ? familyOfModel(devices[scan.serial].model) : null);
+            if (family) {
+                const detected = stockModelForFamily(family, 'Occasion');
+                setPcModel(detected);
+                setPcDetected(`Modèle détecté : ${familyOfModel(detected)}`);
+            } else {
+                setPcDetected('');
+            }
+        }
+    });
+
+    // Scan du téléphone : si l'appareil est connu du registre, son modèle est sélectionné.
+    const phoneScan = useScanCapture({
+        value: phoneSerial,
+        setValue: setPhoneSerial,
+        onScan: (raw) => {
+            const { serial } = parseScan(raw);
+            setPhoneSerial(serial);
+            const known = devices?.[serial];
+            if (known && PHONE_MODEL_OPTIONS.includes(known.model)) {
+                setPhoneModel(known.model);
+                setPhoneDetected(`Modèle détecté : ${known.model}`);
+            } else {
+                setPhoneDetected('');
+            }
+        }
+    });
 
     const handleSubmit = (e) => {
         e.preventDefault();
@@ -104,15 +144,17 @@ export default function EmployeeReturnForm({ devices, onSubmit, onDone }) {
                             ))}
                         </select>
                         <input
+                            {...pcScan.inputProps}
                             type="text"
                             className="loan-input full-width"
                             style={{ marginTop: '8px' }}
-                            placeholder="N° de série du PC (facultatif)"
+                            placeholder="Scanne le QR code du PC ou saisis son n° de série (facultatif)"
                             autoCapitalize="characters"
                             autoComplete="off"
-                            value={pcSerial}
-                            onChange={(e) => setPcSerial(e.target.value)}
+                            autoCorrect="off"
+                            spellCheck={false}
                         />
+                        {pcDetected && <p style={{ ...noteStyle, color: '#15803d', fontWeight: 600 }}>{pcDetected}</p>}
                         <KnownDeviceNote devices={devices} serial={pcSerial} />
                         <p style={noteStyle}>Le PC rejoint le stock Occasion de ce modèle.</p>
                     </div>
@@ -132,15 +174,17 @@ export default function EmployeeReturnForm({ devices, onSubmit, onDone }) {
                             ))}
                         </select>
                         <input
+                            {...phoneScan.inputProps}
                             type="text"
                             className="loan-input full-width"
                             style={{ marginTop: '8px' }}
                             placeholder="N° de série / IMEI (facultatif)"
                             autoCapitalize="characters"
                             autoComplete="off"
-                            value={phoneSerial}
-                            onChange={(e) => setPhoneSerial(e.target.value)}
+                            autoCorrect="off"
+                            spellCheck={false}
                         />
+                        {phoneDetected && <p style={{ ...noteStyle, color: '#15803d', fontWeight: 600 }}>{phoneDetected}</p>}
                         <KnownDeviceNote devices={devices} serial={phoneSerial} />
                         <label style={{ ...checkboxRowStyle, marginTop: '10px' }}>
                             <input type="checkbox" checked={phoneCase} onChange={(e) => setPhoneCase(e.target.checked)} />
