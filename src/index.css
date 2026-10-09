@@ -230,6 +230,20 @@ input[type="checkbox"]:focus {
   box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
 }
 
+.item-add-card-alert {
+  border-color: #fca5a5;
+  background: #fef2f2;
+}
+
+.item-add-card.item-add-card-alert .item-name {
+  color: #b91c1c;
+}
+
+.item-add-card.item-add-card-alert .item-current-stock,
+.item-add-card.item-add-card-alert .item-current-stock strong {
+  color: #dc2626;
+}
+
 .item-add-card .item-icon {
   font-size: 1.5rem;
 }

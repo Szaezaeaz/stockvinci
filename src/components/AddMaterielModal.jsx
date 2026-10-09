@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import Modal from './Modal';
 import QuantityStepper from './QuantityStepper';
 import { ALL_STOCK_ITEMS } from '../config/items';
-import { getMaxStock, hasStockLimits } from '../config/thresholds';
+import { getLowStockThreshold, getMaxStock, hasStockLimits } from '../config/thresholds';
 
 export default function AddMaterielModal({ isOpen, onClose, onConfirm, stock }) {
     const [quantities, setQuantities] = useState({});
@@ -41,8 +41,10 @@ export default function AddMaterielModal({ isOpen, onClose, onConfirm, stock }) 
                             const currentStock = stock[item.id] || 0;
                             const limited = hasStockLimits(item.id);
                             const maxStock = getMaxStock(item.id);
+                            const threshold = getLowStockThreshold(item.id);
+                            const inAlert = threshold > 0 && currentStock < threshold;
                             return (
-                                <div key={item.id} className="item-add-card">
+                                <div key={item.id} className={`item-add-card${inAlert ? ' item-add-card-alert' : ''}`}>
                                     <div className="item-icon">{item.icon}</div>
                                     <div className="item-name">{item.id}</div>
                                     <div className="item-current-stock">
