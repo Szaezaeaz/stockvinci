@@ -14,7 +14,7 @@ const PC_TYPE_OPTIONS = [
     'Zbook Occasion'
 ];
 
-export default function LoanedPCs({ loans, onAdd, onRemove, devices }) {
+export default function LoanedPCs({ loans, onAdd, onRemove, devices, onReceiveDevices }) {
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [pcSerial, setPcSerial] = useState('');
     const [name, setName] = useState('');
@@ -42,8 +42,6 @@ export default function LoanedPCs({ loans, onAdd, onRemove, devices }) {
 
     // PC du modèle choisi déjà scannés et disponibles en stock.
     const inStockDevices = Object.values(devices || {}).filter(d => d.model === pcType && d.status === 'stock');
-    // Au moins un PC scanné est en stock (tous modèles) : on propose de choisir un PC précis.
-    const anyTrackedPcInStock = Object.values(devices || {}).some(d => d.kind === 'pc' && d.status === 'stock');
 
     const resetForm = () => {
         setPcSerial('');
@@ -173,15 +171,14 @@ export default function LoanedPCs({ loans, onAdd, onRemove, devices }) {
                                 </select>
                             </div>
 
-                            {anyTrackedPcInStock && (
-                                <PcPicker
-                                    devices={devices}
-                                    pcType={pcType}
-                                    onModelChange={setPcType}
-                                    selected={pcSerial}
-                                    onSelect={setPcSerial}
-                                />
-                            )}
+                            <PcPicker
+                                devices={devices}
+                                pcType={pcType}
+                                onModelChange={setPcType}
+                                selected={pcSerial}
+                                onSelect={setPcSerial}
+                                onCreateDevice={(entry) => onReceiveDevices([entry])}
+                            />
 
                             <div className="form-group">
                                 <label>Accessoires PC inclus</label>

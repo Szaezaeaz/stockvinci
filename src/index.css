@@ -1768,3 +1768,103 @@ input[type="checkbox"]:focus {
   font-weight: 700;
   cursor: pointer;
 }
+
+/* Réception : choix Neuf / Occasion après le scan */
+.scan-bulk {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 8px;
+  font-size: 0.85rem;
+  color: #92400e;
+}
+
+.scan-bulk button {
+  border: 1px solid #fcd34d;
+  border-radius: 10px;
+  padding: 6px 10px;
+  background: #fffbeb;
+  color: #92400e;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.scan-list-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.scan-condition {
+  display: inline-flex;
+  border: 1px solid var(--accent-gray);
+  border-radius: 10px;
+  overflow: hidden;
+}
+
+.scan-condition-unset {
+  border-color: #f59e0b;
+  box-shadow: 0 0 0 2px rgba(245, 158, 11, 0.2);
+}
+
+.scan-condition button {
+  border: none;
+  padding: 7px 10px;
+  background: #fff;
+  color: #475569;
+  font-size: 0.8rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.scan-condition button.active {
+  background: #2563eb;
+  color: #fff;
+}
+
+.scan-condition button:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+
+/* Pop-up "PC absent de la base" */
+.unknown-text {
+  margin: 0 0 12px;
+  color: #334155;
+  line-height: 1.45;
+}
+
+.unknown-model {
+  margin: 0 0 12px;
+  padding: 8px 12px;
+  border-radius: 10px;
+  background: #f1f5f9;
+  color: #475569;
+  font-size: 0.85rem;
+}
+
+.unknown-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.unknown-actions button {
+  padding: 12px;
+  border: none;
+  border-radius: 12px;
+  font-weight: 700;
+  font-size: 1rem;
+  cursor: pointer;
+}
+
+.unknown-yes {
+  background: linear-gradient(135deg, #3b82f6, #1d4ed8);
+  color: #fff;
+}
+
+.unknown-no {
+  background: #e2e8f0;
+  color: #475569;
+}

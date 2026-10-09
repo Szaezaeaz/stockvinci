@@ -48,7 +48,7 @@ function App() {
           />
         )}
         {activeTab === 'loans' && (
-          <LoanedPCs loans={loans} onAdd={addLoan} onRemove={removeLoan} devices={devices} />
+          <LoanedPCs loans={loans} onAdd={addLoan} onRemove={removeLoan} devices={devices} onReceiveDevices={receiveDevices} />
         )}
         {activeTab === 'history' && (
           <HistoryLog history={history} />

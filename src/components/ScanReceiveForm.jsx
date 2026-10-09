@@ -1,19 +1,25 @@
 import React, { useState } from 'react';
 import { PHONE_MODEL_OPTIONS } from '../config/phoneAccessories';
-import { PC_MODELS } from '../config/trackedModels';
-import { conditionOfModel, parseScan, stockModelForFamily } from '../utils/scanParse';
+import { PC_FAMILIES } from '../config/trackedModels';
+import { parseScan, stockModelForFamily } from '../utils/scanParse';
 import { useScanCapture } from '../hooks/useScanCapture';
 
 const STATUS_LABELS = { stock: 'en stock', assigned: 'attribué' };
 
+// Modèle de stock d'un appareil scanné : téléphone = son modèle ; PC = famille
+// + état (Neuf/Occasion) choisi après le scan.
+function resolveModel(entry) {
+    return entry.kind === 'phone' ? entry.model : stockModelForFamily(entry.family, entry.condition);
+}
+
 // Réception de stock par scan : une douchette en mode clavier (HID) saisit le
 // contenu du code dans le champ toujours actif. Le QR code d'un PC HP contient
 // n° de série, référence produit et nom du modèle : le modèle est alors reconnu
-// et sélectionné automatiquement dans la liste. Chaque scan s'ajoute à la
-// liste, validée en une fois.
+// et sélectionné dans la liste. Le QR ne dit pas si le PC est neuf ou
+// d'occasion : on le choisit pour chaque PC après le scan, puis on valide.
 export default function ScanReceiveForm({ devices, onReceive, onDone }) {
-    const [model, setModel] = useState(PC_MODELS[0]);
-    const [entries, setEntries] = useState([]); // [{ serial, model, modelName, productId }]
+    const [model, setModel] = useState(PC_FAMILIES[0]); // famille de PC ou modèle de téléphone
+    const [entries, setEntries] = useState([]); // [{ serial, kind, family, model, condition, modelName, productId }]
     const [value, setValue] = useState('');
     const [feedback, setFeedback] = useState(null); // { ok, text }
     const [useKeyboard, setUseKeyboard] = useState(false);
@@ -36,16 +42,27 @@ export default function ScanReceiveForm({ devices, onReceive, onDone }) {
             return;
         }
 
-        // Modèle reconnu depuis le QR code (en gardant l'état Neuf/Occasion choisi) :
-        // il est sélectionné dans la liste. Sinon on garde le modèle sélectionné.
-        const entryModel = scan.family ? stockModelForFamily(scan.family, conditionOfModel(model)) : model;
-        if (scan.family) setModel(entryModel);
+        // Modèle reconnu depuis le QR code : il est sélectionné dans la liste.
+        // Sinon on garde le modèle sélectionné (téléphone ou famille de PC).
+        if (scan.family) setModel(scan.family);
+        const isPhone = !scan.family && PHONE_MODEL_OPTIONS.includes(model);
+        const family = scan.family || (isPhone ? null : model);
+        const entry = {
+            serial,
+            kind: isPhone ? 'phone' : 'pc',
+            family,
+            model: isPhone ? model : null,
+            condition: isPhone ? 'n/a' : (family === '850 G8/G10' ? 'Occasion' : null),
+            modelName: scan.modelName,
+            productId: scan.productId
+        };
+        setEntries(prev => [entry, ...prev]);
 
-        setEntries(prev => [{ serial, model: entryModel, modelName: scan.modelName, productId: scan.productId }, ...prev]);
+        const label = isPhone ? model : family;
         if (scan.modelName && !scan.family) {
-            setFeedback({ ok: true, text: `${serial} ajouté en ${entryModel} (modèle « ${scan.modelName} » non reconnu, à vérifier).` });
+            setFeedback({ ok: true, text: `${serial} ajouté en ${label} (modèle « ${scan.modelName} » non reconnu, à vérifier).` });
         } else {
-            setFeedback({ ok: true, text: `${serial} ajouté · ${entryModel}` });
+            setFeedback({ ok: true, text: `${serial} ajouté · ${label}${entry.condition === null ? ' — choisis Neuf ou Occasion' : ''}` });
         }
     };
 
@@ -56,14 +73,31 @@ export default function ScanReceiveForm({ devices, onReceive, onDone }) {
         redirectKeys: true
     });
 
+    const setCondition = (serial, condition) => {
+        setEntries(prev => prev.map(entry => (entry.serial === serial ? { ...entry, condition } : entry)));
+    };
+
+    // Applique un état à tous les PC dont l'état n'est pas encore choisi.
+    const setAllUnset = (condition) => {
+        setEntries(prev => prev.map(entry => (entry.condition === null ? { ...entry, condition } : entry)));
+    };
+
     const removeEntry = (serial) => {
         setEntries(prev => prev.filter(entry => entry.serial !== serial));
         refocus();
     };
 
+    const unsetCount = entries.filter(entry => entry.condition === null).length;
+    const canConfirm = entries.length > 0 && unsetCount === 0;
+
     const handleConfirm = () => {
-        if (entries.length === 0) return;
-        onReceive(entries);
+        if (!canConfirm) return;
+        onReceive(entries.map(entry => ({
+            serial: entry.serial,
+            model: resolveModel(entry),
+            modelName: entry.modelName,
+            productId: entry.productId
+        })));
         setEntries([]);
         setFeedback(null);
         onDone();
@@ -79,15 +113,15 @@ export default function ScanReceiveForm({ devices, onReceive, onDone }) {
                     onChange={(e) => { setModel(e.target.value); e.target.blur(); refocus(); }}
                 >
                     <optgroup label="PC portables">
-                        {PC_MODELS.map(option => <option key={option} value={option}>{option}</option>)}
+                        {PC_FAMILIES.map(option => <option key={option} value={option}>{option}</option>)}
                     </optgroup>
                     <optgroup label="Téléphones">
                         {PHONE_MODEL_OPTIONS.map(option => <option key={option} value={option}>{option}</option>)}
                     </optgroup>
                 </select>
                 <p className="scan-hint">
-                    Le modèle se sélectionne tout seul quand tu scannes le QR code d'un PC. Choisis ici Neuf ou
-                    Occasion, ou le modèle à utiliser quand il n'est pas reconnu.
+                    Le modèle se sélectionne tout seul quand tu scannes le QR code d'un PC. Choisis-le ici quand il
+                    n'est pas reconnu. Neuf ou Occasion se choisit pour chaque PC après le scan.
                 </p>
             </div>
 
@@ -119,16 +153,45 @@ export default function ScanReceiveForm({ devices, onReceive, onDone }) {
             <div className="scan-list-header">
                 <strong>{entries.length}</strong> appareil{entries.length > 1 ? 's' : ''} à ajouter
             </div>
+
+            {unsetCount > 0 && (
+                <div className="scan-bulk">
+                    <span>{unsetCount} PC sans état :</span>
+                    <button type="button" onClick={() => setAllUnset('Neuf')}>Tout en Neuf</button>
+                    <button type="button" onClick={() => setAllUnset('Occasion')}>Tout en Occasion</button>
+                </div>
+            )}
+
             <ul className="scan-list">
                 {entries.map(entry => (
                     <li key={entry.serial} className="scan-list-item">
                         <span className="scan-list-serial">
                             {entry.serial}
-                            <small>{entry.model}</small>
+                            <small>{entry.kind === 'phone' ? entry.model : entry.family}</small>
                         </span>
-                        <button type="button" className="scan-remove" onClick={() => removeEntry(entry.serial)} aria-label={`Retirer ${entry.serial}`}>
-                            &times;
-                        </button>
+                        <span className="scan-list-actions">
+                            {entry.kind === 'pc' && (
+                                <span className={`scan-condition${entry.condition === null ? ' scan-condition-unset' : ''}`}>
+                                    {['Neuf', 'Occasion'].map(option => {
+                                        const locked = entry.family === '850 G8/G10' && option === 'Neuf';
+                                        return (
+                                            <button
+                                                key={option}
+                                                type="button"
+                                                disabled={locked}
+                                                className={entry.condition === option ? 'active' : ''}
+                                                onClick={() => setCondition(entry.serial, option)}
+                                            >
+                                                {option}
+                                            </button>
+                                        );
+                                    })}
+                                </span>
+                            )}
+                            <button type="button" className="scan-remove" onClick={() => removeEntry(entry.serial)} aria-label={`Retirer ${entry.serial}`}>
+                                &times;
+                            </button>
+                        </span>
                     </li>
                 ))}
             </ul>
@@ -136,11 +199,15 @@ export default function ScanReceiveForm({ devices, onReceive, onDone }) {
             <button
                 type="button"
                 className="btn-add full-width-btn"
-                style={{ marginTop: '16px', background: entries.length ? '#22c55e' : '#cbd5e1' }}
-                disabled={entries.length === 0}
+                style={{ marginTop: '16px', background: canConfirm ? '#22c55e' : '#cbd5e1' }}
+                disabled={!canConfirm}
                 onClick={handleConfirm}
             >
-                {entries.length ? `Ajouter ${entries.length} au stock` : 'Scanne un premier appareil'}
+                {entries.length === 0
+                    ? 'Scanne un premier appareil'
+                    : unsetCount > 0
+                        ? `Choisis Neuf ou Occasion (${unsetCount} PC)`
+                        : `Ajouter ${entries.length} au stock`}
             </button>
         </div>
     );
