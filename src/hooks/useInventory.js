@@ -115,6 +115,49 @@ function summarize(data) {
 const SYNC_INTERVAL_MS = 60000;
 const PUSH_DELAY_MS = 1500;
 
+// --- Rollback : copie de l'état avant chacune des 10 dernières actions --------
+// Stockée sur l'appareil seulement (jamais envoyée dans le cloud) ; vidée quand
+// l'appli reprend des données venues d'un autre appareil.
+const UNDO_KEY = 'vinci_undo_stack';
+const UNDO_LIMIT = 10;
+const UNDO_MAX_CHARS = 2000000;
+
+function loadUndoStack() {
+    try {
+        const raw = JSON.parse(localStorage.getItem(UNDO_KEY));
+        return Array.isArray(raw) ? raw.slice(0, UNDO_LIMIT) : [];
+    } catch {
+        return [];
+    }
+}
+
+function saveUndoStack(stack) {
+    let list = stack;
+    for (;;) {
+        try {
+            const text = JSON.stringify(list);
+            if (text.length > UNDO_MAX_CHARS && list.length > 1) {
+                list = list.slice(0, -1); // trop volumineux : on abandonne les plus anciennes
+                continue;
+            }
+            localStorage.setItem(UNDO_KEY, text);
+            return;
+        } catch {
+            if (list.length <= 1) return;
+            list = list.slice(0, -1);
+        }
+    }
+}
+
+// Nom d'une action pour la liste du rollback, d'après la ligne d'historique qu'elle a créée.
+function describeChange(previous, current) {
+    const entry = current.history?.[0];
+    if (entry && entry.id !== previous.history?.[0]?.id) {
+        return `${entry.category}${entry.recipient ? ` · ${entry.recipient}` : ''}`;
+    }
+    return 'Modification';
+}
+
 export function useInventory() {
     const [data, setData] = useState(() => {
         const saved = localStorage.getItem(STORAGE_KEY);
@@ -148,6 +191,25 @@ export function useInventory() {
     const [syncChoice, setSyncChoice] = useState(null); // { cloud, local } (résumés)
     const pendingCloudRef = useRef(null);
 
+    // Rollback : pile des états précédents (la plus récente d'abord).
+    const [undoStack, setUndoStack] = useState(loadUndoStack);
+    const undoStackRef = useRef(undoStack);
+    const skipUndoRef = useRef(false); // vrai pendant un rollback : il ne s'empile pas lui-même
+    const pendingLabelRef = useRef('');
+
+    const updateUndoStack = useCallback((next) => {
+        undoStackRef.current = next;
+        saveUndoStack(next);
+        setUndoStack(next);
+    }, []);
+
+    const recordUndo = useCallback((previous, current) => {
+        const label = pendingLabelRef.current || describeChange(previous, current);
+        pendingLabelRef.current = '';
+        const entry = { id: Date.now(), label, at: new Date().toISOString(), snapshot: previous };
+        updateUndoStack([entry, ...undoStackRef.current].slice(0, UNDO_LIMIT));
+    }, [updateUndoStack]);
+
     useEffect(() => {
         dataRef.current = data;
     }, [data]);
@@ -162,8 +224,9 @@ export function useInventory() {
         knownDataRef.current = next;
         dataRef.current = next;
         updateMeta({ rev: cloud.rev, dirty: false });
+        updateUndoStack([]); // les données viennent d'un autre appareil : on ne peut plus revenir avant
         setData(next);
-    }, [updateMeta]);
+    }, [updateMeta, updateUndoStack]);
 
     const askWhichToKeep = useCallback((cloud) => {
         pendingCloudRef.current = cloud;
@@ -244,11 +307,28 @@ export function useInventory() {
     // "dirty" et déclenche un envoi différé.
     useEffect(() => {
         if (data === knownDataRef.current) return;
+        const previous = knownDataRef.current;
         knownDataRef.current = data;
+        if (skipUndoRef.current) {
+            skipUndoRef.current = false;
+        } else {
+            recordUndo(previous, data);
+        }
         updateMeta({ dirty: true });
         clearTimeout(pushTimerRef.current);
         pushTimerRef.current = setTimeout(sync, PUSH_DELAY_MS);
-    }, [data, sync, updateMeta]);
+    }, [data, sync, updateMeta, recordUndo]);
+
+    // Revient à l'état d'avant l'action n° index de la liste (0 = la plus récente) ;
+    // cette action et celles qui l'ont suivie sont annulées. Le résultat est envoyé
+    // au cloud comme n'importe quelle autre modification.
+    const rollbackTo = (index) => {
+        const entry = undoStackRef.current[index];
+        if (!entry) return;
+        skipUndoRef.current = true;
+        updateUndoStack(undoStackRef.current.slice(index + 1));
+        setData(normalizeData(entry.snapshot));
+    };
 
     // Synchro au lancement, au retour sur l'appli / la connexion, puis toutes les minutes.
     useEffect(() => {
@@ -365,7 +445,7 @@ export function useInventory() {
             // Create Single Composite History Entry
             const loanPackageEntry = {
                 id: Date.now(),
-                category: 'Matériel à récupérer',
+                category: 'Attribution matériel',
                 delta: -1, // Logical decrement (1 package out)
                 recipient: name,
                 details: loanedItems.map(item => (item === pcType && serial ? `${item} (S/N ${serial})` : item)),
@@ -765,9 +845,11 @@ export function useInventory() {
         });
     };
 
-    // Le matériel a été remis à la personne : la fiche quitte "À récupérer" mais
+    // Le matériel a été remis à la personne : la fiche quitte "À remettre" mais
     // reste dans "Matériel attribué" (avec sa date de remise) jusqu'à son retour.
     const handOverLoan = (id) => {
+        const loan = dataRef.current.loans.find(l => l.id === id);
+        pendingLabelRef.current = `Matériel remis${loan ? ` · ${loan.name || loan.recipient}` : ''}`;
         setData(prev => ({
             ...prev,
             loans: prev.loans.map(loan => (loan.id === id && !loan.pickedUpAt ? { ...loan, pickedUpAt: new Date() } : loan))
@@ -817,6 +899,8 @@ export function useInventory() {
         addWithdrawal,
         addStock,
         handOverLoan,
+        undoStack,
+        rollbackTo,
         returnAssignedDevice,
         returnLoan,
         quickReturnPC,

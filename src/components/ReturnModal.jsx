@@ -53,7 +53,7 @@ export default function ReturnModal({
                     className={`segment-btn ${activeTab === 'loans' ? 'active' : ''}`}
                     onClick={() => setActiveTab('loans')}
                 >
-                    À récupérer
+                    Matériel attribué
                 </button>
                 <button
                     className={`segment-btn ${activeTab === 'quick' ? 'active' : ''}`}
@@ -84,7 +84,7 @@ export default function ReturnModal({
                     <div style={{ maxHeight: '300px', overflowY: 'auto' }}>
                         {filteredLoans.length === 0 && (
                             <p style={{ color: '#94a3b8', textAlign: 'center', padding: '20px' }}>
-                                Aucun matériel à récupérer trouvé.
+                                Aucun matériel attribué trouvé.
                             </p>
                         )}
                         {filteredLoans.map(loan => (

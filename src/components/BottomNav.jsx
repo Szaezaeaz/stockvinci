@@ -1,9 +1,8 @@
 import React from 'react';
-import { IconBox, IconClock, IconSwap, IconUsers } from './icons';
+import { IconBox, IconClock, IconUsers } from './icons';
 
 const TABS = [
     { key: 'stock', label: 'Stock', Icon: IconBox },
-    { key: 'loans', label: 'À récupérer', Icon: IconSwap },
     { key: 'assigned', label: 'Attribué', Icon: IconUsers },
     { key: 'history', label: 'Historique', Icon: IconClock }
 ];

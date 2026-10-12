@@ -3,37 +3,40 @@ import { useGlobalScan } from './hooks/useGlobalScan';
 import Layout from './components/Layout';
 import StockDashboard from './components/StockDashboard';
 import HistoryLog from './components/HistoryLog';
-import LoanedPCs from './components/LoanedPCs';
-import AssignedMaterial from './components/AssignedMaterial';
+import AssignedTab from './components/AssignedTab';
 import BottomNav from './components/BottomNav';
 import { useInventory } from './hooks/useInventory';
 import { getStockStats } from './utils/stockStats';
 
 import AlertBanner from './components/AlertBanner';
 import SyncStatus from './components/SyncStatus';
+import RollbackButton from './components/RollbackButton';
 
 function App() {
   const { stock, history, loans, addLoan, handOverLoan, returnAssignedDevice, addWithdrawal, addStock, returnLoan, quickReturnPC,
-        devices, returnFromEmployee, receiveDevices, removeUntrackedStock, deleteDevice,
+        devices, returnFromEmployee, receiveDevices, removeUntrackedStock, deleteDevice, undoStack, rollbackTo,
         syncStatus, syncNotice, submitPasscode, dismissSyncNotice, syncNow, syncChoice, resolveSyncChoice } = useInventory();
-  const [activeTab, setActiveTab] = useState('stock'); // 'stock' | 'loans' | 'assigned' | 'history'
+  const [activeTab, setActiveTab] = useState('stock'); // 'stock' | 'assigned' | 'history'
   const { totalUnits } = useMemo(() => getStockStats(stock), [stock]);
 
   // Un scan hors d'un champ de saisie est confié à l'onglet affiché :
-  // Stock -> fiche du PC ou ajout ; À récupérer -> formulaire avec le PC choisi.
+  // Stock -> fiche du PC ou ajout ; Attribué -> formulaire d'attribution ou recherche.
   const stockRef = useRef(null);
-  const loansRef = useRef(null);
   const assignedRef = useRef(null);
   useGlobalScan((raw) => {
     if (activeTab === 'stock') stockRef.current?.handleScan(raw);
-    else if (activeTab === 'loans') loansRef.current?.handleScan(raw);
     else if (activeTab === 'assigned') assignedRef.current?.handleScan(raw);
   });
 
   return (
     <Layout
       totalUnits={totalUnits}
-      headerExtra={<SyncStatus status={syncStatus} choice={syncChoice} onSubmitCode={submitPasscode} onSyncNow={syncNow} onResolveChoice={resolveSyncChoice} />}
+      headerExtra={(
+        <div className="header-actions">
+          <SyncStatus status={syncStatus} choice={syncChoice} onSubmitCode={submitPasscode} onSyncNow={syncNow} onResolveChoice={resolveSyncChoice} />
+          <RollbackButton undoStack={undoStack} onRollback={rollbackTo} />
+        </div>
+      )}
     >
       {syncNotice && (
         <div className="sync-notice">
@@ -61,16 +64,16 @@ function App() {
             onDeleteDevice={deleteDevice}
           />
         )}
-        {activeTab === 'loans' && (
-          <LoanedPCs ref={loansRef} loans={loans} onAdd={addLoan} onHandOver={handOverLoan} devices={devices} onReceiveDevices={receiveDevices} />
-        )}
         {activeTab === 'assigned' && (
-          <AssignedMaterial
+          <AssignedTab
             ref={assignedRef}
             loans={loans}
             devices={devices}
+            onAdd={addLoan}
+            onHandOver={handOverLoan}
             onReturnLoan={returnLoan}
             onReturnDevice={returnAssignedDevice}
+            onReceiveDevices={receiveDevices}
           />
         )}
         {activeTab === 'history' && (

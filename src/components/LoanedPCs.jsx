@@ -2,6 +2,7 @@ import React, { useImperativeHandle, useRef, useState } from 'react';
 import Modal from './Modal';
 import { PHONE_CASE_INFO, PHONE_MODEL_OPTIONS } from '../config/phoneAccessories';
 import { parseScan } from '../utils/scanParse';
+import { matchesQuery } from '../utils/search';
 import PcPicker from './PcPicker';
 
 const PC_TYPE_OPTIONS = [
@@ -14,13 +15,15 @@ const PC_TYPE_OPTIONS = [
     'Zbook Occasion'
 ];
 
-export default function LoanedPCs({ loans, onAdd, onHandOver, devices, onReceiveDevices, ref }) {
+// Volet "À remettre" de l'onglet Attribué : formulaire "Attribuer du matériel" et
+// liste du matériel préparé en stock, pas encore remis (bouton "Remis"). La
+// liste n'est affichée que si showList ; le formulaire reste disponible.
+export default function LoanedPCs({ loans, onAdd, onHandOver, devices, onReceiveDevices, query = '', showList = true, ref }) {
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [scanRaw, setScanRaw] = useState(null); // scan reçu de la page, traité à l'ouverture du formulaire
     const nameRef = useRef(null);
     const [pcSerial, setPcSerial] = useState('');
     const [name, setName] = useState('');
-    const [searchQuery, setSearchQuery] = useState('');
 
     const [includePC, setIncludePC] = useState(false);
     const [includePhone, setIncludePhone] = useState(false);
@@ -42,6 +45,9 @@ export default function LoanedPCs({ loans, onAdd, onHandOver, devices, onReceive
     // coché ; le sélecteur de PC traite le code (PC choisi, ou proposition de
     // l'ajouter s'il est inconnu).
     useImperativeHandle(ref, () => ({
+        openForm() {
+            setIsModalOpen(true);
+        },
         handleScan(raw) {
             setScanRaw(raw);
             setIncludePC(true);
@@ -49,10 +55,10 @@ export default function LoanedPCs({ loans, onAdd, onHandOver, devices, onReceive
         }
     }));
 
-    // Seul le matériel pas encore remis reste ici ; le reste est dans "Matériel attribué".
+    // Seul le matériel pas encore remis est listé ici ; le reste est chez les utilisateurs.
     const filteredLoans = loans.filter(loan =>
         !loan.pickedUpAt &&
-        (loan.name || loan.recipient || '').toLowerCase().includes(searchQuery.toLowerCase())
+        matchesQuery(query, [loan.name || loan.recipient || '', ...(loan.items || []), loan.pcSerial || ''])
     );
 
     // PC du modèle choisi déjà scannés et disponibles en stock.
@@ -119,18 +125,11 @@ export default function LoanedPCs({ loans, onAdd, onHandOver, devices, onReceive
     const phoneCaseInfo = PHONE_CASE_INFO[phoneType];
 
     return (
-        <div className="loan-container">
-            <div className="loan-header-actions">
-                <h2>Matériel à récupérer</h2>
-                <button className="btn-add-trigger" onClick={() => setIsModalOpen(true)}>
-                    + Nouveau matériel à récupérer
-                </button>
-            </div>
-
+        <div className={showList ? 'loan-container' : undefined}>
             <Modal
                 isOpen={isModalOpen}
                 onClose={() => setIsModalOpen(false)}
-                title="Ajouter du matériel à récupérer"
+                title="Attribuer du matériel"
             >
                 <form onSubmit={handleSubmit} className="loan-form-modal">
                     <div className="form-group">
@@ -322,19 +321,10 @@ export default function LoanedPCs({ loans, onAdd, onHandOver, devices, onReceive
                 </form>
             </Modal>
 
-            <div className="loan-input-group search-group">
-                <input
-                    type="text"
-                    className="loan-input"
-                    placeholder="Rechercher..."
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                />
-            </div>
-
+            {showList && (
             <ul className="loan-list">
                 {filteredLoans.length === 0 && <p style={{ color: '#94a3b8', textAlign: 'center', padding: '20px' }}>
-                    {searchQuery ? 'Aucun résultat.' : 'Aucun matériel à récupérer.'}
+                    {query ? 'Aucun résultat.' : 'Aucun matériel à remettre.'}
                 </p>}
 
                 {filteredLoans.map((loan) => (
@@ -350,7 +340,7 @@ export default function LoanedPCs({ loans, onAdd, onHandOver, devices, onReceive
                             type="button"
                             className="btn-handover"
                             onClick={() => {
-                                if (window.confirm(`Matériel remis à ${loan.name || loan.recipient} ? Il passera dans l'onglet Matériel attribué.`)) {
+                                if (window.confirm(`Matériel remis à ${loan.name || loan.recipient} ? Il passera dans « Remis ».`)) {
                                     onHandOver(loan.id);
                                 }
                             }}
@@ -360,6 +350,7 @@ export default function LoanedPCs({ loans, onAdd, onHandOver, devices, onReceive
                     </li>
                 ))}
             </ul>
+            )}
         </div>
     );
 }

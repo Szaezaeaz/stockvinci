@@ -1,7 +1,5 @@
-import React, { useImperativeHandle, useState } from 'react';
-import SearchBar from './SearchBar';
+import React from 'react';
 import { matchesQuery } from '../utils/search';
-import { parseScan } from '../utils/scanParse';
 
 const dateOf = (value) => (value ? new Date(value).toLocaleDateString() : '');
 const nameKey = (name) => String(name || '').trim().toLowerCase();
@@ -39,22 +37,13 @@ function searchTexts(person, devices) {
     return texts;
 }
 
-// Onglet "Matériel attribué" : qui a quoi. Un scan (douchette) sur cet onglet
-// filtre la liste sur le n° de série scanné.
-export default function AssignedMaterial({ loans, devices, onReturnLoan, onReturnDevice, ref }) {
-    const [query, setQuery] = useState('');
-
-    useImperativeHandle(ref, () => ({
-        handleScan(raw) {
-            const { serial } = parseScan(raw);
-            if (serial) setQuery(serial);
-        }
-    }));
-
-    const everyone = groupByPerson(loans, devices);
+// Volet "Remis" (ou "Tout") de l'onglet Attribué : qui a quoi, une carte par
+// personne. scope 'given' = matériel déjà remis ; 'all' = aussi celui à remettre.
+// La recherche (query) est celle de l'onglet.
+export default function AssignedMaterial({ loans, devices, onReturnLoan, onReturnDevice, query = '', scope = 'given' }) {
+    const scopedLoans = scope === 'all' ? loans : loans.filter(loan => loan.pickedUpAt);
+    const everyone = groupByPerson(scopedLoans, devices);
     const visible = everyone.filter(person => matchesQuery(query, searchTexts(person, devices)));
-
-    const assignedPcs = Object.values(devices || {}).filter(device => device.status === 'assigned').length;
 
     const handleReturnLoan = (person, loan) => {
         if (window.confirm(`${person.name} rend tout ce matériel ? Il retournera en stock.`)) {
@@ -70,13 +59,6 @@ export default function AssignedMaterial({ loans, devices, onReturnLoan, onRetur
 
     return (
         <div className="assigned-section">
-            <h2>Matériel attribué</h2>
-            <p className="assigned-summary">
-                {everyone.length} personne{everyone.length > 1 ? 's' : ''} · {assignedPcs} PC attribué{assignedPcs > 1 ? 's' : ''}
-            </p>
-
-            <SearchBar value={query} onChange={setQuery} placeholder="Rechercher une personne, un n° de série, un matériel…" />
-
             {everyone.length === 0 && <div className="search-empty">Aucun matériel attribué pour le moment.</div>}
             {everyone.length > 0 && visible.length === 0 && <div className="search-empty">Aucun résultat.</div>}
 
@@ -95,7 +77,7 @@ export default function AssignedMaterial({ loans, devices, onReturnLoan, onRetur
                             <div key={loan.id} className="assignment">
                                 <div className="assignment-top">
                                     <span className={`assignment-badge ${handedOver ? 'assignment-badge-given' : 'assignment-badge-pending'}`}>
-                                        {handedOver ? `Remis le ${dateOf(loan.pickedUpAt)}` : 'À récupérer'}
+                                        {handedOver ? `Remis le ${dateOf(loan.pickedUpAt)}` : 'À remettre'}
                                     </span>
                                     <button type="button" className="assignment-return" onClick={() => handleReturnLoan(person, loan)}>
                                         Matériel rendu
