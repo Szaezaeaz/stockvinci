@@ -765,11 +765,43 @@ export function useInventory() {
         });
     };
 
-    const removeLoan = (id) => {
+    // Le matériel a été remis à la personne : la fiche quitte "À récupérer" mais
+    // reste dans "Matériel attribué" (avec sa date de remise) jusqu'à son retour.
+    const handOverLoan = (id) => {
         setData(prev => ({
             ...prev,
-            loans: prev.loans.filter(loan => loan.id !== id)
+            loans: prev.loans.map(loan => (loan.id === id && !loan.pickedUpAt ? { ...loan, pickedUpAt: new Date() } : loan))
         }));
+    };
+
+    // Un PC attribué dont la fiche de prêt n'existe plus revient en stock.
+    const returnAssignedDevice = (serial) => {
+        setData(prev => {
+            const device = prev.devices?.[serial];
+            if (!device || device.status !== 'assigned') return prev;
+            const date = new Date();
+            return {
+                ...prev,
+                stock: { ...prev.stock, [device.model]: (prev.stock[device.model] || 0) + 1 },
+                devices: {
+                    ...prev.devices,
+                    [serial]: {
+                        ...device,
+                        status: 'stock',
+                        holder: null,
+                        events: [{ date, action: 'Retour', person: device.holder }, ...(device.events || [])].slice(0, 20)
+                    }
+                },
+                history: [{
+                    id: Date.now(),
+                    category: 'Retour matériel',
+                    delta: 1,
+                    recipient: device.holder,
+                    details: [`${device.model} (S/N ${serial})`],
+                    date
+                }, ...prev.history].slice(0, 50)
+            };
+        });
     };
 
     return {
@@ -784,7 +816,8 @@ export function useInventory() {
         addLoan,
         addWithdrawal,
         addStock,
-        removeLoan,
+        handOverLoan,
+        returnAssignedDevice,
         returnLoan,
         quickReturnPC,
         syncStatus,

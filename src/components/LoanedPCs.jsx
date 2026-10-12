@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useImperativeHandle, useRef, useState } from 'react';
 import Modal from './Modal';
 import { PHONE_CASE_INFO, PHONE_MODEL_OPTIONS } from '../config/phoneAccessories';
 import { parseScan } from '../utils/scanParse';
@@ -14,8 +14,10 @@ const PC_TYPE_OPTIONS = [
     'Zbook Occasion'
 ];
 
-export default function LoanedPCs({ loans, onAdd, onRemove, devices, onReceiveDevices }) {
+export default function LoanedPCs({ loans, onAdd, onHandOver, devices, onReceiveDevices, ref }) {
     const [isModalOpen, setIsModalOpen] = useState(false);
+    const [scanRaw, setScanRaw] = useState(null); // scan reçu de la page, traité à l'ouverture du formulaire
+    const nameRef = useRef(null);
     const [pcSerial, setPcSerial] = useState('');
     const [name, setName] = useState('');
     const [searchQuery, setSearchQuery] = useState('');
@@ -36,7 +38,20 @@ export default function LoanedPCs({ loans, onAdd, onRemove, devices, onReceiveDe
     const [includePhoneCase, setIncludePhoneCase] = useState(true);
     const [includePhoneScreen, setIncludePhoneScreen] = useState(true);
 
+    // Scan reçu quand aucun champ n'est actif : on ouvre le formulaire avec "PC"
+    // coché ; le sélecteur de PC traite le code (PC choisi, ou proposition de
+    // l'ajouter s'il est inconnu).
+    useImperativeHandle(ref, () => ({
+        handleScan(raw) {
+            setScanRaw(raw);
+            setIncludePC(true);
+            setIsModalOpen(true);
+        }
+    }));
+
+    // Seul le matériel pas encore remis reste ici ; le reste est dans "Matériel attribué".
     const filteredLoans = loans.filter(loan =>
+        !loan.pickedUpAt &&
         (loan.name || loan.recipient || '').toLowerCase().includes(searchQuery.toLowerCase())
     );
 
@@ -123,6 +138,7 @@ export default function LoanedPCs({ loans, onAdd, onRemove, devices, onReceiveDe
                         <input
                             type="text"
                             className="loan-input full-width"
+                            ref={nameRef}
                             placeholder="Ex: Jean Dupont"
                             value={name}
                             onChange={(e) => setName(e.target.value)}
@@ -178,6 +194,12 @@ export default function LoanedPCs({ loans, onAdd, onRemove, devices, onReceiveDe
                                 selected={pcSerial}
                                 onSelect={setPcSerial}
                                 onCreateDevice={(entry) => onReceiveDevices([entry])}
+                                initialScan={scanRaw}
+                                onInitialScanHandled={() => {
+                                    setScanRaw(null);
+                                    // Le PC est choisi : le curseur passe au nom du collaborateur.
+                                    setTimeout(() => nameRef.current?.focus(), 50);
+                                }}
                             />
 
                             <div className="form-group">
@@ -325,11 +347,15 @@ export default function LoanedPCs({ loans, onAdd, onRemove, devices, onReceiveDe
                             </div>
                         </div>
                         <button
-                            className="btn-circle btn-remove-loan"
-                            onClick={() => onRemove(loan.id)}
-                            aria-label="Retourner le matériel"
+                            type="button"
+                            className="btn-handover"
+                            onClick={() => {
+                                if (window.confirm(`Matériel remis à ${loan.name || loan.recipient} ? Il passera dans l'onglet Matériel attribué.`)) {
+                                    onHandOver(loan.id);
+                                }
+                            }}
                         >
-                            ×
+                            Remis
                         </button>
                     </li>
                 ))}

@@ -92,7 +92,7 @@ export default function ReturnModal({
                                 <div style={{ flex: 1 }}>
                                     <div style={{ fontWeight: 600 }}>{loan.recipient || loan.name}</div>
                                     <div style={{ fontSize: '0.85rem', color: '#64748b' }}>
-                                        {new Date(loan.date).toLocaleDateString()}
+                                        {new Date(loan.date).toLocaleDateString()}{loan.pickedUpAt ? ' · remis' : ''}
                                     </div>
                                     <div style={{ fontSize: '0.85rem', color: '#64748b' }}>
                                         {loan.items.join(', ')}

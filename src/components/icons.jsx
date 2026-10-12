@@ -42,6 +42,17 @@ export function IconClock(props) {
     );
 }
 
+export function IconUsers(props) {
+    return (
+        <svg {...base} {...props}>
+            <circle cx="9" cy="8" r="3.5" />
+            <path d="M2.5 20c0-3.6 2.9-6 6.5-6s6.5 2.4 6.5 6" />
+            <path d="M16 4.6a3.5 3.5 0 0 1 0 6.8" />
+            <path d="M18 14.3c2.2.7 3.5 2.6 3.5 5.7" />
+        </svg>
+    );
+}
+
 // Bloc chargeur secteur USB (chargeur de téléphone). Illustration en couleurs,
 // dimensionnée en em pour suivre la taille de police de l'endroit où elle est affichée.
 export function IconPhoneCharger(props) {
