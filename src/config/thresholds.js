@@ -7,7 +7,7 @@ import { PHONE_CASE_INFO } from './phoneAccessories';
 //   longueur des barres de niveau.
 const CATEGORY_LIMITS = {
     // PC (Neuf uniquement : les PC d'occasion n'ont ni seuil ni max, voir
-    // UNLIMITED_CATEGORIES ci-dessous)
+    // hasStockLimits ci-dessous)
     '650 G11 Neuf': { max: 50, threshold: 30 },
     'X360 Neuf': { max: 4, threshold: 1 },
     'Zbook Neuf': { max: 4, threshold: 2 },
@@ -42,34 +42,20 @@ for (const [phone, info] of Object.entries(PHONE_CASE_INFO)) {
     }
 }
 
-// PC d'occasion : ni seuil critique ni stock max, juste un suivi de
-// quantité simple (affiché en sous-ligne sous leur modèle Neuf).
-const UNLIMITED_CATEGORIES = new Set([
-    '650 G11 Occasion',
-    '850 G8/G10 Occasion',
-    'X360 Occasion',
-    'Zbook Occasion',
-]);
-
-// Seuils par défaut pour toute catégorie non listée ci-dessus.
-const DEFAULT_LIMITS = { max: 40, threshold: 10 };
-
-function getLimits(category) {
-    return CATEGORY_LIMITS[category] || DEFAULT_LIMITS;
-}
-
+// Catégories sans seuil critique ni stock max : tout ce qui n'a pas de limite
+// définie ci-dessus. C'est le cas des PC d'occasion (affichés en sous-ligne sous
+// leur modèle Neuf) et de tous les autres modèles du parc, suivis par n° de
+// série mais sans alerte de réapprovisionnement.
 export function hasStockLimits(category) {
-    return !UNLIMITED_CATEGORIES.has(category);
+    return Boolean(CATEGORY_LIMITS[category]);
 }
 
 export function getLowStockThreshold(category) {
-    if (UNLIMITED_CATEGORIES.has(category)) return 0;
-    return getLimits(category).threshold;
+    return CATEGORY_LIMITS[category]?.threshold ?? 0;
 }
 
 export function getMaxStock(category) {
-    if (UNLIMITED_CATEGORIES.has(category)) return Infinity;
-    return getLimits(category).max;
+    return CATEGORY_LIMITS[category]?.max ?? Infinity;
 }
 
 // Échelle utilisée pour la barre des catégories sans limite (PC d'occasion) :
@@ -83,7 +69,7 @@ const UNLIMITED_BAR_SCALE = 20;
 // quand même un repère visuel. Les catégories sans limite (PC d'occasion)
 // n'ont pas de seuil critique : seul un état "rupture" (0) est possible.
 export function getStockStatus(category, count) {
-    if (UNLIMITED_CATEGORIES.has(category)) {
+    if (!hasStockLimits(category)) {
         const percent = Math.min(100, Math.round((count / UNLIMITED_BAR_SCALE) * 100));
         return { status: count <= 0 ? 'out' : 'ok', percent: Math.max(percent, count > 0 ? 4 : 0) };
     }

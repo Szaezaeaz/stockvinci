@@ -2,6 +2,8 @@ import React, { useState } from 'react';
 import Modal from './Modal';
 import EmployeeReturnForm from './EmployeeReturnForm';
 
+const MAX_LOANS_SHOWN = 30;
+
 export default function ReturnModal({
     isOpen,
     onClose,
@@ -21,9 +23,12 @@ export default function ReturnModal({
     const [includeHeadset, setIncludeHeadset] = useState(false);
     const [includeBag, setIncludeBag] = useState(false);
 
-    const filteredLoans = loans.filter(loan =>
+    // Avec tout le parc, la liste peut dépasser mille personnes : on n'affiche que
+    // les premières, la recherche sert à trouver les autres.
+    const matchingLoans = loans.filter(loan =>
         (loan.recipient || loan.name || '').toLowerCase().includes(searchQuery.toLowerCase())
     );
+    const filteredLoans = matchingLoans.slice(0, MAX_LOANS_SHOWN);
 
     const handleQuickSubmit = (e) => {
         e.preventDefault();
@@ -85,6 +90,11 @@ export default function ReturnModal({
                         {filteredLoans.length === 0 && (
                             <p style={{ color: '#94a3b8', textAlign: 'center', padding: '20px' }}>
                                 Aucun matériel attribué trouvé.
+                            </p>
+                        )}
+                        {matchingLoans.length > filteredLoans.length && (
+                            <p style={{ color: '#94a3b8', fontSize: '0.8rem', margin: '0 0 8px' }}>
+                                {filteredLoans.length} affichés sur {matchingLoans.length} : cherche un nom pour trouver les autres.
                             </p>
                         )}
                         {filteredLoans.map(loan => (

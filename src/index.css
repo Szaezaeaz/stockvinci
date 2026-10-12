@@ -2291,3 +2291,23 @@ input[type="checkbox"]:focus {
   border-radius: 12px;
   font-size: 0.95rem;
 }
+
+/* Grandes listes : compteur et bouton "Afficher plus" */
+.list-count {
+  margin: 0 0 10px;
+  color: #94a3b8;
+  font-size: 0.8rem;
+}
+
+.show-more {
+  display: block;
+  width: 100%;
+  margin: 4px 0 12px;
+  padding: 12px;
+  border: 1px dashed #cbd5e1;
+  border-radius: 12px;
+  background: #fff;
+  color: #2563eb;
+  font-weight: 700;
+  cursor: pointer;
+}

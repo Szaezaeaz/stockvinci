@@ -1,7 +1,11 @@
-import React from 'react';
+import React, { useMemo, useState } from 'react';
 import { matchesQuery } from '../utils/search';
 import { getLoanSerials } from '../utils/loans';
 import LoanChips from './LoanChips';
+
+// Avec tout le parc importé, il y a plus de mille personnes : on n'en affiche
+// qu'une page à la fois (la recherche, elle, porte toujours sur tout le monde).
+const PAGE_SIZE = 40;
 
 const dateOf = (value) => (value ? new Date(value).toLocaleDateString() : '');
 const nameKey = (name) => String(name || '').trim().toLowerCase();
@@ -41,9 +45,16 @@ function searchTexts(person, devices) {
 // personne. scope 'given' = matériel déjà remis ; 'all' = aussi celui à remettre.
 // La recherche (query) est celle de l'onglet.
 export default function AssignedMaterial({ loans, devices, onReturnLoan, onReturnDevice, query = '', scope = 'given' }) {
-    const scopedLoans = scope === 'all' ? loans : loans.filter(loan => loan.pickedUpAt);
-    const everyone = groupByPerson(scopedLoans, devices);
-    const visible = everyone.filter(person => matchesQuery(query, searchTexts(person, devices)));
+    const [limit, setLimit] = useState(PAGE_SIZE);
+    const everyone = useMemo(
+        () => groupByPerson(scope === 'all' ? loans : loans.filter(loan => loan.pickedUpAt), devices),
+        [loans, devices, scope]
+    );
+    const visible = useMemo(
+        () => everyone.filter(person => matchesQuery(query, searchTexts(person, devices))),
+        [everyone, query, devices]
+    );
+    const shown = visible.slice(0, limit);
 
     const handleReturnLoan = (person, loan) => {
         if (window.confirm(`${person.name} rend tout ce matériel ? Il retournera en stock.`)) {
@@ -62,7 +73,14 @@ export default function AssignedMaterial({ loans, devices, onReturnLoan, onRetur
             {everyone.length === 0 && <div className="search-empty">Aucun matériel attribué pour le moment.</div>}
             {everyone.length > 0 && visible.length === 0 && <div className="search-empty">Aucun résultat.</div>}
 
-            {visible.map(person => (
+            {visible.length > 0 && (
+                <p className="list-count">
+                    {visible.length} personne{visible.length > 1 ? 's' : ''}
+                    {visible.length > shown.length ? ` · ${shown.length} affichées` : ''}
+                </p>
+            )}
+
+            {shown.map(person => (
                 <div key={nameKey(person.name)} className="person-card">
                     <div className="person-header">
                         <span className="person-name">{person.name}</span>
@@ -108,6 +126,12 @@ export default function AssignedMaterial({ loans, devices, onReturnLoan, onRetur
                     ))}
                 </div>
             ))}
+
+            {visible.length > shown.length && (
+                <button type="button" className="show-more" onClick={() => setLimit(limit + PAGE_SIZE)}>
+                    Afficher plus ({visible.length - shown.length} restantes)
+                </button>
+            )}
         </div>
     );
 }

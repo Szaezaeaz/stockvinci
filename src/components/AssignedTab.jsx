@@ -70,6 +70,7 @@ export default function AssignedTab({ loans, devices, onAdd, onHandOver, onRetur
 
             {pane !== 'pending' && (
                 <AssignedMaterial
+                    key={`${pane}:${query}`} // repart de la première page à chaque recherche
                     loans={loans}
                     devices={devices}
                     onReturnLoan={onReturnLoan}

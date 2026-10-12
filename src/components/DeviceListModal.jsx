@@ -3,6 +3,9 @@ import Modal from './Modal';
 import SearchBar from './SearchBar';
 import { matchesQuery } from '../utils/search';
 
+// Un modèle peut compter des centaines d'appareils : on en affiche une page à la fois.
+const PAGE_SIZE = 50;
+
 const dateOf = (value) => (value ? new Date(value).toLocaleDateString() : '');
 
 function statusLabel(device) {
@@ -15,6 +18,7 @@ function statusLabel(device) {
 export default function DeviceListModal({ model, devices, stock, onClose, onRemoveUntracked, onDeleteDevice, initialSerial }) {
     const [query, setQuery] = useState('');
     const [openSerial, setOpenSerial] = useState(initialSerial || null);
+    const [limit, setLimit] = useState(PAGE_SIZE);
 
     const all = Object.values(devices || {})
         .filter(device => device.model === model)
@@ -22,6 +26,9 @@ export default function DeviceListModal({ model, devices, stock, onClose, onRemo
     const visible = all.filter(device =>
         matchesQuery(query, [device.serial, device.holder || '', statusLabel(device), device.modelName || '', device.productId || ''])
     );
+
+    // L'appareil ouvert d'office (après un scan) reste affiché même au-delà de la première page.
+    const shown = visible.filter((device, index) => index < limit || device.serial === openSerial);
 
     const inStock = all.filter(device => device.status === 'stock').length;
     const assigned = all.length - inStock;
@@ -62,13 +69,13 @@ export default function DeviceListModal({ model, devices, stock, onClose, onRemo
                 </div>
             )}
 
-            <SearchBar value={query} onChange={setQuery} placeholder="Rechercher un n° de série ou une personne…" />
+            <SearchBar value={query} onChange={(value) => { setQuery(value); setLimit(PAGE_SIZE); }} placeholder="Rechercher un n° de série ou une personne…" />
 
             {all.length === 0 && <div className="search-empty">Aucun appareil scanné pour ce modèle.</div>}
             {all.length > 0 && visible.length === 0 && <div className="search-empty">Aucun appareil trouvé.</div>}
 
             <ul className="device-list">
-                {visible.map(device => {
+                {shown.map(device => {
                     const last = device.events?.[0];
                     const open = openSerial === device.serial;
                     return (
@@ -103,6 +110,12 @@ export default function DeviceListModal({ model, devices, stock, onClose, onRemo
                     );
                 })}
             </ul>
+
+            {visible.length > shown.length && (
+                <button type="button" className="show-more" onClick={() => setLimit(limit + PAGE_SIZE)}>
+                    Afficher plus ({visible.length - shown.length} restants)
+                </button>
+            )}
         </Modal>
     );
 }

@@ -19,9 +19,9 @@ export function loadSyncMeta() {
 export const saveSyncMeta = (meta) => localStorage.setItem(META_KEY, JSON.stringify(meta));
 
 // Retourne { status, body } ; status 0 = réseau indisponible.
-async function request(method, payload) {
+async function request(method, payload, query = '') {
     try {
-        const response = await fetch(ENDPOINT, {
+        const response = await fetch(ENDPOINT + query, {
             method,
             headers: { 'Content-Type': 'application/json', 'x-passcode': getPasscode() },
             body: payload ? JSON.stringify(payload) : undefined
@@ -33,5 +33,7 @@ async function request(method, payload) {
     }
 }
 
-export const fetchCloud = () => request('GET');
+// knownRev : révision que cet appareil a déjà. Si le cloud est toujours à cette
+// révision, il répond { unchanged: true } sans renvoyer tout l'inventaire.
+export const fetchCloud = (knownRev = 0) => request('GET', null, knownRev > 0 ? `?rev=${knownRev}` : '');
 export const pushCloud = (data, baseRev) => request('PUT', { data, baseRev });

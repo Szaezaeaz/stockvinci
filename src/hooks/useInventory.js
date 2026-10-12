@@ -4,6 +4,7 @@ import { getLowStockThreshold } from '../config/thresholds';
 import { PHONE_CASE_INFO, PHONE_MODEL_OPTIONS } from '../config/phoneAccessories';
 import { normalizeSerial } from '../utils/serial';
 import { getLoanSerials } from '../utils/loans';
+import { applyUndoPatch, diffState } from '../utils/undo';
 import { fetchCloud, pushCloud, getPasscode, savePasscode, loadSyncMeta, saveSyncMeta } from '../services/cloudSync';
 
 const STORAGE_KEY = 'vinci_inventory_v3';
@@ -122,12 +123,13 @@ function summarize(data) {
 const SYNC_INTERVAL_MS = 60000;
 const PUSH_DELAY_MS = 1500;
 
-// --- Rollback : copie de l'état avant chacune des 10 dernières actions --------
-// Stockée sur l'appareil seulement (jamais envoyée dans le cloud) ; vidée quand
-// l'appli reprend des données venues d'un autre appareil.
+// --- Rollback : pour chacune des 10 dernières actions, ce qu'elle a changé ------
+// (les anciennes valeurs, voir utils/undo). Stocké sur l'appareil seulement
+// (jamais envoyé dans le cloud) ; vidé quand l'appli reprend des données venues
+// d'un autre appareil.
 const UNDO_KEY = 'vinci_undo_stack';
 const UNDO_LIMIT = 10;
-const UNDO_MAX_CHARS = 2000000;
+const UNDO_MAX_CHARS = 1500000;
 
 function loadUndoStack() {
     try {
@@ -178,15 +180,28 @@ export function useInventory() {
         return INITIAL_STATE;
     });
 
-    useEffect(() => {
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
-    }, [data]);
-
     // --- Synchronisation cloud -------------------------------------------
     // syncStatus : 'off' (cloud non configuré) | 'needs-code' | 'syncing' |
     //              'synced' | 'offline' | 'error'
     const [syncStatus, setSyncStatus] = useState(getPasscode() ? 'syncing' : 'needs-code');
     const [syncNotice, setSyncNotice] = useState('');
+
+    // Enregistrement sur l'appareil. Si le stockage est plein, on libère la place
+    // du rollback (secondaire) pour ne jamais perdre l'inventaire lui-même.
+    useEffect(() => {
+        const text = JSON.stringify(data);
+        try {
+            localStorage.setItem(STORAGE_KEY, text);
+        } catch {
+            try {
+                localStorage.removeItem(UNDO_KEY);
+                localStorage.setItem(STORAGE_KEY, text);
+            } catch (e) {
+                console.error('Failed to save inventory data', e);
+                setSyncNotice("Le stockage de cet appareil est plein : les dernières modifications ne sont pas enregistrées ici. Vérifie que la synchronisation indique « Sauvegardé ».");
+            }
+        }
+    }, [data]);
     const dataRef = useRef(data);
     const knownDataRef = useRef(data); // dernier état connu côté synchro (local initial ou cloud)
     const metaRef = useRef(loadSyncMeta());
@@ -213,7 +228,9 @@ export function useInventory() {
     const recordUndo = useCallback((previous, current) => {
         const label = pendingLabelRef.current || describeChange(previous, current);
         pendingLabelRef.current = '';
-        const entry = { id: Date.now(), label, at: new Date().toISOString(), snapshot: previous };
+        const patch = diffState(previous, current);
+        if (Object.keys(patch).length === 0) return;
+        const entry = { id: Date.now(), label, at: new Date().toISOString(), patch };
         updateUndoStack([entry, ...undoStackRef.current].slice(0, UNDO_LIMIT));
     }, [updateUndoStack]);
 
@@ -279,10 +296,12 @@ export function useInventory() {
                     return;
                 }
             } else {
-                result = await fetchCloud();
+                result = await fetchCloud(metaRef.current.rev);
                 if (result.status === 200) {
                     const cloud = result.body;
-                    if (cloud.data == null) {
+                    if (cloud.unchanged) {
+                        // Rien de neuf dans le cloud : l'inventaire n'a pas été renvoyé.
+                    } else if (cloud.data == null) {
                         // Cloud vide : on y envoie l'état de cet appareil.
                         updateMeta({ dirty: true });
                         rerunRef.current = true;
@@ -330,11 +349,17 @@ export function useInventory() {
     // cette action et celles qui l'ont suivie sont annulées. Le résultat est envoyé
     // au cloud comme n'importe quelle autre modification.
     const rollbackTo = (index) => {
-        const entry = undoStackRef.current[index];
-        if (!entry) return;
+        const stack = undoStackRef.current;
+        if (!stack[index]) return;
+        // On défait les actions une à une, de la plus récente jusqu'à celle choisie.
+        // (entry.snapshot : ancien format, copie complète de l'état d'avant l'action.)
+        let restored = dataRef.current;
+        for (let i = 0; i <= index; i++) {
+            restored = stack[i].snapshot ? normalizeData(stack[i].snapshot) : applyUndoPatch(restored, stack[i].patch);
+        }
         skipUndoRef.current = true;
-        updateUndoStack(undoStackRef.current.slice(index + 1));
-        setData(normalizeData(entry.snapshot));
+        updateUndoStack(stack.slice(index + 1));
+        setData(restored);
     };
 
     // Synchro au lancement, au retour sur l'appli / la connexion, puis toutes les minutes.
