@@ -14,7 +14,7 @@ import RollbackButton from './components/RollbackButton';
 
 function App() {
   const { stock, history, loans, addLoan, handOverLoan, returnAssignedDevice, addWithdrawal, addStock, returnLoan, quickReturnPC,
-        devices, returnFromEmployee, receiveDevices, removeUntrackedStock, deleteDevice, undoStack, rollbackTo,
+        devices, returnFromEmployee, receiveDevices, importInventory, removeUntrackedStock, deleteDevice, undoStack, rollbackTo,
         syncStatus, syncNotice, submitPasscode, dismissSyncNotice, syncNow, syncChoice, resolveSyncChoice } = useInventory();
   const [activeTab, setActiveTab] = useState('stock'); // 'stock' | 'assigned' | 'history'
   const { totalUnits } = useMemo(() => getStockStats(stock), [stock]);
@@ -75,6 +75,7 @@ function App() {
             onReturnLoan={returnLoan}
             onReturnDevice={returnAssignedDevice}
             onReceiveDevices={receiveDevices}
+            onImport={importInventory}
           />
         )}
         {activeTab === 'history' && (

@@ -1,5 +1,6 @@
 import React, { useImperativeHandle, useRef, useState } from 'react';
 import AssignedMaterial from './AssignedMaterial';
+import ImportModal from './ImportModal';
 import LoanedPCs from './LoanedPCs';
 import SearchBar from './SearchBar';
 import { parseScan } from '../utils/scanParse';
@@ -10,9 +11,11 @@ const PANES = ['given', 'pending', 'all'];
 //  - Remis : qui a quoi dans l'entreprise (une carte par personne).
 //  - À remettre : matériel préparé, encore en stock, avec le bouton "Remis".
 //  - Tout : les deux ensemble.
-// Le bouton "Attribuer du matériel" ouvre le formulaire d'attribution.
-export default function AssignedTab({ loans, devices, stock, onAdd, onHandOver, onReturnLoan, onReturnDevice, onReceiveDevices, ref }) {
+// Le bouton "Attribuer du matériel" ouvre le formulaire d'attribution ; "Importer"
+// reprend un inventaire existant depuis un classeur Excel.
+export default function AssignedTab({ loans, devices, stock, onAdd, onHandOver, onReturnLoan, onReturnDevice, onReceiveDevices, onImport, ref }) {
     const [pane, setPane] = useState('given');
+    const [importOpen, setImportOpen] = useState(false);
     const [query, setQuery] = useState('');
     const formRef = useRef(null);
 
@@ -37,10 +40,17 @@ export default function AssignedTab({ loans, devices, stock, onAdd, onHandOver, 
         <div className="assigned-tab">
             <div className="loan-header-actions">
                 <h2>Matériel attribué</h2>
-                <button type="button" className="btn-add-trigger" onClick={() => formRef.current?.openForm()}>
-                    + Attribuer du matériel
-                </button>
+                <div className="assigned-header-buttons">
+                    <button type="button" className="btn-import-trigger" onClick={() => setImportOpen(true)}>
+                        Importer
+                    </button>
+                    <button type="button" className="btn-add-trigger" onClick={() => formRef.current?.openForm()}>
+                        + Attribuer du matériel
+                    </button>
+                </div>
             </div>
+
+            <ImportModal isOpen={importOpen} onClose={() => setImportOpen(false)} devices={devices} onImport={onImport} />
 
             <div className="segmented-control assigned-panes">
                 {PANES.map(key => (

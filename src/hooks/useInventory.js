@@ -4,7 +4,7 @@ import { getLowStockThreshold } from '../config/thresholds';
 import { PHONE_CASE_INFO } from '../config/phoneAccessories';
 import { normalizeSerial } from '../utils/serial';
 import { getLoanSerials } from '../utils/loans';
-import { exactModelFromStockKey, kindOfModel, matchModelName, setLearnedAliases, stockKeyLabel } from '../utils/models';
+import { exactModelFromStockKey, kindOfModel, matchModelName, setLearnedAliases, stockKeyLabel, stockKeyOf } from '../utils/models';
 import { applyUndoPatch, diffState } from '../utils/undo';
 import { fetchCloud, pushCloud, getPasscode, savePasscode, loadSyncMeta, saveSyncMeta } from '../services/cloudSync';
 
@@ -894,6 +894,83 @@ export function useInventory() {
         });
     };
 
+    // Import d'un inventaire existant (voir utils/inventoryImport).
+    // rows : [{ serial, model (modèle précis), kind, person }]. Un appareil avec une
+    // personne lui est attribué (une seule attribution, déjà remise, par personne) ;
+    // sans personne, il entre en stock. Tout le matériel importé a déjà servi : les
+    // PC sont rangés en Occasion. Les n° de série déjà connus sont ignorés.
+    const importInventory = (rows) => {
+        setData(prev => {
+            const devices = { ...(prev.devices || {}) };
+            const stock = { ...prev.stock };
+            const date = new Date();
+            const byPerson = new Map();
+            let inStock = 0;
+
+            for (const row of rows) {
+                const serial = normalizeSerial(row.serial);
+                if (!serial || !row.model || devices[serial]) continue;
+                const person = String(row.person || '').trim() || null;
+                const model = stockKeyOf(row.model, 'Occasion');
+                devices[serial] = {
+                    serial,
+                    kind: row.kind || kindOfModel(row.model),
+                    model,
+                    exactModel: row.model,
+                    status: person ? 'assigned' : 'stock',
+                    holder: person,
+                    events: [{ date, action: 'Import', person }]
+                };
+                if (person) {
+                    const key = person.toLowerCase();
+                    if (!byPerson.has(key)) byPerson.set(key, { name: person, items: [], serials: [] });
+                    byPerson.get(key).items.push(model);
+                    byPerson.get(key).serials.push(serial);
+                } else {
+                    stock[model] = (stock[model] || 0) + 1;
+                    inStock++;
+                }
+            }
+
+            const assigned = [...byPerson.values()].reduce((sum, person) => sum + person.serials.length, 0);
+            if (assigned + inStock === 0) return prev;
+
+            // Identifiants distincts de ceux des attributions créées à la main (Date.now()).
+            const baseId = Date.now() * 1000;
+            const loans = [...byPerson.values()].map((person, index) => ({
+                id: baseId + index,
+                name: person.name,
+                date,
+                items: person.items,
+                serials: person.serials,
+                pickedUpAt: date,
+                imported: true
+            }));
+
+            const plural = (count, word) => `${count} ${word}${count > 1 ? 's' : ''}`;
+            const historyEntry = {
+                id: Date.now(),
+                category: 'Import inventaire',
+                delta: 1,
+                recipient: null,
+                details: [
+                    `${plural(assigned + inStock, 'appareil')} importé${assigned + inStock > 1 ? 's' : ''}`,
+                    `${assigned} attribué${assigned > 1 ? 's' : ''} à ${plural(loans.length, 'personne')}`,
+                    `${inStock} en stock`
+                ],
+                date
+            };
+
+            return {
+                ...prev,
+                stock,
+                devices,
+                loans: [...prev.loans, ...loans],
+                history: [historyEntry, ...prev.history].slice(0, 50)
+            };
+        });
+    };
+
     // Supprime la fiche d'un appareil. S'il était en stock, le stock de son modèle
     // diminue d'une unité ; s'il était attribué, le stock ne change pas (déjà sorti)
     // et il disparaît de l'attribution de la personne.
@@ -1006,6 +1083,7 @@ export function useInventory() {
         devices: data.devices,
         returnFromEmployee,
         receiveDevices,
+        importInventory,
         removeUntrackedStock,
         deleteDevice,
         addLoan,
