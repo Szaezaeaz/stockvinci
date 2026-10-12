@@ -1,30 +1,49 @@
 import React, { useEffect, useState } from 'react';
 import Modal from './Modal';
-import { PHONE_MODEL_OPTIONS } from '../config/phoneAccessories';
-import { PC_FAMILIES, PC_MODELS } from '../config/trackedModels';
+import ModelPicker from './ModelPicker';
+import { TRACKED_MODELS } from '../config/trackedModels';
 import { matchesQuery } from '../utils/search';
-import { parseScan, stockModelForFamily } from '../utils/scanParse';
+import { parseScan } from '../utils/scanParse';
+import {
+    aliasKeyToLearn, conditionOfStockKey, deviceModelLabel, exactModelFromStockKey, isOccasionOnly, kindOfModel,
+    shortModelName, stockKeyOf
+} from '../utils/models';
 import { useScanCapture } from '../hooks/useScanCapture';
 
-const dateOf = (value) => (value ? new Date(value).toLocaleDateString() : '');
+// Le stock peut compter des centaines d'appareils : on n'en affiche que les
+// premiers, la recherche sert à trouver les autres.
+const MAX_STOCK_SHOWN = 30;
+
 const iconOf = (kind) => (kind === 'phone' ? '📱' : '💻');
+
+// Nom affiché d'un appareil de la liste : son modèle précis s'il est suivi, sinon
+// sa ligne de stock.
+const itemLabel = (item) => (item.serial && item.exactModel ? shortModelName(item.exactModel) : item.model);
+
+function itemDetail(item) {
+    if (!item.serial) return 'sans n° de série';
+    const condition = item.exactModel ? conditionOfStockKey(item.model) : '';
+    return `S/N ${item.serial}${condition ? ` · ${condition}` : ''}`;
+}
 
 // Matériel à attribuer : un seul champ de scan pour les PC et les téléphones, la
 // liste de ce qui est ajouté, et (repliée) la liste du stock pour choisir à la main.
-// items : [{ uid, kind: 'pc' | 'phone', model, serial }] (serial vide = stock ancien).
-export default function AssignmentPicker({ devices, items, onItemsChange, onCreateDevice, initialScan, onInitialScanHandled }) {
+// items : [{ uid, kind: 'pc' | 'phone', model (ligne de stock), exactModel, serial }]
+// (serial vide = stock ancien non suivi).
+export default function AssignmentPicker({ devices, stock, items, onItemsChange, onCreateDevice, initialScan, onInitialScanHandled }) {
     const [query, setQuery] = useState('');
     const [message, setMessage] = useState(null); // { ok, text }
     const [unknown, setUnknown] = useState(null); // appareil scanné absent de la base
     const [stockOpen, setStockOpen] = useState(false);
-    const [pickKind, setPickKind] = useState('pc');
-    const [pickModel, setPickModel] = useState(PC_MODELS[0]);
     const [stockQuery, setStockQuery] = useState('');
 
     const addItem = (item) => {
         onItemsChange([...items, { uid: item.serial || `legacy-${Date.now()}-${Math.random()}`, ...item }]);
     };
     const removeItem = (uid) => onItemsChange(items.filter(item => item.uid !== uid));
+    const addDevice = (device) => {
+        addItem({ serial: device.serial, kind: device.kind, model: device.model, exactModel: device.exactModel });
+    };
 
     const handleScan = (raw) => {
         const scan = parseScan(raw);
@@ -36,19 +55,19 @@ export default function AssignmentPicker({ devices, items, onItemsChange, onCrea
         } else if (items.some(item => item.serial === serial)) {
             setMessage({ ok: false, text: `${serial} : déjà dans la liste.` });
         } else if (!device) {
-            setUnknown({ serial, modelName: scan.modelName, productId: scan.productId, family: scan.family, kind: scan.family ? 'pc' : null });
+            setUnknown(scan);
             return; // la fenêtre prend la main : pas de refocus sur le champ derrière
         } else if (device.status !== 'stock') {
             setMessage({ ok: false, text: `${serial} : déjà attribué à ${device.holder || '?'}.` });
         } else {
-            addItem({ serial, kind: device.kind, model: device.model });
-            setMessage({ ok: true, text: `${serial} ajouté · ${device.model}` });
+            addDevice(device);
+            setMessage({ ok: true, text: `${serial} ajouté · ${deviceModelLabel(device)}` });
         }
         refocus();
     };
 
-    // redirectKeys : si le focus est resté sur une liste déroulante ou un bouton, les
-    // touches de la douchette sont redirigées vers ce champ de scan.
+    // redirectKeys : si le focus est resté sur un bouton, les touches de la douchette
+    // sont redirigées vers ce champ de scan.
     const { focused, refocus, inputProps } = useScanCapture({
         value: query,
         setValue: setQuery,
@@ -66,10 +85,18 @@ export default function AssignmentPicker({ devices, items, onItemsChange, onCrea
     }, []);
 
     // --- Appareil inconnu : on le crée puis on l'ajoute à la liste ---------------
-    const createUnknown = (kind, model) => {
-        onCreateDevice({ serial: unknown.serial, model, modelName: unknown.modelName, productId: unknown.productId });
-        addItem({ serial: unknown.serial, kind, model });
-        setMessage({ ok: true, text: `${unknown.serial} ajouté à la base · ${model}` });
+    const createUnknown = (exactModel, condition) => {
+        const model = stockKeyOf(exactModel, condition);
+        onCreateDevice({
+            serial: unknown.serial,
+            model,
+            exactModel,
+            modelName: unknown.modelName,
+            productId: unknown.productId,
+            learnKey: unknown.modelName && !unknown.model ? aliasKeyToLearn(unknown) : ''
+        });
+        addItem({ serial: unknown.serial, kind: kindOfModel(exactModel), model, exactModel });
+        setMessage({ ok: true, text: `${unknown.serial} ajouté à la base · ${shortModelName(exactModel)}` });
         setUnknown(null);
         refocus();
     };
@@ -79,19 +106,27 @@ export default function AssignmentPicker({ devices, items, onItemsChange, onCrea
     };
 
     // --- Stock (choix à la main) ---------------------------------------------
-    const stockCards = Object.values(devices || {})
-        .filter(device => device.kind === pickKind && device.status === 'stock' && device.model === pickModel)
-        .filter(device => !items.some(item => item.serial === device.serial))
-        .filter(device => matchesQuery(stockQuery, [device.serial, device.modelName || '']));
-
-    const changeKind = (kind) => {
-        setPickKind(kind);
-        setPickModel(kind === 'pc' ? PC_MODELS[0] : PHONE_MODEL_OPTIONS[0]);
-    };
+    const inStock = stockOpen
+        ? Object.values(devices || {}).filter(device => device.status === 'stock' && !items.some(item => item.serial === device.serial))
+        : [];
+    const stockCards = inStock.filter(device =>
+        matchesQuery(stockQuery, [device.serial, device.exactModel || '', device.model, device.modelName || ''])
+    );
+    // Lignes de l'accueil qui comptent encore des unités sans n° de série.
+    const untracked = stockOpen
+        ? [...TRACKED_MODELS]
+            .map(model => ({
+                model,
+                count: (stock?.[model] || 0)
+                    - Object.values(devices || {}).filter(device => device.status === 'stock' && device.model === model).length
+                    - items.filter(item => !item.serial && item.model === model).length
+            }))
+            .filter(({ model, count }) => count > 0 && matchesQuery(stockQuery, [model]))
+        : [];
 
     return (
         <div className="assign-picker">
-            <UnknownDeviceModal key={unknown?.serial || 'none'} unknown={unknown} onCreate={createUnknown} onCancel={cancelUnknown} />
+            <UnknownDeviceModal key={unknown?.serial || 'none'} unknown={unknown} devices={devices} onCreate={createUnknown} onCancel={cancelUnknown} />
 
             <label className="assign-title">Matériel à attribuer</label>
 
@@ -117,10 +152,10 @@ export default function AssignmentPicker({ devices, items, onItemsChange, onCrea
                     <li key={item.uid} className="assign-item">
                         <span className="assign-item-icon">{iconOf(item.kind)}</span>
                         <span className="assign-item-main">
-                            <span className="assign-item-model">{item.model}</span>
-                            <span className="assign-item-serial">{item.serial ? `S/N ${item.serial}` : 'sans n° de série'}</span>
+                            <span className="assign-item-model">{itemLabel(item)}</span>
+                            <span className="assign-item-serial">{itemDetail(item)}</span>
                         </span>
-                        <button type="button" className="assign-item-remove" onClick={() => removeItem(item.uid)} aria-label={`Retirer ${item.model}`}>
+                        <button type="button" className="assign-item-remove" onClick={() => removeItem(item.uid)} aria-label={`Retirer ${itemLabel(item)}`}>
                             &times;
                         </button>
                     </li>
@@ -133,71 +168,58 @@ export default function AssignmentPicker({ devices, items, onItemsChange, onCrea
 
             {stockOpen && (
                 <div className="assign-stock">
-                    <div className="segmented-control">
-                        <button type="button" className={`segment-btn ${pickKind === 'pc' ? 'active' : ''}`} onClick={() => changeKind('pc')}>PC</button>
-                        <button type="button" className={`segment-btn ${pickKind === 'phone' ? 'active' : ''}`} onClick={() => changeKind('phone')}>Téléphones</button>
-                    </div>
-                    <select
-                        className="loan-input"
-                        value={pickModel}
-                        onChange={(e) => { setPickModel(e.target.value); e.target.blur(); refocus(); }}
-                    >
-                        {(pickKind === 'pc' ? PC_MODELS : PHONE_MODEL_OPTIONS).map(model => (
-                            <option key={model} value={model}>{model}</option>
-                        ))}
-                    </select>
                     <input
                         type="text"
                         className="loan-input"
-                        placeholder="Filtrer par n° de série…"
+                        placeholder="Chercher un modèle ou un n° de série…"
                         value={stockQuery}
                         onChange={(e) => setStockQuery(e.target.value)}
-                        autoCapitalize="characters"
                         autoComplete="off"
                         spellCheck={false}
                     />
-                    {stockCards.length === 0 && <div className="search-empty">Aucun appareil scanné en stock pour ce modèle.</div>}
+                    {stockCards.length === 0 && untracked.length === 0 && (
+                        <div className="search-empty">{stockQuery ? 'Aucun appareil trouvé en stock.' : 'Aucun appareil en stock.'}</div>
+                    )}
+                    {stockCards.length > MAX_STOCK_SHOWN && (
+                        <p className="list-count">{MAX_STOCK_SHOWN} affichés sur {stockCards.length} : précise la recherche pour trouver les autres.</p>
+                    )}
                     <div className="pc-card-list">
-                        {stockCards.map(device => (
-                            <button
-                                key={device.serial}
-                                type="button"
-                                className="pc-card"
-                                onClick={() => addItem({ serial: device.serial, kind: device.kind, model: device.model })}
-                            >
+                        {stockCards.slice(0, MAX_STOCK_SHOWN).map(device => (
+                            <button key={device.serial} type="button" className="pc-card" onClick={() => addDevice(device)}>
                                 <span className="pc-card-main">
                                     <span className="pc-card-serial">{device.serial}</span>
                                     <span className="pc-card-sub">
-                                        {device.modelName || device.model} · reçu le {dateOf(device.events?.[device.events.length - 1]?.date)}
+                                        {iconOf(device.kind)} {deviceModelLabel(device)}
+                                        {device.exactModel && conditionOfStockKey(device.model) ? ` · ${conditionOfStockKey(device.model)}` : ''}
                                     </span>
                                 </span>
                                 <span className="pc-card-check">+</span>
                             </button>
                         ))}
                     </div>
-                    <button
-                        type="button"
-                        className="assign-legacy"
-                        onClick={() => addItem({ serial: '', kind: pickKind, model: pickModel })}
-                    >
-                        + Ajouter un {pickModel} sans n° de série
-                    </button>
+                    {untracked.map(({ model, count }) => (
+                        <button
+                            key={model}
+                            type="button"
+                            className="assign-legacy"
+                            onClick={() => addItem({ serial: '', kind: kindOfModel(model), model, exactModel: exactModelFromStockKey(model) || undefined })}
+                        >
+                            + {model} sans n° de série ({count} en stock)
+                        </button>
+                    ))}
                 </div>
             )}
         </div>
     );
 }
 
-// Fenêtre « appareil absent de la base » : on demande si c'est un PC ou un
-// téléphone (sauf si le QR code l'indique), son modèle, puis l'état pour un PC.
-function UnknownDeviceModal({ unknown, onCreate, onCancel }) {
-    const [kind, setKind] = useState(null);
-    const [family, setFamily] = useState(PC_FAMILIES[0]);
-    const [phoneModel, setPhoneModel] = useState(PHONE_MODEL_OPTIONS[0]);
+// Fenêtre « appareil absent de la base » : le modèle vient du QR code quand il est
+// reconnu, sinon on le choisit ; puis, pour un PC, son état.
+function UnknownDeviceModal({ unknown, devices, onCreate, onCancel }) {
+    const [model, setModel] = useState(unknown?.model || '');
 
     if (!unknown) return null;
-    const effectiveKind = unknown.kind || kind;
-    const effectiveFamily = unknown.family || family;
+    const kind = model ? kindOfModel(model) : null;
 
     return (
         <Modal isOpen onClose={onCancel} title="Appareil absent de la base">
@@ -205,58 +227,33 @@ function UnknownDeviceModal({ unknown, onCreate, onCancel }) {
                 <strong>{unknown.serial}</strong> n'est pas présent dans la base de données.
                 Voulez-vous l'ajouter et l'associer ici ?
             </p>
-            {unknown.modelName && <p className="unknown-model">Lu dans le QR code : {unknown.modelName}</p>}
-
-            {!unknown.kind && (
-                <div className="segmented-control" style={{ marginBottom: '12px' }}>
-                    <button type="button" className={`segment-btn ${kind === 'pc' ? 'active' : ''}`} onClick={() => setKind('pc')}>PC</button>
-                    <button type="button" className={`segment-btn ${kind === 'phone' ? 'active' : ''}`} onClick={() => setKind('phone')}>Téléphone</button>
-                </div>
+            {unknown.modelName && (
+                <p className="unknown-model">
+                    Lu dans le QR code : {unknown.modelName}
+                    {!unknown.model && ' — modèle non reconnu, à choisir ci-dessous'}
+                </p>
             )}
 
-            {effectiveKind === 'pc' && (
-                <>
-                    {!unknown.family && (
-                        <select className="loan-input" value={family} onChange={(e) => setFamily(e.target.value)} style={{ marginBottom: '12px' }}>
-                            {PC_FAMILIES.map(option => <option key={option} value={option}>{option}</option>)}
-                        </select>
-                    )}
-                    <p className="unknown-text">
-                        {unknown.family ? `Modèle reconnu : ${unknown.family}. ` : ''}Ce PC est-il neuf ou d'occasion ?
-                    </p>
-                    <div className="unknown-actions">
-                        {effectiveFamily !== '850 G8/G10' && (
-                            <button type="button" className="unknown-yes" onClick={() => onCreate('pc', stockModelForFamily(effectiveFamily, 'Neuf'))}>
-                                Ajouter en Neuf
-                            </button>
-                        )}
-                        <button type="button" className="unknown-yes" onClick={() => onCreate('pc', stockModelForFamily(effectiveFamily, 'Occasion'))}>
-                            Ajouter en Occasion
-                        </button>
-                        <button type="button" className="unknown-no" onClick={onCancel}>Non</button>
-                    </div>
-                </>
-            )}
+            <div className="unknown-picker">
+                <ModelPicker value={model} onChange={setModel} devices={devices} suggestions={unknown.candidates} />
+            </div>
 
-            {effectiveKind === 'phone' && (
-                <>
-                    <select className="loan-input" value={phoneModel} onChange={(e) => setPhoneModel(e.target.value)} style={{ marginBottom: '12px' }}>
-                        {PHONE_MODEL_OPTIONS.map(option => <option key={option} value={option}>{option}</option>)}
-                    </select>
-                    <div className="unknown-actions">
-                        <button type="button" className="unknown-yes" onClick={() => onCreate('phone', phoneModel)}>
-                            Ajouter ce {phoneModel}
-                        </button>
-                        <button type="button" className="unknown-no" onClick={onCancel}>Non</button>
-                    </div>
-                </>
-            )}
+            {kind === 'pc' && <p className="unknown-text">Ce PC est-il neuf ou d'occasion ?</p>}
 
-            {!effectiveKind && (
-                <div className="unknown-actions">
-                    <button type="button" className="unknown-no" onClick={onCancel}>Non</button>
-                </div>
-            )}
+            <div className="unknown-actions">
+                {kind === 'pc' && !isOccasionOnly(model) && (
+                    <button type="button" className="unknown-yes" onClick={() => onCreate(model, 'Neuf')}>Ajouter en Neuf</button>
+                )}
+                {kind === 'pc' && (
+                    <button type="button" className="unknown-yes" onClick={() => onCreate(model, 'Occasion')}>Ajouter en Occasion</button>
+                )}
+                {kind === 'phone' && (
+                    <button type="button" className="unknown-yes" onClick={() => onCreate(model, null)}>
+                        Ajouter ce {shortModelName(model)}
+                    </button>
+                )}
+                <button type="button" className="unknown-no" onClick={onCancel}>Non</button>
+            </div>
         </Modal>
     );
 }

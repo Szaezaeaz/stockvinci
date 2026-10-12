@@ -1,16 +1,20 @@
 import React from 'react';
 import { getLoanSerials } from '../utils/loans';
+import { conditionOfStockKey, deviceModelLabel } from '../utils/models';
 
 // Pastilles d'une attribution : chaque article, avec le n° de série de l'appareil
-// correspondant quand il est suivi (le premier appareil du même modèle non encore
-// associé). Les n° de série sans appareil connu sont ajoutés à la fin.
+// correspondant quand il est suivi (le premier appareil de la même ligne de stock
+// non encore associé) : la pastille porte alors son modèle précis et son état.
+// Les n° de série sans appareil connu sont ajoutés à la fin.
 function chipsOf(loan, devices) {
     const remaining = getLoanSerials(loan).filter(serial => devices?.[serial]);
     const chips = (loan.items || []).map(item => {
         const index = remaining.findIndex(serial => devices[serial].model === item);
         if (index === -1) return { label: item, serial: null };
         const [serial] = remaining.splice(index, 1);
-        return { label: item, serial };
+        const device = devices[serial];
+        const condition = device.exactModel ? conditionOfStockKey(item) : '';
+        return { label: deviceModelLabel(device), serial, detail: condition ? ` · ${condition}` : '' };
     });
     getLoanSerials(loan)
         .filter(serial => !devices?.[serial])
@@ -24,7 +28,7 @@ export default function LoanChips({ loan, devices }) {
             {chipsOf(loan, devices).map((chip, index) => (
                 <span key={index} className={`assignment-chip${chip.serial ? ' assignment-chip-pc' : ''}`}>
                     {chip.label}
-                    {chip.serial && <small>S/N {chip.serial}</small>}
+                    {chip.serial && <small>S/N {chip.serial}{chip.detail}</small>}
                 </span>
             ))}
         </div>

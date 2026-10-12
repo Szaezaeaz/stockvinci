@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import Modal from './Modal';
 import SearchBar from './SearchBar';
 import { matchesQuery } from '../utils/search';
+import { shortModelName, stockKeyLabel } from '../utils/models';
 
 // Un modèle peut compter des centaines d'appareils : on en affiche une page à la fois.
 const PAGE_SIZE = 50;
@@ -24,18 +25,22 @@ export default function DeviceListModal({ model, devices, stock, onClose, onRemo
         .filter(device => device.model === model)
         .sort((a, b) => new Date(b.events?.[0]?.date || 0) - new Date(a.events?.[0]?.date || 0));
     const visible = all.filter(device =>
-        matchesQuery(query, [device.serial, device.holder || '', statusLabel(device), device.modelName || '', device.productId || ''])
+        matchesQuery(query, [device.serial, device.holder || '', statusLabel(device), device.exactModel || '', device.modelName || '', device.productId || ''])
     );
 
     // L'appareil ouvert d'office (après un scan) reste affiché même au-delà de la première page.
     const shown = visible.filter((device, index) => index < limit || device.serial === openSerial);
+
+    // Une ligne de stock peut regrouper plusieurs modèles précis (ex. les ZBook) :
+    // on l'indique alors sur chaque appareil.
+    const severalModels = new Set(all.map(device => device.exactModel || '')).size > 1;
 
     const inStock = all.filter(device => device.status === 'stock').length;
     const assigned = all.length - inStock;
     const untracked = (stock?.[model] || 0) - inStock;
 
     const handleRemoveUntracked = () => {
-        if (window.confirm(`Retirer du stock les ${untracked} ${model} sans n° de série ? Le stock affiché passera à ${inStock}.`)) {
+        if (window.confirm(`Retirer du stock les ${untracked} ${stockKeyLabel(model)} sans n° de série ? Le stock affiché passera à ${inStock}.`)) {
             onRemoveUntracked(model);
         }
     };
@@ -43,7 +48,7 @@ export default function DeviceListModal({ model, devices, stock, onClose, onRemo
     const handleDelete = (device) => {
         const message = device.status === 'assigned'
             ? `${device.serial} est attribué à ${device.holder || '?'}. Supprimer sa fiche ? Le stock ne change pas.`
-            : `Supprimer ${device.serial} ? Le stock de ${model} passera de ${stock?.[model] || 0} à ${Math.max(0, (stock?.[model] || 0) - 1)}.`;
+            : `Supprimer ${device.serial} ? Le stock de ${stockKeyLabel(model)} passera de ${stock?.[model] || 0} à ${Math.max(0, (stock?.[model] || 0) - 1)}.`;
         if (window.confirm(message)) {
             onDeleteDevice(device.serial);
             setOpenSerial(null);
@@ -51,7 +56,7 @@ export default function DeviceListModal({ model, devices, stock, onClose, onRemo
     };
 
     return (
-        <Modal isOpen={Boolean(model)} onClose={onClose} title={model || ''}>
+        <Modal isOpen={Boolean(model)} onClose={onClose} title={stockKeyLabel(model)}>
             <div className="device-summary">
                 <span className="device-chip device-chip-stock">{inStock} en stock</span>
                 <span className="device-chip device-chip-assigned">{assigned} attribué{assigned > 1 ? 's' : ''}</span>
@@ -84,6 +89,7 @@ export default function DeviceListModal({ model, devices, stock, onClose, onRemo
                                 <span className="device-main">
                                     <span className="device-serial">{device.serial}</span>
                                     <span className="device-sub">
+                                        {severalModels && device.exactModel ? `${shortModelName(device.exactModel)} · ` : ''}
                                         {last ? `${last.action}${last.person ? ` · ${last.person}` : ''} · ${dateOf(last.date)}` : ''}
                                     </span>
                                 </span>
@@ -93,7 +99,8 @@ export default function DeviceListModal({ model, devices, stock, onClose, onRemo
                             </button>
                             {open && (
                                 <ul className="device-events">
-                                    {device.modelName && <li>Modèle : {device.modelName}{device.productId ? ` (${device.productId})` : ''}</li>}
+                                    {device.exactModel && <li>Modèle : {device.exactModel}</li>}
+                                    {device.modelName && <li>QR code : {device.modelName}{device.productId ? ` (${device.productId})` : ''}</li>}
                                     {(device.events || []).map((event, index) => (
                                         <li key={index}>
                                             {dateOf(event.date)} · {event.action}{event.person ? ` · ${event.person}` : ''}

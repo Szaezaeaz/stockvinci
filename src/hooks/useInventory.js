@@ -1,9 +1,10 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { sendLowStockAlert } from '../services/email';
 import { getLowStockThreshold } from '../config/thresholds';
-import { PHONE_CASE_INFO, PHONE_MODEL_OPTIONS } from '../config/phoneAccessories';
+import { PHONE_CASE_INFO } from '../config/phoneAccessories';
 import { normalizeSerial } from '../utils/serial';
 import { getLoanSerials } from '../utils/loans';
+import { exactModelFromStockKey, kindOfModel, matchModelName, setLearnedAliases, stockKeyLabel } from '../utils/models';
 import { applyUndoPatch, diffState } from '../utils/undo';
 import { fetchCloud, pushCloud, getPasscode, savePasscode, loadSyncMeta, saveSyncMeta } from '../services/cloudSync';
 
@@ -41,8 +42,13 @@ const INITIAL_STATE = {
     history: [],
     loans: [], // Array of { id, name, date }
     // Registre des numéros de série saisis (PC / téléphones), indexé par n° de
-    // série : { serial, kind, model, events: [{ date, action, person }] }.
-    devices: {}
+    // série : { serial, kind, model, exactModel, events: [{ date, action, person }] }.
+    // model = ligne de stock qui compte l'appareil ("650 G11 Occasion") ;
+    // exactModel = son modèle précis ("HP EliteBook 660 16 inch G11 Notebook PC").
+    devices: {},
+    // Modèles choisis à la main pour des QR codes non reconnus, retenus pour les
+    // scans suivants (voir utils/models).
+    modelAliases: {}
 };
 
 // Maps legacy generic category names (pre-model-tracking) to their closest
@@ -94,7 +100,37 @@ function migrateLoanItem(itemStr) {
     return (LEGACY_KEY_MIGRATIONS[base] || base) + (match?.[2] || '');
 }
 
+// Modèle exact d'une fiche créée avant qu'il soit enregistré : retrouvé d'après
+// le nom lu dans le QR code, sinon d'après la ligne de stock quand elle ne
+// correspond qu'à un seul modèle.
+function withExactModel(device) {
+    if (device.exactModel) return device;
+    const exactModel = matchModelName(device.modelName, device.productId).model || exactModelFromStockKey(device.model);
+    return exactModel ? { ...device, exactModel } : device;
+}
+
+// Retire un appareil des attributions qui le mentionnent : son n° de série et
+// l'article correspondant. Une attribution qui n'a plus rien disparaît.
+function detachFromLoans(loans, serial, stockKey) {
+    if (!loans.some(loan => getLoanSerials(loan).includes(serial))) return loans;
+    const next = [];
+    for (const loan of loans) {
+        const serials = getLoanSerials(loan);
+        if (!serials.includes(serial)) {
+            next.push(loan);
+            continue;
+        }
+        const items = [...(loan.items || [])];
+        const index = items.indexOf(stockKey);
+        if (index !== -1) items.splice(index, 1);
+        const remaining = serials.filter(other => other !== serial);
+        if (items.length > 0 || remaining.length > 0) next.push({ ...loan, items, serials: remaining });
+    }
+    return next;
+}
+
 function normalizeData(parsed) {
+    setLearnedAliases(parsed.modelAliases);
     return {
         stock: { ...INITIAL_STATE.stock, ...migrateLegacyStock(parsed.stock || {}) },
         history: parsed.history || [],
@@ -106,9 +142,10 @@ function normalizeData(parsed) {
         devices: Object.fromEntries(
             Object.entries(parsed.devices || {}).map(([serial, device]) => [
                 serial,
-                { status: 'stock', holder: null, ...device }
+                withExactModel({ status: 'stock', holder: null, ...device })
             ])
-        )
+        ),
+        modelAliases: parsed.modelAliases || {}
     };
 }
 
@@ -236,6 +273,7 @@ export function useInventory() {
 
     useEffect(() => {
         dataRef.current = data;
+        setLearnedAliases(data.modelAliases);
     }, [data]);
 
     const updateMeta = useCallback((patch) => {
@@ -418,9 +456,9 @@ export function useInventory() {
 
             const labelWithSerial = (item, rawSerial) => {
                 const serial = normalizeSerial(rawSerial);
-                if (!serial || trackedSerials.includes(serial)) return item;
+                if (!serial || trackedSerials.includes(serial)) return stockKeyLabel(item);
                 trackedSerials.push(serial);
-                return `${item} (S/N ${serial})`;
+                return `${stockKeyLabel(item)} (S/N ${serial})`;
             };
 
             // Helper to process deduction
@@ -670,7 +708,7 @@ export function useInventory() {
                 category: 'Retour matériel',
                 delta: 1,
                 recipient: loan.recipient,
-                details: loan.items,
+                details: loan.items.map(stockKeyLabel),
                 date: returnedDate
             };
 
@@ -721,29 +759,47 @@ export function useInventory() {
     // Retour d'un collaborateur (départ CDI/CDD...) : le PC rejoint le stock
     // Occasion de son modèle, le téléphone son stock, plus les accessoires.
     // Les numéros de série saisis alimentent le registre `devices`.
-    const returnFromEmployee = (name, { pcModel, pcSerial, phoneModel, phoneSerial, phoneCase, accessories = {} }) => {
+    // pcModel / phoneModel : lignes de stock ; pcExactModel / phoneExactModel : modèles précis.
+    const returnFromEmployee = (name, { pcModel, pcExactModel, pcSerial, phoneModel, phoneExactModel, phoneSerial, phoneCase, accessories = {} }) => {
         setData(prev => {
             const stockUpdates = {};
             const details = [];
             const devices = { ...(prev.devices || {}) };
+            let loans = prev.loans;
             const date = new Date();
 
             const add = (item) => { stockUpdates[item] = (stockUpdates[item] || 0) + 1; };
-            const track = (rawSerial, kind, model) => {
+            // Appareil rendu : il rejoint la ligne de stock `model`. Avec un n° de série,
+            // sa fiche passe "en stock" et il quitte l'attribution qui le mentionnait.
+            const giveBack = (rawSerial, kind, model, exactModel) => {
                 const serial = normalizeSerial(rawSerial);
-                if (!serial) return '';
-                const events = [{ date, action: 'Retour', person: name }, ...(devices[serial]?.events || [])].slice(0, 20);
-                devices[serial] = { serial, kind, model, status: 'stock', holder: null, events };
-                return ` (S/N ${serial})`;
+                const known = serial ? devices[serial] : null;
+                if (known?.status === 'stock') {
+                    // déjà compté dans le stock : il change seulement de ligne si besoin
+                    stockUpdates[known.model] = (stockUpdates[known.model] || 0) - 1;
+                }
+                add(model);
+                if (!serial) return stockKeyLabel(model);
+                if (known?.status === 'assigned') loans = detachFromLoans(loans, serial, known.model);
+                const resolved = exactModel || known?.exactModel || exactModelFromStockKey(model);
+                devices[serial] = {
+                    ...known,
+                    serial,
+                    kind,
+                    model,
+                    ...(resolved ? { exactModel: resolved } : {}),
+                    status: 'stock',
+                    holder: null,
+                    events: [{ date, action: 'Retour', person: name }, ...(known?.events || [])].slice(0, 20)
+                };
+                return `${stockKeyLabel(model)} (S/N ${serial})`;
             };
 
             if (pcModel) {
-                add(pcModel);
-                details.push(pcModel + track(pcSerial, 'pc', pcModel));
+                details.push(giveBack(pcSerial, 'pc', pcModel, pcExactModel));
             }
             if (phoneModel) {
-                add(phoneModel);
-                details.push(phoneModel + track(phoneSerial, 'phone', phoneModel));
+                details.push(giveBack(phoneSerial, 'phone', phoneModel, phoneExactModel));
                 const caseInfo = PHONE_CASE_INFO[phoneModel];
                 if (phoneCase && caseInfo) {
                     const caseItems = caseInfo.bundled ? [caseInfo.comboItem] : [caseInfo.caseItem, caseInfo.screenItem];
@@ -774,6 +830,7 @@ export function useInventory() {
                 ...prev,
                 stock: newStock,
                 devices,
+                loans,
                 history: [historyEntry, ...prev.history].slice(0, 50)
             };
         });
@@ -782,22 +839,30 @@ export function useInventory() {
     // Réception de matériel scanné : chaque n° de série devient une fiche
     // d'appareil "en stock" et le stock du modèle augmente d'autant. Les n° de
     // série déjà connus sont ignorés.
-    // entries : [{ serial, model, modelName?, productId? }] — chaque appareil
-    // porte son propre modèle (reconnu depuis le QR code, ou choisi à la main).
+    // entries : [{ serial, model, exactModel?, modelName?, productId?, learnKey? }] —
+    // chaque appareil porte sa ligne de stock (model) et son modèle précis
+    // (exactModel), reconnu depuis le QR code ou choisi à la main. learnKey : clé
+    // sous laquelle retenir ce choix pour les prochains scans (QR non reconnu).
     const receiveDevices = (entries) => {
         setData(prev => {
             const devices = { ...(prev.devices || {}) };
             const stock = { ...prev.stock };
+            let modelAliases = prev.modelAliases || {};
             const date = new Date();
             const details = [];
 
             for (const entry of entries) {
                 const serial = normalizeSerial(entry.serial);
                 if (!serial || devices[serial]) continue;
+                const exactModel = entry.exactModel || exactModelFromStockKey(entry.model);
+                if (entry.learnKey && exactModel && modelAliases[entry.learnKey] !== exactModel) {
+                    modelAliases = { ...modelAliases, [entry.learnKey]: exactModel };
+                }
                 devices[serial] = {
                     serial,
-                    kind: PHONE_MODEL_OPTIONS.includes(entry.model) ? 'phone' : 'pc',
+                    kind: kindOfModel(exactModel || entry.model),
                     model: entry.model,
+                    ...(exactModel ? { exactModel } : {}),
                     modelName: entry.modelName || '',
                     productId: entry.productId || '',
                     status: 'stock',
@@ -805,7 +870,7 @@ export function useInventory() {
                     events: [{ date, action: 'Réception', person: null }]
                 };
                 stock[entry.model] = (stock[entry.model] || 0) + 1;
-                details.push(`${entry.model} (S/N ${serial})`);
+                details.push(`${stockKeyLabel(entry.model)} (S/N ${serial})`);
             }
 
             if (details.length === 0) return prev;
@@ -823,13 +888,15 @@ export function useInventory() {
                 ...prev,
                 stock,
                 devices,
+                modelAliases,
                 history: [historyEntry, ...prev.history].slice(0, 50)
             };
         });
     };
 
     // Supprime la fiche d'un appareil. S'il était en stock, le stock de son modèle
-    // diminue d'une unité ; s'il était attribué, le stock ne change pas (déjà sorti).
+    // diminue d'une unité ; s'il était attribué, le stock ne change pas (déjà sorti)
+    // et il disparaît de l'attribution de la personne.
     const deleteDevice = (serial) => {
         setData(prev => {
             const device = prev.devices?.[serial];
@@ -848,7 +915,7 @@ export function useInventory() {
                 category: 'Suppression appareil',
                 delta: -1,
                 recipient: device.status === 'assigned' ? device.holder : null,
-                details: [`${device.model} (S/N ${serial})`],
+                details: [`${stockKeyLabel(device.model)} (S/N ${serial})`],
                 date: new Date()
             };
 
@@ -856,6 +923,7 @@ export function useInventory() {
                 ...prev,
                 stock,
                 devices,
+                loans: detachFromLoans(prev.loans, serial, device.model),
                 history: [historyEntry, ...prev.history].slice(0, 50)
             };
         });
@@ -876,7 +944,7 @@ export function useInventory() {
                 category: 'Ajustement stock',
                 delta: -1,
                 recipient: null,
-                details: [`${model} : ${untracked} unité${untracked > 1 ? 's' : ''} sans n° de série retirée${untracked > 1 ? 's' : ''}`],
+                details: [`${stockKeyLabel(model)} : ${untracked} unité${untracked > 1 ? 's' : ''} sans n° de série retirée${untracked > 1 ? 's' : ''}`],
                 date: new Date()
             };
 
@@ -899,7 +967,8 @@ export function useInventory() {
         }));
     };
 
-    // Un PC attribué dont la fiche de prêt n'existe plus revient en stock.
+    // Un appareil attribué revient en stock, seul (le reste de l'attribution de la
+    // personne ne change pas).
     const returnAssignedDevice = (serial) => {
         setData(prev => {
             const device = prev.devices?.[serial];
@@ -917,12 +986,13 @@ export function useInventory() {
                         events: [{ date, action: 'Retour', person: device.holder }, ...(device.events || [])].slice(0, 20)
                     }
                 },
+                loans: detachFromLoans(prev.loans, serial, device.model),
                 history: [{
                     id: Date.now(),
                     category: 'Retour matériel',
                     delta: 1,
                     recipient: device.holder,
-                    details: [`${device.model} (S/N ${serial})`],
+                    details: [`${stockKeyLabel(device.model)} (S/N ${serial})`],
                     date
                 }, ...prev.history].slice(0, 50)
             };

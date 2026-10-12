@@ -11,7 +11,7 @@ const PANES = ['given', 'pending', 'all'];
 //  - À remettre : matériel préparé, encore en stock, avec le bouton "Remis".
 //  - Tout : les deux ensemble.
 // Le bouton "Attribuer du matériel" ouvre le formulaire d'attribution.
-export default function AssignedTab({ loans, devices, onAdd, onHandOver, onReturnLoan, onReturnDevice, onReceiveDevices, ref }) {
+export default function AssignedTab({ loans, devices, stock, onAdd, onHandOver, onReturnLoan, onReturnDevice, onReceiveDevices, ref }) {
     const [pane, setPane] = useState('given');
     const [query, setQuery] = useState('');
     const formRef = useRef(null);
@@ -61,6 +61,7 @@ export default function AssignedTab({ loans, devices, onAdd, onHandOver, onRetur
                 ref={formRef}
                 loans={loans}
                 devices={devices}
+                stock={stock}
                 onAdd={onAdd}
                 onHandOver={onHandOver}
                 onReceiveDevices={onReceiveDevices}

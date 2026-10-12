@@ -69,6 +69,7 @@ function App() {
             ref={assignedRef}
             loans={loans}
             devices={devices}
+            stock={stock}
             onAdd={addLoan}
             onHandOver={handOverLoan}
             onReturnLoan={returnLoan}

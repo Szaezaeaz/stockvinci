@@ -1,16 +1,15 @@
 import React, { useState } from 'react';
-import { PHONE_CASE_INFO, PHONE_MODEL_OPTIONS } from '../config/phoneAccessories';
+import ModelPicker from './ModelPicker';
+import { MODEL_CATALOG } from '../config/modelCatalog';
+import { PHONE_CASE_INFO } from '../config/phoneAccessories';
 import { normalizeSerial } from '../utils/serial';
-import { familyOfModel, parseScan, stockModelForFamily } from '../utils/scanParse';
+import { parseScan } from '../utils/scanParse';
+import { deviceModelLabel, kindOfModel, shortModelName, stockKeyOf } from '../utils/models';
 import { useScanCapture } from '../hooks/useScanCapture';
 
-// Le PC rendu rejoint le stock Occasion de son modèle.
-const PC_RETURN_OPTIONS = [
-    { value: '650 G11 Occasion', label: '650 G11' },
-    { value: '850 G8/G10 Occasion', label: '850 G8/G10' },
-    { value: 'X360 Occasion', label: 'X360' },
-    { value: 'Zbook Occasion', label: 'Zbook' }
-];
+// Modèles présélectionnés : les plus courants du parc.
+const DEFAULT_PC_MODEL = MODEL_CATALOG.find(entry => entry.kind === 'pc').name;
+const DEFAULT_PHONE_MODEL = MODEL_CATALOG.find(entry => entry.kind === 'phone').name;
 
 const ACCESSORY_OPTIONS = [
     { key: 'mouse', label: 'Souris' },
@@ -36,7 +35,7 @@ function KnownDeviceNote({ devices, serial }) {
     const state = device.status === 'assigned' ? `attribué à ${device.holder || '?'}` : 'en stock';
     return (
         <p style={noteStyle}>
-            Déjà enregistré : {device.model} · {state}
+            Déjà enregistré : {deviceModelLabel(device)} · {state}
             {last ? ` · dernier mouvement : ${last.action}${last.person ? ` (${last.person})` : ''} le ${when}` : ''}
         </p>
     );
@@ -46,11 +45,11 @@ export default function EmployeeReturnForm({ devices, onSubmit, onDone }) {
     const [name, setName] = useState('');
 
     const [includePC, setIncludePC] = useState(true);
-    const [pcModel, setPcModel] = useState(PC_RETURN_OPTIONS[0].value);
+    const [pcModel, setPcModel] = useState(DEFAULT_PC_MODEL); // modèle précis
     const [pcSerial, setPcSerial] = useState('');
 
     const [includePhone, setIncludePhone] = useState(false);
-    const [phoneModel, setPhoneModel] = useState(PHONE_MODEL_OPTIONS[0]);
+    const [phoneModel, setPhoneModel] = useState(DEFAULT_PHONE_MODEL); // modèle précis
     const [phoneSerial, setPhoneSerial] = useState('');
     const [phoneCase, setPhoneCase] = useState(false);
 
@@ -60,20 +59,19 @@ export default function EmployeeReturnForm({ devices, onSubmit, onDone }) {
 
     // Scan du PC : le n° de série remplit le champ et le modèle se sélectionne
     // tout seul (QR code HP, ou appareil déjà connu du registre).
+    const knownModel = (serial, kind) => {
+        const exactModel = devices?.[serial]?.exactModel;
+        return exactModel && kindOfModel(exactModel) === kind ? exactModel : null;
+    };
     const pcScan = useScanCapture({
         value: pcSerial,
         setValue: setPcSerial,
         onScan: (raw) => {
             const scan = parseScan(raw);
             setPcSerial(scan.serial);
-            const family = scan.family || (devices?.[scan.serial] ? familyOfModel(devices[scan.serial].model) : null);
-            if (family) {
-                const detected = stockModelForFamily(family, 'Occasion');
-                setPcModel(detected);
-                setPcDetected(`Modèle détecté : ${familyOfModel(detected)}`);
-            } else {
-                setPcDetected('');
-            }
+            const detected = (scan.model && kindOfModel(scan.model) === 'pc' ? scan.model : null) || knownModel(scan.serial, 'pc');
+            if (detected) setPcModel(detected);
+            setPcDetected(detected ? `Modèle détecté : ${shortModelName(detected)}` : '');
         }
     });
 
@@ -84,15 +82,16 @@ export default function EmployeeReturnForm({ devices, onSubmit, onDone }) {
         onScan: (raw) => {
             const { serial } = parseScan(raw);
             setPhoneSerial(serial);
-            const known = devices?.[serial];
-            if (known && PHONE_MODEL_OPTIONS.includes(known.model)) {
-                setPhoneModel(known.model);
-                setPhoneDetected(`Modèle détecté : ${known.model}`);
-            } else {
-                setPhoneDetected('');
-            }
+            const detected = knownModel(serial, 'phone');
+            if (detected) setPhoneModel(detected);
+            setPhoneDetected(detected ? `Modèle détecté : ${shortModelName(detected)}` : '');
         }
     });
+
+    // Coque et vitre : seulement pour les téléphones dont on les tient en stock.
+    const phoneStockKey = stockKeyOf(phoneModel);
+    const caseInfo = PHONE_CASE_INFO[phoneStockKey];
+    const caseLabel = caseInfo?.bundled ? 'Coque + Vitre' : 'Coque et Vitre';
 
     const handleSubmit = (e) => {
         e.preventDefault();
@@ -105,18 +104,20 @@ export default function EmployeeReturnForm({ devices, onSubmit, onDone }) {
             alert('Sélectionnez au moins un matériel rendu.');
             return;
         }
+        // Le PC rendu rejoint le stock Occasion de son modèle.
         onSubmit(name.trim(), {
-            pcModel: includePC ? pcModel : null,
+            pcModel: includePC ? stockKeyOf(pcModel, 'Occasion') : null,
+            pcExactModel: includePC ? pcModel : null,
             pcSerial: includePC ? pcSerial : '',
-            phoneModel: includePhone ? phoneModel : null,
+            phoneModel: includePhone ? phoneStockKey : null,
+            phoneExactModel: includePhone ? phoneModel : null,
             phoneSerial: includePhone ? phoneSerial : '',
-            phoneCase: includePhone && phoneCase,
+            phoneCase: includePhone && phoneCase && Boolean(caseInfo),
             accessories
         });
         onDone();
     };
 
-    const caseLabel = PHONE_CASE_INFO[phoneModel]?.bundled ? 'Coque + Vitre' : 'Coque et Vitre';
 
     return (
         <form onSubmit={handleSubmit} className="employee-return-form">
@@ -138,11 +139,7 @@ export default function EmployeeReturnForm({ devices, onSubmit, onDone }) {
                 </label>
                 {includePC && (
                     <div style={{ marginTop: '8px' }}>
-                        <select className="loan-input full-width" value={pcModel} onChange={(e) => { setPcModel(e.target.value); e.target.blur(); pcScan.refocus(); }}>
-                            {PC_RETURN_OPTIONS.map(option => (
-                                <option key={option.value} value={option.value}>{option.label}</option>
-                            ))}
-                        </select>
+                        <ModelPicker value={pcModel} onChange={(model) => { setPcModel(model); setPcDetected(''); }} devices={devices} kind="pc" />
                         <input
                             {...pcScan.inputProps}
                             type="text"
@@ -168,11 +165,7 @@ export default function EmployeeReturnForm({ devices, onSubmit, onDone }) {
                 </label>
                 {includePhone && (
                     <div style={{ marginTop: '8px' }}>
-                        <select className="loan-input full-width" value={phoneModel} onChange={(e) => { setPhoneModel(e.target.value); e.target.blur(); phoneScan.refocus(); }}>
-                            {PHONE_MODEL_OPTIONS.map(option => (
-                                <option key={option} value={option}>{option}</option>
-                            ))}
-                        </select>
+                        <ModelPicker value={phoneModel} onChange={(model) => { setPhoneModel(model); setPhoneDetected(''); }} devices={devices} kind="phone" />
                         <input
                             {...phoneScan.inputProps}
                             type="text"
@@ -186,10 +179,12 @@ export default function EmployeeReturnForm({ devices, onSubmit, onDone }) {
                         />
                         {phoneDetected && <p style={{ ...noteStyle, color: '#15803d', fontWeight: 600 }}>{phoneDetected}</p>}
                         <KnownDeviceNote devices={devices} serial={phoneSerial} />
-                        <label style={{ ...checkboxRowStyle, marginTop: '10px' }}>
-                            <input type="checkbox" checked={phoneCase} onChange={(e) => setPhoneCase(e.target.checked)} />
-                            {caseLabel} récupérée
-                        </label>
+                        {caseInfo && (
+                            <label style={{ ...checkboxRowStyle, marginTop: '10px' }}>
+                                <input type="checkbox" checked={phoneCase} onChange={(e) => setPhoneCase(e.target.checked)} />
+                                {caseLabel} récupérée
+                            </label>
+                        )}
                     </div>
                 )}
             </div>

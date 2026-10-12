@@ -1,6 +1,7 @@
 import React, { useMemo, useState } from 'react';
 import { matchesQuery } from '../utils/search';
 import { getLoanSerials } from '../utils/loans';
+import { deviceModelLabel } from '../utils/models';
 import LoanChips from './LoanChips';
 
 // Avec tout le parc importé, il y a plus de mille personnes : on n'en affiche
@@ -10,9 +11,9 @@ const PAGE_SIZE = 40;
 const dateOf = (value) => (value ? new Date(value).toLocaleDateString() : '');
 const nameKey = (name) => String(name || '').trim().toLowerCase();
 
-// Regroupe par personne : ses fiches de matériel (à récupérer ou déjà remis) et
-// les PC attribués dont la fiche n'existe plus (anciens "×").
-function groupByPerson(loans, devices) {
+// Regroupe par personne : ses fiches de matériel (loans : celles à afficher) et
+// les appareils attribués qui ne figurent dans aucune fiche (allLoans).
+function groupByPerson(loans, allLoans, devices) {
     const people = new Map();
     const personOf = (rawName) => {
         const key = nameKey(rawName) || '-';
@@ -22,7 +23,7 @@ function groupByPerson(loans, devices) {
 
     loans.forEach(loan => personOf(loan.name || loan.recipient).loans.push(loan));
 
-    const linkedSerials = new Set(loans.flatMap(loan => getLoanSerials(loan)));
+    const linkedSerials = new Set(allLoans.flatMap(loan => getLoanSerials(loan)));
     Object.values(devices || {})
         .filter(device => device.status === 'assigned' && !linkedSerials.has(device.serial))
         .forEach(device => personOf(device.holder).orphans.push(device));
@@ -35,9 +36,9 @@ function searchTexts(person, devices) {
     const texts = [person.name];
     person.loans.forEach(loan => {
         texts.push(...(loan.items || []));
-        getLoanSerials(loan).forEach(serial => texts.push(serial, devices?.[serial]?.modelName || ''));
+        getLoanSerials(loan).forEach(serial => texts.push(serial, devices?.[serial]?.exactModel || '', devices?.[serial]?.modelName || ''));
     });
-    person.orphans.forEach(device => texts.push(device.serial, device.model, device.modelName || ''));
+    person.orphans.forEach(device => texts.push(device.serial, device.model, device.exactModel || '', device.modelName || ''));
     return texts;
 }
 
@@ -47,7 +48,7 @@ function searchTexts(person, devices) {
 export default function AssignedMaterial({ loans, devices, onReturnLoan, onReturnDevice, query = '', scope = 'given' }) {
     const [limit, setLimit] = useState(PAGE_SIZE);
     const everyone = useMemo(
-        () => groupByPerson(scope === 'all' ? loans : loans.filter(loan => loan.pickedUpAt), devices),
+        () => groupByPerson(scope === 'all' ? loans : loans.filter(loan => loan.pickedUpAt), loans, devices),
         [loans, devices, scope]
     );
     const visible = useMemo(
@@ -63,7 +64,7 @@ export default function AssignedMaterial({ loans, devices, onReturnLoan, onRetur
     };
 
     const handleReturnDevice = (device) => {
-        if (window.confirm(`Remettre ${device.serial} (${device.model}) en stock ?`)) {
+        if (window.confirm(`Remettre ${device.serial} (${deviceModelLabel(device)}) en stock ?`)) {
             onReturnDevice(device.serial);
         }
     };
@@ -118,7 +119,7 @@ export default function AssignedMaterial({ loans, devices, onReturnLoan, onRetur
                             </div>
                             <div className="assignment-items">
                                 <span className="assignment-chip assignment-chip-pc">
-                                    {device.model}
+                                    {deviceModelLabel(device)}
                                     <small>S/N {device.serial}</small>
                                 </span>
                             </div>

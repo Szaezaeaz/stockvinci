@@ -31,7 +31,7 @@ const ACCESSORY_PILLS = [
 // Volet "À remettre" de l'onglet Attribué : formulaire "Attribuer du matériel" et
 // liste du matériel préparé en stock, pas encore remis (bouton "Remis"). La
 // liste n'est affichée que si showList ; le formulaire reste disponible.
-export default function LoanedPCs({ loans, onAdd, onHandOver, devices, onReceiveDevices, query = '', showList = true, ref }) {
+export default function LoanedPCs({ loans, onAdd, onHandOver, devices, stock, onReceiveDevices, query = '', showList = true, ref }) {
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [scanRaw, setScanRaw] = useState(null); // scan reçu de la page, traité à l'ouverture du formulaire
     const nameRef = useRef(null);
@@ -54,16 +54,22 @@ export default function LoanedPCs({ loans, onAdd, onHandOver, devices, onReceive
     // Seul le matériel pas encore remis est listé ici ; le reste est chez les utilisateurs.
     const filteredLoans = loans.filter(loan =>
         !loan.pickedUpAt &&
-        matchesQuery(query, [loan.name || loan.recipient || '', ...(loan.items || []), ...getLoanSerials(loan)])
+        matchesQuery(query, [
+            loan.name || loan.recipient || '',
+            ...(loan.items || []),
+            ...getLoanSerials(loan).flatMap(serial => [serial, devices?.[serial]?.exactModel || ''])
+        ])
     );
 
     const toggleAccessory = (key) => setAccessories(prev => ({ ...prev, [key]: !prev[key] }));
 
-    // Pastilles coque / vitre : seulement s'il y a un téléphone dans la liste.
+    // Pastilles coque / vitre : seulement s'il y a dans la liste un téléphone dont
+    // on tient les coques en stock.
     const phones = items.filter(item => item.kind === 'phone');
+    const phonesWithCase = phones.filter(phone => PHONE_CASE_INFO[phone.model]);
     const phoneAccessoryPills = [];
-    if (phones.length > 0) {
-        const allBundled = phones.every(phone => PHONE_CASE_INFO[phone.model]?.bundled);
+    if (phonesWithCase.length > 0) {
+        const allBundled = phonesWithCase.every(phone => PHONE_CASE_INFO[phone.model].bundled);
         if (allBundled) {
             phoneAccessoryPills.push({ key: 'phoneCase', label: 'Coque + Vitre' });
         } else {
@@ -128,6 +134,7 @@ export default function LoanedPCs({ loans, onAdd, onHandOver, devices, onReceive
 
                     <AssignmentPicker
                         devices={devices}
+                        stock={stock}
                         items={items}
                         onItemsChange={setItems}
                         onCreateDevice={(entry) => onReceiveDevices([entry])}
