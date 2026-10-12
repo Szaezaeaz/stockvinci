@@ -125,7 +125,7 @@ export default function EmployeeReturnForm({ devices, onSubmit, onDone }) {
                 <input
                     type="text"
                     className="loan-input full-width"
-                    placeholder="Ex: Jean Dupont"
+                    placeholder="NOM Prénom"
                     value={name}
                     onChange={(e) => setName(e.target.value)}
                 />

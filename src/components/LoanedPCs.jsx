@@ -1,6 +1,7 @@
 import React, { useImperativeHandle, useRef, useState } from 'react';
 import Modal from './Modal';
 import AssignmentPicker from './AssignmentPicker';
+import LoanChips from './LoanChips';
 import { PHONE_CASE_INFO } from '../config/phoneAccessories';
 import { matchesQuery } from '../utils/search';
 import { getLoanSerials } from '../utils/loans';
@@ -118,7 +119,7 @@ export default function LoanedPCs({ loans, onAdd, onHandOver, devices, onReceive
                             type="text"
                             className="loan-input full-width"
                             ref={nameRef}
-                            placeholder="Ex: Jean Dupont"
+                            placeholder="NOM Prénom"
                             value={name}
                             onChange={(e) => setName(e.target.value)}
                             autoFocus
@@ -161,34 +162,34 @@ export default function LoanedPCs({ loans, onAdd, onHandOver, devices, onReceive
             </Modal>
 
             {showList && (
-            <ul className="loan-list">
-                {filteredLoans.length === 0 && <p style={{ color: '#94a3b8', textAlign: 'center', padding: '20px' }}>
-                    {query ? 'Aucun résultat.' : 'Aucun matériel à remettre.'}
-                </p>}
+                <div className="pending-list">
+                    {filteredLoans.length === 0 && (
+                        <div className="search-empty">{query ? 'Aucun résultat.' : 'Aucun matériel à remettre.'}</div>
+                    )}
 
-                {filteredLoans.map((loan) => (
-                    <li key={loan.id} className="loan-item">
-                        <div className="loan-info">
-                            <span className="loan-name">{loan.name || loan.recipient}</span>
-                            <div className="loan-meta">
-                                {loan.items && loan.items.join(' • ')}
-                                {getLoanSerials(loan).map(serial => ` • S/N ${serial}`).join('')}
+                    {filteredLoans.map((loan) => (
+                        <div key={loan.id} className="person-card pending-card">
+                            <div className="person-header">
+                                <span className="person-name">{loan.name || loan.recipient}</span>
+                                <span className="assignment-badge assignment-badge-pending">
+                                    Préparé le {new Date(loan.date).toLocaleDateString()}
+                                </span>
                             </div>
+                            <LoanChips loan={loan} devices={devices} />
+                            <button
+                                type="button"
+                                className="btn-handover btn-handover-wide"
+                                onClick={() => {
+                                    if (window.confirm(`Matériel remis à ${loan.name || loan.recipient} ? Il passera dans « Remis ».`)) {
+                                        onHandOver(loan.id);
+                                    }
+                                }}
+                            >
+                                ✓ Remis à {loan.name || loan.recipient}
+                            </button>
                         </div>
-                        <button
-                            type="button"
-                            className="btn-handover"
-                            onClick={() => {
-                                if (window.confirm(`Matériel remis à ${loan.name || loan.recipient} ? Il passera dans « Remis ».`)) {
-                                    onHandOver(loan.id);
-                                }
-                            }}
-                        >
-                            Remis
-                        </button>
-                    </li>
-                ))}
-            </ul>
+                    ))}
+                </div>
             )}
         </div>
     );

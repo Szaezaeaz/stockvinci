@@ -1,6 +1,7 @@
 import React from 'react';
 import { matchesQuery } from '../utils/search';
 import { getLoanSerials } from '../utils/loans';
+import LoanChips from './LoanChips';
 
 const dateOf = (value) => (value ? new Date(value).toLocaleDateString() : '');
 const nameKey = (name) => String(name || '').trim().toLowerCase();
@@ -23,23 +24,6 @@ function groupByPerson(loans, devices) {
         .forEach(device => personOf(device.holder).orphans.push(device));
 
     return [...people.values()].sort((a, b) => a.name.localeCompare(b.name, 'fr'));
-}
-
-// Pastilles d'une attribution : chaque article, avec le n° de série de l'appareil
-// correspondant quand il est suivi (le premier appareil du même modèle non encore
-// associé). Les n° de série sans appareil connu sont ajoutés à la fin.
-function chipsOf(loan, devices) {
-    const remaining = getLoanSerials(loan).filter(serial => devices?.[serial]);
-    const chips = (loan.items || []).map(item => {
-        const index = remaining.findIndex(serial => devices[serial].model === item);
-        if (index === -1) return { label: item, serial: null };
-        const [serial] = remaining.splice(index, 1);
-        return { label: item, serial };
-    });
-    getLoanSerials(loan)
-        .filter(serial => !devices?.[serial])
-        .forEach(serial => chips.push({ label: 'Appareil supprimé', serial }));
-    return chips;
 }
 
 // Texte retrouvable par la recherche pour une personne.
@@ -99,14 +83,7 @@ export default function AssignedMaterial({ loans, devices, onReturnLoan, onRetur
                                         Matériel rendu
                                     </button>
                                 </div>
-                                <div className="assignment-items">
-                                    {chipsOf(loan, devices).map((chip, index) => (
-                                        <span key={index} className={`assignment-chip${chip.serial ? ' assignment-chip-pc' : ''}`}>
-                                            {chip.label}
-                                            {chip.serial && <small>S/N {chip.serial}</small>}
-                                        </span>
-                                    ))}
-                                </div>
+                                <LoanChips loan={loan} devices={devices} />
                             </div>
                         );
                     })}

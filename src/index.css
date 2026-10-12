@@ -2098,7 +2098,7 @@ input[type="checkbox"]:focus {
   display: flex;
   align-items: center;
   gap: 10px;
-  padding: 4px 6px 4px 14px;
+  padding: 4px 16px 4px 14px;
   border: 2px dashed #93c5fd;
   border-radius: 14px;
   background: #f8fbff;
@@ -2268,4 +2268,26 @@ input[type="checkbox"]:focus {
   display: block;
   width: 100%;
   box-sizing: border-box;
+}
+
+/* Liste "À remettre" en cartes */
+.pending-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.pending-card .person-header {
+  align-items: center;
+}
+
+.pending-card .assignment-items {
+  margin-bottom: 12px;
+}
+
+.btn-handover-wide {
+  width: 100%;
+  padding: 12px;
+  border-radius: 12px;
+  font-size: 0.95rem;
 }
