@@ -379,10 +379,10 @@ export function useInventory() {
         }
     };
 
-    // pcs : [{ model, serial }] — chaque PC peut porter son n° de série (facultatif
-    // tant que le modèle n'est pas suivi par n° de série). phoneSerial : n° de série
-    // / IMEI du téléphone remis. Les appareils suivis passent "attribués" à la personne.
-    const addLoan = (name, { pcs = [], phoneType = null, phoneSerial = '', accessories = DEFAULT_LOAN_ACCESSORIES } = {}) => {
+    // pcs / phones : [{ model, serial }] — chaque appareil peut porter son n° de série
+    // (vide pour du stock ancien non suivi). Les appareils suivis passent "attribués"
+    // à la personne.
+    const addLoan = (name, { pcs = [], phones = [], accessories = DEFAULT_LOAN_ACCESSORIES } = {}) => {
         setData(prev => {
             const stockUpdates = {};
             // On crée UNE seule entrée d'historique pour toute l'attribution.
@@ -435,18 +435,18 @@ export function useInventory() {
             if (accessories.dock) deduct('Dock');
             if (accessories.keyboard) deduct('Clavier');
 
-            // Téléphone, puis coque/vitre : un seul article si vendues ensemble
+            // Téléphones, puis coque/vitre de chacun : un seul article si vendues ensemble
             // (iPhone 16e/17, Samsung A36), deux articles distincts sinon (Xcover).
-            if (phoneType) {
-                deduct(phoneType, labelWithSerial(phoneType, phoneSerial));
-                const caseInfo = PHONE_CASE_INFO[phoneType];
+            phones.forEach(phone => {
+                deduct(phone.model, labelWithSerial(phone.model, phone.serial));
+                const caseInfo = PHONE_CASE_INFO[phone.model];
                 if (caseInfo?.bundled) {
                     if (accessories.phoneCase) deduct(caseInfo.comboItem);
                 } else if (caseInfo) {
                     if (accessories.phoneCase) deduct(caseInfo.caseItem);
                     if (accessories.phoneScreen) deduct(caseInfo.screenItem);
                 }
-            }
+            });
 
             if (!allDeducted) {
                 alert("Stock insuffisant pour un ou plusieurs articles !");
