@@ -7,8 +7,10 @@ import { matchesQuery } from '../utils/search';
 import { ALL_STOCK_ITEMS } from '../config/items';
 import { getLowStockThreshold, getMaxStock, hasStockLimits } from '../config/thresholds';
 
-export default function AddMaterielModal({ isOpen, onClose, onConfirm, stock, devices, onReceiveDevices }) {
-    const [mode, setMode] = useState('quantities'); // 'quantities' | 'scan'
+// initialScan : code scanné depuis l'accueil, la fenêtre s'ouvre alors directement
+// sur l'onglet Scanner avec ce code déjà dans la liste.
+export default function AddMaterielModal({ isOpen, onClose, onConfirm, stock, devices, onReceiveDevices, initialScan }) {
+    const [mode, setMode] = useState(initialScan ? 'scan' : 'quantities'); // 'quantities' | 'scan'
     const [quantities, setQuantities] = useState({});
     const [query, setQuery] = useState('');
     const visibleItems = ALL_STOCK_ITEMS.filter(item => matchesQuery(query, [item.id]));
@@ -63,7 +65,7 @@ export default function AddMaterielModal({ isOpen, onClose, onConfirm, stock, de
             </div>
 
             {mode === 'scan' ? (
-                <ScanReceiveForm devices={devices} onReceive={onReceiveDevices} onDone={close} />
+                <ScanReceiveForm devices={devices} onReceive={onReceiveDevices} onDone={close} initialScan={initialScan} />
             ) : (
                 <form onSubmit={handleSubmit} className="global-withdraw-form">
                     <div className="form-section" style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column' }}>

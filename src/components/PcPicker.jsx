@@ -8,7 +8,7 @@ const dateOf = (value) => (value ? new Date(value).toLocaleDateString() : '');
 
 // Choix d'un PC précis parmi ceux en stock : scan du QR code (le modèle se
 // sélectionne alors tout seul) ou appui sur une carte de la liste du modèle choisi.
-export default function PcPicker({ devices, pcType, onModelChange, selected, onSelect, onCreateDevice }) {
+export default function PcPicker({ devices, pcType, onModelChange, selected, onSelect, onCreateDevice, initialScan, onInitialScanHandled }) {
     const [query, setQuery] = useState('');
     const [message, setMessage] = useState(null); // { ok, text }
 
@@ -68,8 +68,15 @@ export default function PcPicker({ devices, pcType, onModelChange, selected, onS
         refocus();
     };
 
+    // À l'ouverture : soit on traite le code déjà scanné depuis la page (le PC est
+    // alors choisi directement), soit on met le champ de scan au premier plan.
     useEffect(() => {
-        refocus();
+        if (initialScan) {
+            handleScan(initialScan);
+            onInitialScanHandled?.();
+        } else {
+            refocus();
+        }
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 

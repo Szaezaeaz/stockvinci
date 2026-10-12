@@ -17,11 +17,38 @@ function resolveModel(entry) {
 // n° de série, référence produit et nom du modèle : le modèle est alors reconnu
 // et sélectionné dans la liste. Le QR ne dit pas si le PC est neuf ou
 // d'occasion : on le choisit pour chaque PC après le scan, puis on valide.
-export default function ScanReceiveForm({ devices, onReceive, onDone }) {
-    const [model, setModel] = useState(PC_FAMILIES[0]); // famille de PC ou modèle de téléphone
-    const [entries, setEntries] = useState([]); // [{ serial, kind, family, model, condition, modelName, productId }]
+// Ligne de la liste pour un code scanné. Modèle reconnu depuis le QR code, sinon
+// celui sélectionné dans la liste (téléphone ou famille de PC).
+function createEntry(scan, selectedModel) {
+    const isPhone = !scan.family && PHONE_MODEL_OPTIONS.includes(selectedModel);
+    const family = scan.family || (isPhone ? null : selectedModel);
+    const entry = {
+        serial: scan.serial,
+        kind: isPhone ? 'phone' : 'pc',
+        family,
+        model: isPhone ? selectedModel : null,
+        condition: isPhone ? 'n/a' : (family === '850 G8/G10' ? 'Occasion' : null),
+        modelName: scan.modelName,
+        productId: scan.productId
+    };
+    const label = isPhone ? selectedModel : family;
+    const feedback = scan.modelName && !scan.family
+        ? { ok: true, text: `${scan.serial} ajouté en ${label} (modèle « ${scan.modelName} » non reconnu, à vérifier).` }
+        : { ok: true, text: `${scan.serial} ajouté · ${label}${entry.condition === null ? ' — choisis Neuf ou Occasion' : ''}` };
+    return { entry, feedback };
+}
+
+// initialScan : code déjà scanné ailleurs (accueil) à ajouter dès l'ouverture.
+export default function ScanReceiveForm({ devices, onReceive, onDone, initialScan }) {
+    const [initial] = useState(() => {
+        const scan = initialScan ? parseScan(initialScan) : null;
+        return scan?.serial ? { scan, ...createEntry(scan, PC_FAMILIES[0]) } : null;
+    });
+    // famille de PC ou modèle de téléphone
+    const [model, setModel] = useState(initial?.scan.family || PC_FAMILIES[0]);
+    const [entries, setEntries] = useState(initial ? [initial.entry] : []); // [{ serial, kind, family, model, condition, modelName, productId }]
     const [value, setValue] = useState('');
-    const [feedback, setFeedback] = useState(null); // { ok, text }
+    const [feedback, setFeedback] = useState(initial ? initial.feedback : null); // { ok, text }
     const [useKeyboard, setUseKeyboard] = useState(false);
 
     const addSerial = (raw) => {
@@ -43,27 +70,10 @@ export default function ScanReceiveForm({ devices, onReceive, onDone }) {
         }
 
         // Modèle reconnu depuis le QR code : il est sélectionné dans la liste.
-        // Sinon on garde le modèle sélectionné (téléphone ou famille de PC).
         if (scan.family) setModel(scan.family);
-        const isPhone = !scan.family && PHONE_MODEL_OPTIONS.includes(model);
-        const family = scan.family || (isPhone ? null : model);
-        const entry = {
-            serial,
-            kind: isPhone ? 'phone' : 'pc',
-            family,
-            model: isPhone ? model : null,
-            condition: isPhone ? 'n/a' : (family === '850 G8/G10' ? 'Occasion' : null),
-            modelName: scan.modelName,
-            productId: scan.productId
-        };
-        setEntries(prev => [entry, ...prev]);
-
-        const label = isPhone ? model : family;
-        if (scan.modelName && !scan.family) {
-            setFeedback({ ok: true, text: `${serial} ajouté en ${label} (modèle « ${scan.modelName} » non reconnu, à vérifier).` });
-        } else {
-            setFeedback({ ok: true, text: `${serial} ajouté · ${label}${entry.condition === null ? ' — choisis Neuf ou Occasion' : ''}` });
-        }
+        const created = createEntry(scan, model);
+        setEntries(prev => [created.entry, ...prev]);
+        setFeedback(created.feedback);
     };
 
     const { focused, refocus, inputProps } = useScanCapture({

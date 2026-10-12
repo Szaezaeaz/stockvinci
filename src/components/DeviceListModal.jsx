@@ -11,9 +11,10 @@ function statusLabel(device) {
 
 // Liste des appareils (n° de série) d'un modèle, avec leur état : en stock ou
 // attribué à une personne, plus l'historique de leurs mouvements.
-export default function DeviceListModal({ model, devices, stock, onClose, onRemoveUntracked, onDeleteDevice }) {
+// initialSerial : appareil dont la fiche s'ouvre dès l'affichage (après un scan).
+export default function DeviceListModal({ model, devices, stock, onClose, onRemoveUntracked, onDeleteDevice, initialSerial }) {
     const [query, setQuery] = useState('');
-    const [openSerial, setOpenSerial] = useState(null);
+    const [openSerial, setOpenSerial] = useState(initialSerial || null);
 
     const all = Object.values(devices || {})
         .filter(device => device.model === model)

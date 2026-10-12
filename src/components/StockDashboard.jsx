@@ -1,4 +1,5 @@
-import React, { useMemo, useState } from 'react';
+import React, { useImperativeHandle, useMemo, useState } from 'react';
+import { parseScan } from '../utils/scanParse';
 import GlobalWithdrawModal from './GlobalWithdrawModal';
 import ReturnModal from './ReturnModal';
 import AddMaterielModal from './AddMaterielModal';
@@ -99,13 +100,38 @@ export default function StockDashboard({
     onEmployeeReturn,
     onReceiveDevices,
     onRemoveUntracked,
-    onDeleteDevice
+    onDeleteDevice,
+    ref
 }) {
     const [isWithdrawModalOpen, setIsWithdrawModalOpen] = useState(false);
     const [isReturnModalOpen, setIsReturnModalOpen] = useState(false);
     const [isAddModalOpen, setIsAddModalOpen] = useState(false);
     const [query, setQuery] = useState('');
     const [deviceModel, setDeviceModel] = useState(null); // modèle dont on consulte les n° de série
+    const [deviceSerial, setDeviceSerial] = useState(null); // appareil dont la fiche s'ouvre d'office (après un scan)
+    const [scanForAdd, setScanForAdd] = useState(null); // { raw, key } : scan reçu depuis l'accueil
+
+    const openModel = (model) => {
+        setDeviceSerial(null);
+        setDeviceModel(model);
+    };
+
+    // Scan reçu quand aucun champ n'est actif (voir useGlobalScan dans App) :
+    // PC connu -> sa fiche ; PC inconnu -> Ajout > Scanner avec ce code déjà listé.
+    useImperativeHandle(ref, () => ({
+        handleScan(raw) {
+            const { serial } = parseScan(raw);
+            if (!serial) return;
+            const device = devices?.[serial];
+            if (device) {
+                setDeviceSerial(serial);
+                setDeviceModel(device.model);
+            } else {
+                setScanForAdd({ raw, key: Date.now() });
+                setIsAddModalOpen(true);
+            }
+        }
+    }));
 
     const stats = useMemo(() => getStockStats(stock), [stock]);
 
@@ -138,8 +164,10 @@ export default function StockDashboard({
             />
 
             <AddMaterielModal
+                key={scanForAdd ? scanForAdd.key : 'manual'}
                 isOpen={isAddModalOpen}
-                onClose={() => setIsAddModalOpen(false)}
+                initialScan={scanForAdd ? scanForAdd.raw : null}
+                onClose={() => { setIsAddModalOpen(false); setScanForAdd(null); }}
                 onConfirm={onAddStock}
                 stock={stock}
                 devices={devices}
@@ -147,8 +175,9 @@ export default function StockDashboard({
             />
 
             <DeviceListModal
-                key={deviceModel || 'none'}
+                key={`${deviceModel || 'none'}:${deviceSerial || ''}`}
                 model={deviceModel}
+                initialSerial={deviceSerial}
                 devices={devices}
                 stock={stock}
                 onClose={() => setDeviceModel(null)}
@@ -208,7 +237,7 @@ export default function StockDashboard({
                                 <div key={key} className="item-row-group">
                                     <div
                                         className={`item-row${TRACKED_MODELS.has(key) ? ' item-row-clickable' : ''}`}
-                                        onClick={TRACKED_MODELS.has(key) ? () => setDeviceModel(key) : undefined}
+                                        onClick={TRACKED_MODELS.has(key) ? () => openModel(key) : undefined}
                                     >
                                         <span className="item-row-icon">{itemIcon(key, section.icon)}</span>
                                         <div className="item-row-main">
@@ -237,7 +266,7 @@ export default function StockDashboard({
                                                 )
                                             )}
                                             {occasionKey && (
-                                                <SubRow label="Occasion" itemKey={occasionKey} stock={stock} onOpen={() => setDeviceModel(occasionKey)} />
+                                                <SubRow label="Occasion" itemKey={occasionKey} stock={stock} onOpen={() => openModel(occasionKey)} />
                                             )}
                                         </div>
                                     )}
