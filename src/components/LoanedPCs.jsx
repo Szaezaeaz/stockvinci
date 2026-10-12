@@ -3,7 +3,8 @@ import Modal from './Modal';
 import { PHONE_CASE_INFO, PHONE_MODEL_OPTIONS } from '../config/phoneAccessories';
 import { parseScan } from '../utils/scanParse';
 import { matchesQuery } from '../utils/search';
-import PcPicker from './PcPicker';
+import { getLoanSerials } from '../utils/loans';
+import DevicePicker from './DevicePicker';
 
 const PC_TYPE_OPTIONS = [
     '650 G11 Neuf',
@@ -21,8 +22,10 @@ const PC_TYPE_OPTIONS = [
 export default function LoanedPCs({ loans, onAdd, onHandOver, devices, onReceiveDevices, query = '', showList = true, ref }) {
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [scanRaw, setScanRaw] = useState(null); // scan reçu de la page, traité à l'ouverture du formulaire
+    const [scanKind, setScanKind] = useState('pc'); // 'pc' ou 'phone' : quel sélecteur traite ce scan
     const nameRef = useRef(null);
-    const [pcSerial, setPcSerial] = useState('');
+    const [pcSerials, setPcSerials] = useState([]); // PC précis remis (n° de série)
+    const [phoneSerials, setPhoneSerials] = useState([]); // téléphone précis remis (0 ou 1)
     const [name, setName] = useState('');
 
     const [includePC, setIncludePC] = useState(false);
@@ -49,8 +52,13 @@ export default function LoanedPCs({ loans, onAdd, onHandOver, devices, onReceive
             setIsModalOpen(true);
         },
         handleScan(raw) {
+            // Un téléphone connu de la base ouvre la partie téléphone ; sinon c'est un PC.
+            const known = devices?.[parseScan(raw).serial];
+            const isPhone = known?.kind === 'phone';
+            setScanKind(isPhone ? 'phone' : 'pc');
             setScanRaw(raw);
-            setIncludePC(true);
+            if (isPhone) setIncludePhone(true);
+            else setIncludePC(true);
             setIsModalOpen(true);
         }
     }));
@@ -58,14 +66,16 @@ export default function LoanedPCs({ loans, onAdd, onHandOver, devices, onReceive
     // Seul le matériel pas encore remis est listé ici ; le reste est chez les utilisateurs.
     const filteredLoans = loans.filter(loan =>
         !loan.pickedUpAt &&
-        matchesQuery(query, [loan.name || loan.recipient || '', ...(loan.items || []), loan.pcSerial || ''])
+        matchesQuery(query, [loan.name || loan.recipient || '', ...(loan.items || []), ...getLoanSerials(loan)])
     );
 
-    // PC du modèle choisi déjà scannés et disponibles en stock.
+    // Appareils du modèle choisi déjà scannés et disponibles en stock.
     const inStockDevices = Object.values(devices || {}).filter(d => d.model === pcType && d.status === 'stock');
+    const inStockPhones = Object.values(devices || {}).filter(d => d.model === phoneType && d.status === 'stock');
 
     const resetForm = () => {
-        setPcSerial('');
+        setPcSerials([]);
+        setPhoneSerials([]);
         setIncludePC(false);
         setIncludePhone(false);
         setPcType('650 G11 Neuf');
@@ -88,35 +98,65 @@ export default function LoanedPCs({ loans, onAdd, onHandOver, devices, onReceive
             alert('Sélectionnez au moins PC ou Téléphone.');
             return;
         }
-        // Si des PC de ce modèle sont suivis par n° de série, on attribue un PC précis.
-        let serial = '';
-        if (includePC && inStockDevices.length > 0) {
-            serial = parseScan(pcSerial).serial;
-            const device = serial ? devices[serial] : null;
-            if (!device) {
-                alert("Indique le n° de série du PC remis : scanne son QR code ou choisis-le dans la liste.");
-                return;
+        // Chaque appareil choisi doit exister et être en stock.
+        const checkInStock = (serials, noun) => {
+            for (const serial of serials) {
+                const device = devices?.[serial];
+                if (!device || device.status !== 'stock') {
+                    alert(`${noun} ${serial} n'est plus disponible en stock : retire-le de la sélection.`);
+                    return false;
+                }
             }
-            if (device.status !== 'stock') {
-                alert(`Ce PC (${serial}) n'est pas en stock : ${device.status === 'assigned' ? `il est attribué à ${device.holder || '?'}` : 'état inconnu'}.`);
+            return true;
+        };
+
+        // PC : ceux scannés/choisis ; sinon, si des PC de ce modèle sont suivis par n° de
+        // série on en exige au moins un, sinon c'est un PC "sans n° de série" (ancien stock).
+        let pcs = [];
+        if (includePC) {
+            if (pcSerials.length > 0) {
+                if (!checkInStock(pcSerials, 'Le PC')) return;
+                pcs = pcSerials.map(serial => ({ model: devices[serial].model, serial }));
+            } else if (inStockDevices.length > 0) {
+                alert("Indique le PC remis : scanne son QR code ou choisis-le dans la liste.");
                 return;
-            }
-            if (device.model !== pcType) {
-                alert(`Ce PC (${serial}) est enregistré comme « ${device.model} ». Choisis ce modèle ou un autre PC.`);
-                return;
+            } else {
+                pcs = [{ model: pcType, serial: '' }];
             }
         }
-        onAdd(name.trim(), includePC ? pcType : null, includePhone ? phoneType : null, {
-            mouse: includeMouse,
-            headset: includeHeadset,
-            bag: includeBag,
-            backpack: includeBackpack,
-            screen: includeScreen,
-            dock: includeDock,
-            keyboard: includeKeyboard,
-            phoneCase: includePhoneCase,
-            phoneScreen: includePhoneScreen
-        }, serial);
+
+        // Téléphone : même principe.
+        let phoneModel = null;
+        let phoneSerial = '';
+        if (includePhone) {
+            if (phoneSerials.length > 0) {
+                if (!checkInStock(phoneSerials, 'Le téléphone')) return;
+                phoneSerial = phoneSerials[0];
+                phoneModel = devices[phoneSerial].model;
+            } else if (inStockPhones.length > 0) {
+                alert("Indique le téléphone remis : scanne son QR code ou choisis-le dans la liste.");
+                return;
+            } else {
+                phoneModel = phoneType;
+            }
+        }
+
+        onAdd(name.trim(), {
+            pcs,
+            phoneType: phoneModel,
+            phoneSerial,
+            accessories: {
+                mouse: includeMouse,
+                headset: includeHeadset,
+                bag: includeBag,
+                backpack: includeBackpack,
+                screen: includeScreen,
+                dock: includeDock,
+                keyboard: includeKeyboard,
+                phoneCase: includePhoneCase,
+                phoneScreen: includePhoneScreen
+            }
+        });
         setName('');
         resetForm();
         setIsModalOpen(false); // Close modal on success
@@ -170,15 +210,11 @@ export default function LoanedPCs({ loans, onAdd, onHandOver, devices, onReceive
                     {includePC && (
                         <>
                             <div className="form-group">
-                                <label>Type de PC</label>
+                                <label>Type de PC (liste affichée ci-dessous)</label>
                                 <select
                                     className="loan-input full-width"
                                     value={pcType}
-                                    onChange={(e) => {
-                                        setPcType(e.target.value);
-                                        // Le PC choisi ne correspond plus au modèle : on le désélectionne.
-                                        if (pcSerial && devices?.[pcSerial]?.model !== e.target.value) setPcSerial('');
-                                    }}
+                                    onChange={(e) => setPcType(e.target.value)}
                                 >
                                     {PC_TYPE_OPTIONS.map(option => (
                                         <option key={option} value={option}>{option}</option>
@@ -186,14 +222,16 @@ export default function LoanedPCs({ loans, onAdd, onHandOver, devices, onReceive
                                 </select>
                             </div>
 
-                            <PcPicker
+                            <DevicePicker
+                                kind="pc"
+                                multi
                                 devices={devices}
-                                pcType={pcType}
+                                model={pcType}
                                 onModelChange={setPcType}
-                                selected={pcSerial}
-                                onSelect={setPcSerial}
+                                selected={pcSerials}
+                                onChange={setPcSerials}
                                 onCreateDevice={(entry) => onReceiveDevices([entry])}
-                                initialScan={scanRaw}
+                                initialScan={scanKind === 'pc' ? scanRaw : null}
                                 onInitialScanHandled={() => {
                                     setScanRaw(null);
                                     // Le PC est choisi : le curseur passe au nom du collaborateur.
@@ -280,6 +318,21 @@ export default function LoanedPCs({ loans, onAdd, onHandOver, devices, onReceive
                                 </select>
                             </div>
 
+                            <DevicePicker
+                                kind="phone"
+                                devices={devices}
+                                model={phoneType}
+                                onModelChange={setPhoneType}
+                                selected={phoneSerials}
+                                onChange={setPhoneSerials}
+                                onCreateDevice={(entry) => onReceiveDevices([entry])}
+                                initialScan={scanKind === 'phone' ? scanRaw : null}
+                                onInitialScanHandled={() => {
+                                    setScanRaw(null);
+                                    setTimeout(() => nameRef.current?.focus(), 50);
+                                }}
+                            />
+
                             <div className="form-group">
                                 <label>Accessoires téléphone inclus</label>
                                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: '12px 15px', marginTop: '5px' }}>
@@ -333,7 +386,7 @@ export default function LoanedPCs({ loans, onAdd, onHandOver, devices, onReceive
                             <span className="loan-name">{loan.name || loan.recipient}</span>
                             <div className="loan-meta">
                                 {loan.items && loan.items.join(' • ')}
-                                {loan.pcSerial ? ` • S/N ${loan.pcSerial}` : ''}
+                                {getLoanSerials(loan).map(serial => ` • S/N ${serial}`).join('')}
                             </div>
                         </div>
                         <button

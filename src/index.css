@@ -2069,3 +2069,15 @@ input[type="checkbox"]:focus {
 .assigned-panes {
   margin-bottom: 14px;
 }
+
+/* Appareils sélectionnés (plusieurs PC) */
+.pc-selected-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.pc-selected-list .pc-selected {
+  margin-top: 0;
+}

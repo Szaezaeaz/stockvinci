@@ -3,6 +3,7 @@ import { sendLowStockAlert } from '../services/email';
 import { getLowStockThreshold } from '../config/thresholds';
 import { PHONE_CASE_INFO, PHONE_MODEL_OPTIONS } from '../config/phoneAccessories';
 import { normalizeSerial } from '../utils/serial';
+import { getLoanSerials } from '../utils/loans';
 import { fetchCloud, pushCloud, getPasscode, savePasscode, loadSyncMeta, saveSyncMeta } from '../services/cloudSync';
 
 const STORAGE_KEY = 'vinci_inventory_v3';
@@ -54,6 +55,12 @@ const LEGACY_KEY_MIGRATIONS = {
     '850 G8 Occasion': '850 G8/G10 Occasion',
     Chargeur: 'Chargeur USB-C',
     'Anciens chargeurs': 'Ancien chargeur'
+};
+
+// Accessoires cochés par défaut quand on attribue du matériel.
+const DEFAULT_LOAN_ACCESSORIES = {
+    mouse: true, headset: false, bag: true, backpack: false, screen: false, dock: false, keyboard: false,
+    phoneCase: true, phoneScreen: true
 };
 
 // Accessoires récupérables avec un collaborateur : case à cocher -> article de stock.
@@ -372,21 +379,27 @@ export function useInventory() {
         }
     };
 
-    const addLoan = (name, pcType, phoneType, accessories = {
-        mouse: true, headset: false, bag: true, backpack: false, screen: false, dock: false, keyboard: false,
-        phoneCase: true, phoneScreen: true
-    }, pcSerial = '') => {
+    // pcs : [{ model, serial }] — chaque PC peut porter son n° de série (facultatif
+    // tant que le modèle n'est pas suivi par n° de série). phoneSerial : n° de série
+    // / IMEI du téléphone remis. Les appareils suivis passent "attribués" à la personne.
+    const addLoan = (name, { pcs = [], phoneType = null, phoneSerial = '', accessories = DEFAULT_LOAN_ACCESSORIES } = {}) => {
         setData(prev => {
             const stockUpdates = {};
-            // We won't push individual history updates anymore.
-            // We will push ONE composite "Loan Package" update.
-
-            const loanedItems = [];
+            // On crée UNE seule entrée d'historique pour toute l'attribution.
+            const loanedItems = []; // noms de stock (utilisés pour le retour en stock)
+            const details = []; // même liste avec les n° de série, pour l'historique
+            const trackedSerials = [];
             const newDate = new Date();
-            const serial = normalizeSerial(pcSerial);
+
+            const labelWithSerial = (item, rawSerial) => {
+                const serial = normalizeSerial(rawSerial);
+                if (!serial || trackedSerials.includes(serial)) return item;
+                trackedSerials.push(serial);
+                return `${item} (S/N ${serial})`;
+            };
 
             // Helper to process deduction
-            const processDeduction = (item) => {
+            const processDeduction = (item, label = item) => {
                 if (!item || item === 'Aucun') return true;
                 const currentQty = (prev.stock[item] || 0) + (stockUpdates[item] || 0);
                 if (currentQty <= 0) return false; // Stock insufficient
@@ -401,37 +414,41 @@ export function useInventory() {
                 }
 
                 loanedItems.push(item);
+                details.push(label);
                 return true;
             };
 
-            // Deduct items
-            const canDeductPC = processDeduction(pcType);
-            const canDeductMouse = accessories.mouse ? processDeduction('Souris') : true;
-            const canDeductHeadset = accessories.headset ? processDeduction('Casque') : true;
-            const canDeductBag = accessories.bag ? processDeduction('Sacoche') : true;
-            const canDeductBackpack = accessories.backpack ? processDeduction('Sac à Dos') : true;
-            const canDeductScreen = accessories.screen ? processDeduction('Écran') : true;
-            const canDeductDock = accessories.dock ? processDeduction('Dock') : true;
-            const canDeductKeyboard = accessories.keyboard ? processDeduction('Clavier') : true;
-            const canDeductPhone = phoneType ? processDeduction(phoneType) : true;
+            let allDeducted = true;
+            const deduct = (item, label) => {
+                if (!processDeduction(item, label)) allDeducted = false;
+            };
 
-            // Coque/vitre du téléphone : un seul article si vendues ensemble
+            // PC (un ou plusieurs)
+            pcs.forEach(pc => deduct(pc.model, labelWithSerial(pc.model, pc.serial)));
+
+            // Accessoires
+            if (accessories.mouse) deduct('Souris');
+            if (accessories.headset) deduct('Casque');
+            if (accessories.bag) deduct('Sacoche');
+            if (accessories.backpack) deduct('Sac à Dos');
+            if (accessories.screen) deduct('Écran');
+            if (accessories.dock) deduct('Dock');
+            if (accessories.keyboard) deduct('Clavier');
+
+            // Téléphone, puis coque/vitre : un seul article si vendues ensemble
             // (iPhone 16e/17, Samsung A36), deux articles distincts sinon (Xcover).
-            let canDeductPhoneCase = true;
-            let canDeductPhoneScreen = true;
             if (phoneType) {
+                deduct(phoneType, labelWithSerial(phoneType, phoneSerial));
                 const caseInfo = PHONE_CASE_INFO[phoneType];
                 if (caseInfo?.bundled) {
-                    canDeductPhoneCase = accessories.phoneCase ? processDeduction(caseInfo.comboItem) : true;
+                    if (accessories.phoneCase) deduct(caseInfo.comboItem);
                 } else if (caseInfo) {
-                    canDeductPhoneCase = accessories.phoneCase ? processDeduction(caseInfo.caseItem) : true;
-                    canDeductPhoneScreen = accessories.phoneScreen ? processDeduction(caseInfo.screenItem) : true;
+                    if (accessories.phoneCase) deduct(caseInfo.caseItem);
+                    if (accessories.phoneScreen) deduct(caseInfo.screenItem);
                 }
             }
 
-            if (!canDeductPC || !canDeductMouse || !canDeductHeadset || !canDeductBag || !canDeductBackpack
-                || !canDeductScreen || !canDeductDock || !canDeductKeyboard || !canDeductPhone
-                || !canDeductPhoneCase || !canDeductPhoneScreen) {
+            if (!allDeducted) {
                 alert("Stock insuffisant pour un ou plusieurs articles !");
                 return prev;
             }
@@ -442,13 +459,12 @@ export function useInventory() {
                 newStock[item] = (newStock[item] || 0) + delta;
             }
 
-            // Create Single Composite History Entry
             const loanPackageEntry = {
                 id: Date.now(),
                 category: 'Attribution matériel',
                 delta: -1, // Logical decrement (1 package out)
                 recipient: name,
-                details: loanedItems.map(item => (item === pcType && serial ? `${item} (S/N ${serial})` : item)),
+                details,
                 date: newDate
             };
 
@@ -457,19 +473,20 @@ export function useInventory() {
                 name,
                 date: newDate,
                 items: loanedItems,
-                pcSerial: serial
+                serials: trackedSerials
             };
 
-            // Le PC précis passe "attribué" à la personne.
+            // Les appareils précis passent "attribués" à la personne.
             const devices = { ...(prev.devices || {}) };
-            if (serial && devices[serial]) {
+            trackedSerials.forEach(serial => {
+                if (!devices[serial]) return;
                 devices[serial] = {
                     ...devices[serial],
                     status: 'assigned',
                     holder: name,
                     events: [{ date: newDate, action: 'Attribution', person: name }, ...(devices[serial].events || [])].slice(0, 20)
                 };
-            }
+            });
 
             return {
                 ...prev,
@@ -609,17 +626,18 @@ export function useInventory() {
                 newStock[id] = (newStock[id] || 0) + count;
             }
 
-            // Le PC attribué retourne "en stock".
+            // Les appareils attribués (PC, téléphone) retournent "en stock".
             const devices = { ...(prev.devices || {}) };
             const returnedDate = new Date();
-            if (loan.pcSerial && devices[loan.pcSerial]) {
-                devices[loan.pcSerial] = {
-                    ...devices[loan.pcSerial],
+            getLoanSerials(loan).forEach(serial => {
+                if (!devices[serial]) return;
+                devices[serial] = {
+                    ...devices[serial],
                     status: 'stock',
                     holder: null,
-                    events: [{ date: returnedDate, action: 'Retour', person: loan.name || loan.recipient }, ...(devices[loan.pcSerial].events || [])].slice(0, 20)
+                    events: [{ date: returnedDate, action: 'Retour', person: loan.name || loan.recipient }, ...(devices[serial].events || [])].slice(0, 20)
                 };
-            }
+            });
 
             // History Log
             const historyEntry = {
