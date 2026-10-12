@@ -24,6 +24,11 @@ export default function LoanedPCs({ loans, onAdd, onHandOver, devices, onReceive
     const [scanRaw, setScanRaw] = useState(null); // scan reçu de la page, traité à l'ouverture du formulaire
     const [scanKind, setScanKind] = useState('pc'); // 'pc' ou 'phone' : quel sélecteur traite ce scan
     const nameRef = useRef(null);
+    // Sélecteur (PC ou téléphone) qui reçoit les scans quand le focus est sur une liste
+    // déroulante ou un bouton ; les clés forcent le retour du focus sur son champ de scan.
+    const [scanTarget, setScanTarget] = useState('pc');
+    const [pcFocusKey, setPcFocusKey] = useState(0);
+    const [phoneFocusKey, setPhoneFocusKey] = useState(0);
     const [pcSerials, setPcSerials] = useState([]); // PC précis remis (n° de série)
     const [phoneSerials, setPhoneSerials] = useState([]); // téléphone précis remis (0 ou 1)
     const [name, setName] = useState('');
@@ -163,6 +168,8 @@ export default function LoanedPCs({ loans, onAdd, onHandOver, devices, onReceive
     };
 
     const phoneCaseInfo = PHONE_CASE_INFO[phoneType];
+    // Un seul sélecteur redirige les touches à la fois (sinon les deux se les disputeraient).
+    const activeScanTarget = (scanTarget === 'phone' && includePhone) || !includePC ? 'phone' : 'pc';
 
     return (
         <div className={showList ? 'loan-container' : undefined}>
@@ -214,7 +221,12 @@ export default function LoanedPCs({ loans, onAdd, onHandOver, devices, onReceive
                                 <select
                                     className="loan-input full-width"
                                     value={pcType}
-                                    onChange={(e) => setPcType(e.target.value)}
+                                    onChange={(e) => {
+                                        setPcType(e.target.value);
+                                        e.target.blur(); // sinon la douchette taperait dans la liste
+                                        setScanTarget('pc');
+                                        setPcFocusKey(key => key + 1);
+                                    }}
                                 >
                                     {PC_TYPE_OPTIONS.map(option => (
                                         <option key={option} value={option}>{option}</option>
@@ -225,6 +237,8 @@ export default function LoanedPCs({ loans, onAdd, onHandOver, devices, onReceive
                             <DevicePicker
                                 kind="pc"
                                 multi
+                                redirectKeys={activeScanTarget === 'pc'}
+                                focusKey={pcFocusKey}
                                 devices={devices}
                                 model={pcType}
                                 onModelChange={setPcType}
@@ -310,7 +324,12 @@ export default function LoanedPCs({ loans, onAdd, onHandOver, devices, onReceive
                                 <select
                                     className="loan-input full-width"
                                     value={phoneType}
-                                    onChange={(e) => setPhoneType(e.target.value)}
+                                    onChange={(e) => {
+                                        setPhoneType(e.target.value);
+                                        e.target.blur(); // sinon la douchette taperait dans la liste
+                                        setScanTarget('phone');
+                                        setPhoneFocusKey(key => key + 1);
+                                    }}
                                 >
                                     {PHONE_MODEL_OPTIONS.map(option => (
                                         <option key={option} value={option}>{option}</option>
@@ -320,6 +339,8 @@ export default function LoanedPCs({ loans, onAdd, onHandOver, devices, onReceive
 
                             <DevicePicker
                                 kind="phone"
+                                redirectKeys={activeScanTarget === 'phone'}
+                                focusKey={phoneFocusKey}
                                 devices={devices}
                                 model={phoneType}
                                 onModelChange={setPhoneType}

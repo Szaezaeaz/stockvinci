@@ -35,7 +35,9 @@ export default function DevicePicker({
     onCreateDevice,
     multi = false,
     initialScan,
-    onInitialScanHandled
+    onInitialScanHandled,
+    redirectKeys = false,
+    focusKey = 0
 }) {
     const text = TEXTS[kind];
     const [query, setQuery] = useState('');
@@ -89,7 +91,21 @@ export default function DevicePicker({
         refocus();
     };
 
-    const { focused, refocus, inputProps } = useScanCapture({ value: query, setValue: setQuery, onScan: handleScan });
+    // redirectKeys : si le focus est resté sur une liste déroulante (modèle) ou un
+    // bouton, la douchette y tapait son code (la liste change de modèle toute seule) ;
+    // les touches sont alors redirigées vers ce champ de scan.
+    const { focused, refocus, inputProps } = useScanCapture({
+        value: query,
+        setValue: setQuery,
+        onScan: handleScan,
+        redirectKeys
+    });
+
+    // Le parent change focusKey après un choix de modèle : le champ de scan reprend la main.
+    useEffect(() => {
+        if (focusKey) refocus();
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [focusKey]);
 
     // Ajoute l'appareil inconnu à la base (PC : avec l'état choisi) puis le sélectionne.
     const createAndSelect = (condition) => {

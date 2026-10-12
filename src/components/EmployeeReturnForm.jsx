@@ -138,7 +138,7 @@ export default function EmployeeReturnForm({ devices, onSubmit, onDone }) {
                 </label>
                 {includePC && (
                     <div style={{ marginTop: '8px' }}>
-                        <select className="loan-input full-width" value={pcModel} onChange={(e) => setPcModel(e.target.value)}>
+                        <select className="loan-input full-width" value={pcModel} onChange={(e) => { setPcModel(e.target.value); e.target.blur(); pcScan.refocus(); }}>
                             {PC_RETURN_OPTIONS.map(option => (
                                 <option key={option.value} value={option.value}>{option.label}</option>
                             ))}
@@ -168,7 +168,7 @@ export default function EmployeeReturnForm({ devices, onSubmit, onDone }) {
                 </label>
                 {includePhone && (
                     <div style={{ marginTop: '8px' }}>
-                        <select className="loan-input full-width" value={phoneModel} onChange={(e) => setPhoneModel(e.target.value)}>
+                        <select className="loan-input full-width" value={phoneModel} onChange={(e) => { setPhoneModel(e.target.value); e.target.blur(); phoneScan.refocus(); }}>
                             {PHONE_MODEL_OPTIONS.map(option => (
                                 <option key={option} value={option}>{option}</option>
                             ))}
