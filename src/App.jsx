@@ -13,7 +13,7 @@ import SyncStatus from './components/SyncStatus';
 import RollbackButton from './components/RollbackButton';
 
 function App() {
-  const { stock, history, loans, addLoan, handOverLoan, returnAssignedDevice, addWithdrawal, addStock, returnLoan, quickReturnPC,
+  const { stock, history, loans, addLoan, handOverLoan, returnAssignedDevice, addWithdrawal, addStock, returnLoan,
         devices, returnFromEmployee, receiveDevices, importInventory, removeUntrackedStock, deleteDevice, undoStack, rollbackTo,
         syncStatus, syncNotice, submitPasscode, dismissSyncNotice, syncNow, syncChoice, resolveSyncChoice } = useInventory();
   const [activeTab, setActiveTab] = useState('stock'); // 'stock' | 'assigned' | 'history'
@@ -56,7 +56,6 @@ function App() {
             onAddStock={addStock}
             loans={loans}
             onReturnLoan={returnLoan}
-            onQuickReturnPC={quickReturnPC}
             devices={devices}
             onEmployeeReturn={returnFromEmployee}
             onReceiveDevices={receiveDevices}

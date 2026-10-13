@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import Modal from './Modal';
 import EmployeeReturnForm from './EmployeeReturnForm';
+import { stockKeyLabel } from '../utils/models';
 
 const MAX_LOANS_SHOWN = 30;
 
@@ -9,19 +10,11 @@ export default function ReturnModal({
     onClose,
     loans,
     onReturnLoan,
-    onQuickReturnPC,
     devices,
     onEmployeeReturn
 }) {
-    const [activeTab, setActiveTab] = useState('loans'); // 'loans' or 'quick'
+    const [activeTab, setActiveTab] = useState('employee'); // 'employee' or 'loans'
     const [searchQuery, setSearchQuery] = useState('');
-
-    // Quick Return State
-    const [quickPcModel, setQuickPcModel] = useState('G11 Occasion');
-    const [includeMouse, setIncludeMouse] = useState(true);
-    const [includeCharger, setIncludeCharger] = useState(true);
-    const [includeHeadset, setIncludeHeadset] = useState(false);
-    const [includeBag, setIncludeBag] = useState(false);
 
     // Avec tout le parc, la liste peut dépasser mille personnes : on n'affiche que
     // les premières, la recherche sert à trouver les autres.
@@ -29,23 +22,6 @@ export default function ReturnModal({
         (loan.recipient || loan.name || '').toLowerCase().includes(searchQuery.toLowerCase())
     );
     const filteredLoans = matchingLoans.slice(0, MAX_LOANS_SHOWN);
-
-    const handleQuickSubmit = (e) => {
-        e.preventDefault();
-        onQuickReturnPC(quickPcModel, {
-            mouse: includeMouse,
-            charger: includeCharger,
-            headset: includeHeadset,
-            bag: includeBag
-        });
-        // Reset defaults
-        setQuickPcModel('G11 Occasion');
-        setIncludeMouse(true);
-        setIncludeCharger(true);
-        setIncludeHeadset(false);
-        setIncludeBag(false);
-        onClose();
-    };
 
     return (
         <Modal
@@ -55,22 +31,16 @@ export default function ReturnModal({
         >
             <div className="segmented-control" style={{ marginBottom: '20px' }}>
                 <button
-                    className={`segment-btn ${activeTab === 'loans' ? 'active' : ''}`}
-                    onClick={() => setActiveTab('loans')}
-                >
-                    Matériel attribué
-                </button>
-                <button
-                    className={`segment-btn ${activeTab === 'quick' ? 'active' : ''}`}
-                    onClick={() => setActiveTab('quick')}
-                >
-                    Retour PC Rapide
-                </button>
-                <button
                     className={`segment-btn ${activeTab === 'employee' ? 'active' : ''}`}
                     onClick={() => setActiveTab('employee')}
                 >
                     Retour collaborateur
+                </button>
+                <button
+                    className={`segment-btn ${activeTab === 'loans' ? 'active' : ''}`}
+                    onClick={() => setActiveTab('loans')}
+                >
+                    Matériel attribué
                 </button>
             </div>
 
@@ -105,7 +75,7 @@ export default function ReturnModal({
                                         {new Date(loan.date).toLocaleDateString()}{loan.pickedUpAt ? ' · remis' : ''}
                                     </div>
                                     <div style={{ fontSize: '0.85rem', color: '#64748b' }}>
-                                        {loan.items.join(', ')}
+                                        {loan.items.map(stockKeyLabel).join(', ')}
                                     </div>
                                 </div>
                                 <button
@@ -123,90 +93,12 @@ export default function ReturnModal({
                         ))}
                     </div>
                 </div>
-            ) : activeTab === 'employee' ? (
+            ) : (
                 <EmployeeReturnForm
                     devices={devices}
                     onSubmit={onEmployeeReturn}
                     onDone={onClose}
                 />
-            ) : (
-                <form onSubmit={handleQuickSubmit}>
-                    <div className="form-group">
-                        <label>Modèle de PC rendu</label>
-                        <div className="segmented-control" style={{ marginTop: '5px', marginBottom: '15px' }}>
-                            <button
-                                type="button"
-                                className={`segment-btn ${quickPcModel === 'G11 Occasion' ? 'active' : ''}`}
-                                onClick={() => setQuickPcModel('G11 Occasion')}
-                            >
-                                G11 Occ.
-                            </button>
-                            <button
-                                type="button"
-                                className={`segment-btn ${quickPcModel === 'G8/G10 Occasion' ? 'active' : ''}`}
-                                onClick={() => setQuickPcModel('G8/G10 Occasion')}
-                            >
-                                G8/G10 Occ.
-                            </button>
-                            <button
-                                type="button"
-                                className={`segment-btn ${quickPcModel === 'X360 Occasion' ? 'active' : ''}`}
-                                onClick={() => setQuickPcModel('X360 Occasion')}
-                            >
-                                X360 Occ.
-                            </button>
-                            <button
-                                type="button"
-                                className={`segment-btn ${quickPcModel === 'Zbook Occasion' ? 'active' : ''}`}
-                                onClick={() => setQuickPcModel('Zbook Occasion')}
-                            >
-                                Zbook Occ.
-                            </button>
-                        </div>
-                    </div>
-
-                    <div className="form-group">
-                        <label>Accessoires rendus avec le PC :</label>
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginTop: '10px' }}>
-                            <label className="checkbox-label">
-                                <input
-                                    type="checkbox"
-                                    checked={includeMouse}
-                                    onChange={e => setIncludeMouse(e.target.checked)}
-                                />
-                                Souris
-                            </label>
-                            <label className="checkbox-label">
-                                <input
-                                    type="checkbox"
-                                    checked={includeCharger}
-                                    onChange={e => setIncludeCharger(e.target.checked)}
-                                />
-                                Chargeur USB-C
-                            </label>
-                            <label className="checkbox-label">
-                                <input
-                                    type="checkbox"
-                                    checked={includeHeadset}
-                                    onChange={e => setIncludeHeadset(e.target.checked)}
-                                />
-                                Casque
-                            </label>
-                            <label className="checkbox-label">
-                                <input
-                                    type="checkbox"
-                                    checked={includeBag}
-                                    onChange={e => setIncludeBag(e.target.checked)}
-                                />
-                                Sacoche
-                            </label>
-                        </div>
-                    </div>
-
-                    <button type="submit" className="btn-add full-width-btn" style={{ background: 'linear-gradient(135deg, #3b82f6, #1d4ed8)', marginTop: '20px' }}>
-                        Valider le Retour
-                    </button>
-                </form>
             )}
         </Modal>
     );

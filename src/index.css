@@ -2508,3 +2508,16 @@ input[type="checkbox"]:focus {
   font-size: 1.1rem;
   font-weight: 800;
 }
+
+/* Collaborateur : NOM et Prénom côte à côte */
+.name-fields {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+.name-fields .loan-input {
+  display: block;
+  width: 100%;
+  min-width: 0;
+}

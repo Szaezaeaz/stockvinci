@@ -5,7 +5,7 @@ import { TRACKED_MODELS } from '../config/trackedModels';
 import { matchesQuery } from '../utils/search';
 import { parseScan } from '../utils/scanParse';
 import {
-    aliasKeyToLearn, conditionOfStockKey, deviceModelLabel, exactModelFor, exactModelFromStockKey, isOccasionOnly, kindOfModel,
+    aliasKeyToLearn, conditionOfStockKey, deviceFullName, exactModelFor, exactModelFromStockKey, isOccasionOnly, kindOfModel,
     modelLabel, modelOf, stockKeyOf
 } from '../utils/models';
 import { useScanCapture } from '../hooks/useScanCapture';
@@ -17,7 +17,7 @@ const MAX_STOCK_SHOWN = 30;
 const iconOf = (kind) => (kind === 'phone' ? '📱' : '💻');
 
 // Nom affiché d'un appareil de la liste, puis son n° de série et son état.
-const itemLabel = (item) => deviceModelLabel(item);
+const itemLabel = (item) => deviceFullName(item);
 
 function itemDetail(item) {
     const condition = conditionOfStockKey(item.model);
@@ -59,7 +59,7 @@ export default function AssignmentPicker({ devices, stock, items, onItemsChange,
             setMessage({ ok: false, text: `${serial} : déjà attribué à ${device.holder || '?'}.` });
         } else {
             addDevice(device);
-            setMessage({ ok: true, text: `${serial} ajouté · ${deviceModelLabel(device)}` });
+            setMessage({ ok: true, text: `${serial} ajouté · ${deviceFullName(device)}` });
         }
         refocus();
     };
@@ -97,7 +97,7 @@ export default function AssignmentPicker({ devices, stock, items, onItemsChange,
             learnModel: chosen
         });
         addItem({ serial: unknown.serial, kind: kindOfModel(chosen), model, exactModel });
-        setMessage({ ok: true, text: `${unknown.serial} ajouté à la base · ${modelLabel(chosen)}` });
+        setMessage({ ok: true, text: `${unknown.serial} ajouté à la base · ${deviceFullName({ model, exactModel })}` });
         setUnknown(null);
         refocus();
     };
@@ -190,7 +190,7 @@ export default function AssignmentPicker({ devices, stock, items, onItemsChange,
                                 <span className="pc-card-main">
                                     <span className="pc-card-serial">{device.serial}</span>
                                     <span className="pc-card-sub">
-                                        {iconOf(device.kind)} {deviceModelLabel(device)}
+                                        {iconOf(device.kind)} {deviceFullName(device)}
                                         {conditionOfStockKey(device.model) ? ` · ${conditionOfStockKey(device.model)}` : ''}
                                     </span>
                                 </span>

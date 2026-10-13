@@ -1,9 +1,17 @@
 import React, { useState } from 'react';
 import Modal from './Modal';
+import PersonNameFields from './PersonNameFields';
 import { ALL_STOCK_ITEMS } from '../config/items';
+import { TRACKED_MODELS } from '../config/trackedModels';
+import { fullName } from '../utils/person';
+
+// Les PC et les téléphones sont suivis par n° de série : ils sortent par
+// "Attribuer du matériel", pas d'ici. Seul le matériel secondaire est proposé.
+const WITHDRAW_ITEMS = ALL_STOCK_ITEMS.filter(item => !TRACKED_MODELS.has(item.id));
 
 export default function GlobalWithdrawModal({ isOpen, onClose, onConfirm, stock }) {
-    const [recipient, setRecipient] = useState('');
+    const [lastName, setLastName] = useState('');
+    const [firstName, setFirstName] = useState('');
     const [type, setType] = useState('pret'); // 'don' or 'pret'
     const [selectedItems, setSelectedItems] = useState({}); // { 'Souris': true, ... }
 
@@ -32,9 +40,10 @@ export default function GlobalWithdrawModal({ isOpen, onClose, onConfirm, stock 
             return;
         }
 
-        onConfirm(recipient.trim() || 'Anonyme', type, itemsToWithdraw);
+        onConfirm(fullName(lastName, firstName) || 'Anonyme', type, itemsToWithdraw);
 
-        setRecipient('');
+        setLastName('');
+        setFirstName('');
         setType('pret');
         setSelectedItems({});
         onClose();
@@ -50,12 +59,11 @@ export default function GlobalWithdrawModal({ isOpen, onClose, onConfirm, stock 
 
                 <div className="form-section">
                     <label className="section-label">BÉNÉFICIAIRE</label>
-                    <input
-                        type="text"
-                        className="loan-input full-width"
-                        placeholder="Nom du collaborateur"
-                        value={recipient}
-                        onChange={(e) => setRecipient(e.target.value)}
+                    <PersonNameFields
+                        last={lastName}
+                        first={firstName}
+                        onLastChange={setLastName}
+                        onFirstChange={setFirstName}
                         autoFocus
                         required
                     />
@@ -84,7 +92,7 @@ export default function GlobalWithdrawModal({ isOpen, onClose, onConfirm, stock 
                 <div className="form-section" style={{ marginTop: '25px', flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column' }}>
                     <label className="section-label" style={{ marginBottom: '12px' }}>SÉLECTION DU MATÉRIEL</label>
                     <div className="items-grid-selection">
-                        {ALL_STOCK_ITEMS.map(item => {
+                        {WITHDRAW_ITEMS.map(item => {
                             const isSelected = !!selectedItems[item.id];
                             const available = stock[item.id] || 0;
                             const isOutOfStock = available === 0;

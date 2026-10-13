@@ -95,7 +95,6 @@ export default function StockDashboard({
     onAddStock,
     loans,
     onReturnLoan,
-    onQuickReturnPC,
     devices,
     onEmployeeReturn,
     onReceiveDevices,
@@ -158,7 +157,6 @@ export default function StockDashboard({
                 onClose={() => setIsReturnModalOpen(false)}
                 loans={loans}
                 onReturnLoan={onReturnLoan}
-                onQuickReturnPC={onQuickReturnPC}
                 devices={devices}
                 onEmployeeReturn={onEmployeeReturn}
             />

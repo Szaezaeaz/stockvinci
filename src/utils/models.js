@@ -112,6 +112,11 @@ export function stockKeyLabel(stockKey) {
 // Nom à afficher pour un appareil (sans son état Neuf / Occasion).
 export const deviceModelLabel = (device) => modelLabel(device?.exactModel || baseOfStockKey(device?.model));
 
+// Nom complet d'un appareil (modèle précis, raccourci) pour l'onglet Attribué ;
+// l'accueil, lui, parle en lignes de stock ("G11"). Sans modèle précis connu, on
+// retombe sur le nom de l'appli.
+export const deviceFullName = (device) => (device?.exactModel ? shortModelName(device.exactModel) : deviceModelLabel(device));
+
 // Tous les modèles proposables dans une liste de choix : les lignes de l'accueil
 // d'abord, puis les autres modèles du catalogue, plus ceux rencontrés dans la
 // base (un import peut en apporter de nouveaux).

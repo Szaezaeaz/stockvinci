@@ -1,6 +1,6 @@
 import React from 'react';
 import { getLoanSerials } from '../utils/loans';
-import { conditionOfStockKey, deviceModelLabel, stockKeyLabel } from '../utils/models';
+import { conditionOfStockKey, deviceFullName, stockKeyLabel } from '../utils/models';
 
 // Pastilles d'une attribution : chaque article, avec le n° de série de l'appareil
 // correspondant quand il est suivi (le premier appareil de la même ligne de stock
@@ -13,7 +13,7 @@ function chipsOf(loan, devices) {
         if (index === -1) return { label: stockKeyLabel(item), serial: null };
         const [serial] = remaining.splice(index, 1);
         const condition = conditionOfStockKey(item);
-        return { label: deviceModelLabel(devices[serial]), serial, detail: condition ? ` · ${condition}` : '' };
+        return { label: deviceFullName(devices[serial]), serial, detail: condition ? ` · ${condition}` : '' };
     });
     getLoanSerials(loan)
         .filter(serial => !devices?.[serial])

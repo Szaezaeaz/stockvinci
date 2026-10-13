@@ -2,9 +2,11 @@ import React, { useImperativeHandle, useRef, useState } from 'react';
 import Modal from './Modal';
 import AssignmentPicker from './AssignmentPicker';
 import LoanChips from './LoanChips';
+import PersonNameFields from './PersonNameFields';
 import { PHONE_CASE_INFO } from '../config/phoneAccessories';
 import { matchesQuery } from '../utils/search';
 import { getLoanSerials } from '../utils/loans';
+import { fullName } from '../utils/person';
 
 const DEFAULT_ACCESSORIES = {
     mouse: true,
@@ -35,7 +37,8 @@ export default function LoanedPCs({ loans, onAdd, onHandOver, devices, stock, on
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [scanRaw, setScanRaw] = useState(null); // scan reçu de la page, traité à l'ouverture du formulaire
     const nameRef = useRef(null);
-    const [name, setName] = useState('');
+    const [lastName, setLastName] = useState('');
+    const [firstName, setFirstName] = useState('');
     const [items, setItems] = useState([]); // appareils à attribuer (PC, téléphones)
     const [accessories, setAccessories] = useState(DEFAULT_ACCESSORIES);
 
@@ -78,15 +81,16 @@ export default function LoanedPCs({ loans, onAdd, onHandOver, devices, stock, on
     }
 
     const resetForm = () => {
-        setName('');
+        setLastName('');
+        setFirstName('');
         setItems([]);
         setAccessories(DEFAULT_ACCESSORIES);
     };
 
     const handleSubmit = (e) => {
         e.preventDefault();
-        if (!name.trim()) {
-            alert('Indique le nom du collaborateur.');
+        if (!lastName.trim() || !firstName.trim()) {
+            alert('Indique le NOM et le prénom du collaborateur.');
             return;
         }
         if (items.length === 0) {
@@ -102,7 +106,7 @@ export default function LoanedPCs({ loans, onAdd, onHandOver, devices, stock, on
             }
         }
         const toLoanItem = ({ model, serial }) => ({ model, serial });
-        onAdd(name.trim(), {
+        onAdd(fullName(lastName, firstName), {
             pcs: items.filter(item => item.kind === 'pc').map(toLoanItem),
             phones: phones.map(toLoanItem),
             accessories
@@ -121,13 +125,12 @@ export default function LoanedPCs({ loans, onAdd, onHandOver, devices, stock, on
                 <form onSubmit={handleSubmit} className="loan-form-modal assign-form">
                     <div className="form-group">
                         <label>Collaborateur</label>
-                        <input
-                            type="text"
-                            className="loan-input full-width"
-                            ref={nameRef}
-                            placeholder="NOM Prénom"
-                            value={name}
-                            onChange={(e) => setName(e.target.value)}
+                        <PersonNameFields
+                            last={lastName}
+                            first={firstName}
+                            onLastChange={setLastName}
+                            onFirstChange={setFirstName}
+                            lastRef={nameRef}
                             autoFocus
                         />
                     </div>

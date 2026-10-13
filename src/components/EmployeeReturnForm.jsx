@@ -1,7 +1,9 @@
 import React, { useState } from 'react';
 import ModelPicker from './ModelPicker';
+import PersonNameFields from './PersonNameFields';
 import { PHONE_CASE_INFO } from '../config/phoneAccessories';
 import { normalizeSerial } from '../utils/serial';
+import { fullName } from '../utils/person';
 import { parseScan } from '../utils/scanParse';
 import { deviceModelLabel, kindOfModel, listModelChoices, modelLabel, modelOf, stockKeyOf } from '../utils/models';
 import { useScanCapture } from '../hooks/useScanCapture';
@@ -41,7 +43,8 @@ function KnownDeviceNote({ devices, serial }) {
 }
 
 export default function EmployeeReturnForm({ devices, onSubmit, onDone }) {
-    const [name, setName] = useState('');
+    const [lastName, setLastName] = useState('');
+    const [firstName, setFirstName] = useState('');
 
     const [includePC, setIncludePC] = useState(true);
     const [pcModel, setPcModel] = useState(DEFAULT_PC_MODEL);
@@ -97,8 +100,8 @@ export default function EmployeeReturnForm({ devices, onSubmit, onDone }) {
 
     const handleSubmit = (e) => {
         e.preventDefault();
-        if (!name.trim()) {
-            alert('Indiquez le nom du collaborateur.');
+        if (!lastName.trim() || !firstName.trim()) {
+            alert('Indiquez le NOM et le prénom du collaborateur.');
             return;
         }
         const hasAccessory = Object.values(accessories).some(Boolean);
@@ -107,7 +110,7 @@ export default function EmployeeReturnForm({ devices, onSubmit, onDone }) {
             return;
         }
         // Le PC rendu rejoint le stock Occasion de son modèle.
-        onSubmit(name.trim(), {
+        onSubmit(fullName(lastName, firstName), {
             pcModel: includePC ? stockKeyOf(pcModel, 'Occasion') : null,
             pcExactModel: includePC ? pcQrModel : null,
             pcSerial: includePC ? pcSerial : '',
@@ -124,12 +127,11 @@ export default function EmployeeReturnForm({ devices, onSubmit, onDone }) {
         <form onSubmit={handleSubmit} className="employee-return-form">
             <div className="form-group">
                 <label>Nom du collaborateur</label>
-                <input
-                    type="text"
-                    className="loan-input full-width"
-                    placeholder="NOM Prénom"
-                    value={name}
-                    onChange={(e) => setName(e.target.value)}
+                <PersonNameFields
+                    last={lastName}
+                    first={firstName}
+                    onLastChange={setLastName}
+                    onFirstChange={setFirstName}
                 />
             </div>
 

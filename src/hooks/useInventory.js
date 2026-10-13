@@ -768,40 +768,6 @@ export function useInventory() {
         });
     };
 
-    const quickReturnPC = (pcModel = 'G11 Occasion', accessories = { mouse: true, charger: true, headset: false, bag: false }) => {
-        setData(prev => {
-            const stockUpdates = { [pcModel]: 1 };
-            const returnedItemsLog = [pcModel];
-
-            if (accessories.mouse) { stockUpdates['Souris'] = 1; returnedItemsLog.push('Souris'); }
-            if (accessories.charger) { stockUpdates['Chargeur USB-C'] = 1; returnedItemsLog.push('Chargeur USB-C'); }
-            if (accessories.headset) { stockUpdates['Casque'] = 1; returnedItemsLog.push('Casque'); }
-            if (accessories.bag) { stockUpdates['Sacoche'] = 1; returnedItemsLog.push('Sacoche'); }
-
-            // Update Stock
-            const newStock = { ...prev.stock };
-            for (const [id, count] of Object.entries(stockUpdates)) {
-                newStock[id] = (newStock[id] || 0) + count;
-            }
-
-            // History Log
-            const historyEntry = {
-                id: Date.now(),
-                category: 'Retour PC (Rapide)',
-                delta: 1,
-                recipient: 'Anonyme',
-                details: returnedItemsLog,
-                date: new Date()
-            };
-
-            return {
-                ...prev,
-                stock: newStock,
-                history: [historyEntry, ...prev.history].slice(0, 50)
-            };
-        });
-    };
-
     // Retour d'un collaborateur (départ CDI/CDD...) : le PC rejoint le stock
     // Occasion de son modèle, le téléphone son stock, plus les accessoires.
     // Les numéros de série saisis alimentent le registre `devices`.
@@ -1141,7 +1107,6 @@ export function useInventory() {
         rollbackTo,
         returnAssignedDevice,
         returnLoan,
-        quickReturnPC,
         syncStatus,
         syncNotice,
         submitPasscode,

@@ -1,7 +1,7 @@
 import React, { useMemo, useState } from 'react';
 import { matchesQuery } from '../utils/search';
 import { getLoanSerials } from '../utils/loans';
-import { deviceModelLabel } from '../utils/models';
+import { deviceFullName } from '../utils/models';
 import LoanChips from './LoanChips';
 
 // Avec tout le parc importé, il y a plus de mille personnes : on n'en affiche
@@ -64,7 +64,7 @@ export default function AssignedMaterial({ loans, devices, onReturnLoan, onRetur
     };
 
     const handleReturnDevice = (device) => {
-        if (window.confirm(`Remettre ${device.serial} (${deviceModelLabel(device)}) en stock ?`)) {
+        if (window.confirm(`Remettre ${device.serial} (${deviceFullName(device)}) en stock ?`)) {
             onReturnDevice(device.serial);
         }
     };
@@ -119,7 +119,7 @@ export default function AssignedMaterial({ loans, devices, onReturnLoan, onRetur
                             </div>
                             <div className="assignment-items">
                                 <span className="assignment-chip assignment-chip-pc">
-                                    {deviceModelLabel(device)}
+                                    {deviceFullName(device)}
                                     <small>S/N {device.serial}</small>
                                 </span>
                             </div>
