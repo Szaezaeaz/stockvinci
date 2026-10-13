@@ -4,7 +4,7 @@ import QuantityStepper from './QuantityStepper';
 import SearchBar from './SearchBar';
 import ScanReceiveForm from './ScanReceiveForm';
 import { matchesQuery } from '../utils/search';
-import { ALL_STOCK_ITEMS } from '../config/items';
+import { SECONDARY_ITEMS } from '../config/secondaryItems';
 import { getLowStockThreshold, getMaxStock, hasStockLimits } from '../config/thresholds';
 
 // initialScan : code scanné depuis l'accueil, la fenêtre s'ouvre alors directement
@@ -13,7 +13,7 @@ export default function AddMaterielModal({ isOpen, onClose, onConfirm, stock, de
     const [mode, setMode] = useState(initialScan ? 'scan' : 'quantities'); // 'quantities' | 'scan'
     const [quantities, setQuantities] = useState({});
     const [query, setQuery] = useState('');
-    const visibleItems = ALL_STOCK_ITEMS.filter(item => matchesQuery(query, [item.id]));
+    const visibleItems = SECONDARY_ITEMS.filter(item => matchesQuery(query, [item.id]));
 
     const setQty = (id, value) => {
         setQuantities(prev => ({ ...prev, [id]: value }));
@@ -60,7 +60,7 @@ export default function AddMaterielModal({ isOpen, onClose, onConfirm, stock, de
                     className={`segment-btn ${mode === 'scan' ? 'active' : ''}`}
                     onClick={() => setMode('scan')}
                 >
-                    Scanner (n° de série)
+                    Scanner PC / téléphones
                 </button>
             </div>
 
