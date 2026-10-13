@@ -17,7 +17,7 @@ export default function ReturnModal({
     const [searchQuery, setSearchQuery] = useState('');
 
     // Quick Return State
-    const [quickPcModel, setQuickPcModel] = useState('650 G11 Occasion');
+    const [quickPcModel, setQuickPcModel] = useState('660 G11 Occasion');
     const [includeMouse, setIncludeMouse] = useState(true);
     const [includeCharger, setIncludeCharger] = useState(true);
     const [includeHeadset, setIncludeHeadset] = useState(false);
@@ -39,7 +39,7 @@ export default function ReturnModal({
             bag: includeBag
         });
         // Reset defaults
-        setQuickPcModel('650 G11 Occasion');
+        setQuickPcModel('660 G11 Occasion');
         setIncludeMouse(true);
         setIncludeCharger(true);
         setIncludeHeadset(false);
@@ -136,10 +136,10 @@ export default function ReturnModal({
                         <div className="segmented-control" style={{ marginTop: '5px', marginBottom: '15px' }}>
                             <button
                                 type="button"
-                                className={`segment-btn ${quickPcModel === '650 G11 Occasion' ? 'active' : ''}`}
-                                onClick={() => setQuickPcModel('650 G11 Occasion')}
+                                className={`segment-btn ${quickPcModel === '660 G11 Occasion' ? 'active' : ''}`}
+                                onClick={() => setQuickPcModel('660 G11 Occasion')}
                             >
-                                650 G11 Occ.
+                                660 G11 Occ.
                             </button>
                             <button
                                 type="button"

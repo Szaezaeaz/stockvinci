@@ -8,7 +8,7 @@ import { PHONE_CASE_INFO } from './phoneAccessories';
 const CATEGORY_LIMITS = {
     // PC (Neuf uniquement : les PC d'occasion n'ont ni seuil ni max, voir
     // hasStockLimits ci-dessous)
-    '650 G11 Neuf': { max: 50, threshold: 30 },
+    '660 G11 Neuf': { max: 50, threshold: 30 },
     'X360 Neuf': { max: 4, threshold: 1 },
     'Zbook Neuf': { max: 4, threshold: 2 },
     // Téléphones

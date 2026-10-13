@@ -17,7 +17,7 @@ const DASHBOARD_SECTIONS = [
         title: 'PC portables',
         icon: '💻',
         unitLabel: 'modèles',
-        items: ['650 G11 Neuf', '850 G8/G10 Occasion', 'X360 Neuf', 'Zbook Neuf'],
+        items: ['660 G11 Neuf', '850 G8/G10 Occasion', 'X360 Neuf', 'Zbook Neuf'],
         withOccasion: true
     },
     {
@@ -38,7 +38,7 @@ const DASHBOARD_SECTIONS = [
 // PC Neuf -> PC Occasion correspondant, affiché en sous-ligne (le 850 G8/G10
 // n'a pas d'équivalent Neuf, il reste une ligne principale à part).
 const PC_OCCASION_PAIRS = {
-    '650 G11 Neuf': '650 G11 Occasion',
+    '660 G11 Neuf': '660 G11 Occasion',
     'X360 Neuf': 'X360 Occasion',
     'Zbook Neuf': 'Zbook Occasion'
 };

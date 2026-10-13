@@ -7,7 +7,7 @@ import { exactNamesOf, groupOfModel, kindOfModel, listModelChoices, modelLabel, 
 const GROUP_ORDER = ['PC', 'iPhone', 'Android'];
 
 // Modèles précis regroupés sous un modèle de l'appli, rappelés sous son nom
-// ("650 G11" : EliteBook 660 16" G11).
+// ("660 G11" : EliteBook 660 16" G11).
 function exactHint(model) {
     const names = exactNamesOf(model).map(shortModelName).filter(name => name !== model);
     return names.join(', ');
@@ -15,7 +15,7 @@ function exactHint(model) {
 
 // Choix d'un modèle parmi tous ceux du parc : un bouton qui ouvre la liste
 // complète, avec une recherche (le parc compte plusieurs dizaines de modèles).
-// Les modèles sont ceux de l'appli : les lignes de l'accueil ("650 G11",
+// Les modèles sont ceux de l'appli : les lignes de l'accueil ("660 G11",
 // "Zbook"...) d'abord, puis les modèles qui n'en ont pas.
 // value : modèle choisi, ou '' si aucun.
 // kind : 'pc' ou 'phone' pour ne proposer qu'un type d'appareil.
