@@ -15,9 +15,9 @@ const STORAGE_KEY = 'vinci_inventory_v3';
 
 const INITIAL_STATE = {
     stock: {
-        '660 G11 Neuf': 5,
-        '660 G11 Occasion': 5,
-        '850 G8/G10 Occasion': 0,
+        'G11 Neuf': 5,
+        'G11 Occasion': 5,
+        'G8/G10 Occasion': 0,
         'X360 Neuf': 0,
         'X360 Occasion': 0,
         'Zbook Neuf': 0,
@@ -46,7 +46,7 @@ const INITIAL_STATE = {
     loans: [], // Array of { id, name, date }
     // Registre des numéros de série saisis (PC / téléphones), indexé par n° de
     // série : { serial, kind, model, exactModel, events: [{ date, action, person }] }.
-    // model = ligne de stock qui compte l'appareil ("660 G11 Occasion") ;
+    // model = ligne de stock qui compte l'appareil ("G11 Occasion") ;
     // exactModel = son modèle précis ("HP EliteBook 660 16 inch G11 Notebook PC").
     devices: {},
     // Modèles choisis à la main pour des QR codes non reconnus, retenus pour les
@@ -58,39 +58,44 @@ const INITIAL_STATE = {
 // specific replacement, so existing on-device stock counts aren't lost when
 // this update lands on a tablet that already has real inventory data.
 const LEGACY_KEY_MIGRATIONS = {
-    'PC Neuf': '660 G11 Neuf',
-    'PC Occasion': '660 G11 Occasion',
+    'PC Neuf': 'G11 Neuf',
+    'PC Occasion': 'G11 Occasion',
     Iphone: 'iPhone 16e',
     Xcover: 'Samsung XCOVER 7',
-    '850 G8 Occasion': '850 G8/G10 Occasion',
+    '850 G8 Occasion': 'G8/G10 Occasion',
     Chargeur: 'Chargeur USB-C',
     'Anciens chargeurs': 'Ancien chargeur'
 };
 
-// Modèles de l'accueil renommés (ancien nom -> nouveau). L'ancien nom est remplacé
-// partout dans les données : stock, appareils, attributions, historique.
-const RENAMED_MODELS = {
-    '650 G11': '660 G11'
-};
+// Modèles de l'accueil renommés : [ancien nom, nouveau nom], l'ancien nom le plus
+// récent d'abord. L'ancien nom est remplacé partout dans les données : stock,
+// appareils, attributions, historique.
+const RENAMED_MODELS = [
+    ['660 G11', 'G11'],
+    ['650 G11', 'G11'],
+    ['850 G8/G10', 'G8/G10']
+];
 
 const renameModels = (text) => (typeof text === 'string'
-    ? Object.entries(RENAMED_MODELS).reduce((result, [oldName, newName]) => result.split(oldName).join(newName), text)
+    ? RENAMED_MODELS.reduce((result, [oldName, newName]) => result.split(oldName).join(newName), text)
     : text);
 
 // Vrai si des données enregistrées portent encore un ancien nom de modèle.
-const hasRenamedModels = (text) => Object.keys(RENAMED_MODELS).some(oldName => String(text || '').includes(oldName));
+const hasRenamedModels = (text) => RENAMED_MODELS.some(([oldName]) => String(text || '').includes(oldName));
 
 // Les quantités passent sous le nouveau nom. Si le nouveau nom existe déjà, les
-// données ont déjà été converties par un autre appareil : l'ancienne ligne (que
-// seule une ancienne version de l'appli a pu recréer, avec sa valeur par défaut)
-// est abandonnée au lieu d'être ajoutée.
+// données ont déjà été converties (par un autre appareil, ou depuis un ancien
+// nom plus récent) : l'ancienne ligne, que seule une ancienne version de l'appli
+// a pu recréer avec sa valeur par défaut, est abandonnée au lieu d'être ajoutée.
 function renameStockKeys(stock) {
     const renamed = { ...stock };
-    for (const key of Object.keys(stock)) {
-        const newKey = renameModels(key);
-        if (newKey === key) continue;
-        if (!(newKey in renamed)) renamed[newKey] = renamed[key];
-        delete renamed[key];
+    for (const [oldName, newName] of RENAMED_MODELS) {
+        for (const key of Object.keys(renamed)) {
+            if (!key.includes(oldName)) continue;
+            const newKey = key.split(oldName).join(newName);
+            if (!(newKey in renamed)) renamed[newKey] = renamed[key];
+            delete renamed[key];
+        }
     }
     return renamed;
 }
@@ -763,7 +768,7 @@ export function useInventory() {
         });
     };
 
-    const quickReturnPC = (pcModel = '660 G11 Occasion', accessories = { mouse: true, charger: true, headset: false, bag: false }) => {
+    const quickReturnPC = (pcModel = 'G11 Occasion', accessories = { mouse: true, charger: true, headset: false, bag: false }) => {
         setData(prev => {
             const stockUpdates = { [pcModel]: 1 };
             const returnedItemsLog = [pcModel];

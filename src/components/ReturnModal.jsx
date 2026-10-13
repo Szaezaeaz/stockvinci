@@ -17,7 +17,7 @@ export default function ReturnModal({
     const [searchQuery, setSearchQuery] = useState('');
 
     // Quick Return State
-    const [quickPcModel, setQuickPcModel] = useState('660 G11 Occasion');
+    const [quickPcModel, setQuickPcModel] = useState('G11 Occasion');
     const [includeMouse, setIncludeMouse] = useState(true);
     const [includeCharger, setIncludeCharger] = useState(true);
     const [includeHeadset, setIncludeHeadset] = useState(false);
@@ -39,7 +39,7 @@ export default function ReturnModal({
             bag: includeBag
         });
         // Reset defaults
-        setQuickPcModel('660 G11 Occasion');
+        setQuickPcModel('G11 Occasion');
         setIncludeMouse(true);
         setIncludeCharger(true);
         setIncludeHeadset(false);
@@ -136,17 +136,17 @@ export default function ReturnModal({
                         <div className="segmented-control" style={{ marginTop: '5px', marginBottom: '15px' }}>
                             <button
                                 type="button"
-                                className={`segment-btn ${quickPcModel === '660 G11 Occasion' ? 'active' : ''}`}
-                                onClick={() => setQuickPcModel('660 G11 Occasion')}
+                                className={`segment-btn ${quickPcModel === 'G11 Occasion' ? 'active' : ''}`}
+                                onClick={() => setQuickPcModel('G11 Occasion')}
                             >
-                                660 G11 Occ.
+                                G11 Occ.
                             </button>
                             <button
                                 type="button"
-                                className={`segment-btn ${quickPcModel === '850 G8/G10 Occasion' ? 'active' : ''}`}
-                                onClick={() => setQuickPcModel('850 G8/G10 Occasion')}
+                                className={`segment-btn ${quickPcModel === 'G8/G10 Occasion' ? 'active' : ''}`}
+                                onClick={() => setQuickPcModel('G8/G10 Occasion')}
                             >
-                                850 G8/G10 Occ.
+                                G8/G10 Occ.
                             </button>
                             <button
                                 type="button"

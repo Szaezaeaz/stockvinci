@@ -4,7 +4,7 @@ import { HOME_LINES, MODEL_CATALOG, OCCASION_ONLY_LINES } from '../config/modelC
 //  - son modèle précis, tel que l'inventaire et le QR code le donnent
 //    ("HP EliteBook 660 16 inch G11 Notebook PC") ;
 //  - son modèle dans l'appli, celui qu'on affiche et qu'on compte : la ligne de
-//    l'accueil dont il fait partie ("660 G11", "Zbook", "Samsung XCOVER 7"), ou
+//    l'accueil dont il fait partie ("G11", "Zbook", "Samsung XCOVER 7"), ou
 //    son modèle précis quand il n'a pas de ligne à l'accueil.
 // Un "HP ZBook Fury 16 G11" EST un "Zbook" : même modèle, même stock.
 
@@ -27,7 +27,7 @@ export const modelOf = (name) => catalogEntry(name)?.line || String(name || '');
 export const exactNamesOf = (model) => LINES.get(model)?.names || [];
 
 // Modèle précis d'un modèle de l'appli quand il n'y en a qu'un possible
-// ("660 G11" -> HP EliteBook 660 16 inch G11, mais pas "Zbook" qui en regroupe plusieurs).
+// ("G11" -> HP EliteBook 660 16 inch G11, mais pas "Zbook" qui en regroupe plusieurs).
 export function exactModelOf(name) {
     if (catalogEntry(name)) return name;
     const names = LINES.get(name)?.names;
@@ -67,14 +67,14 @@ export function stockKeyOf(name, condition) {
     return `${model} ${condition === 'Occasion' || isOccasionOnly(name) ? 'Occasion' : 'Neuf'}`;
 }
 
-// "660 G11 Occasion" -> "Occasion" ; '' pour une ligne sans état (téléphones).
+// "G11 Occasion" -> "Occasion" ; '' pour une ligne sans état (téléphones).
 export const conditionOfStockKey = (stockKey) => String(stockKey || '').match(/ (Neuf|Occasion)$/)?.[1] || '';
 
-// "660 G11 Occasion" -> "660 G11" : le modèle d'une ligne de stock.
+// "G11 Occasion" -> "G11" : le modèle d'une ligne de stock.
 export const baseOfStockKey = (stockKey) => String(stockKey || '').replace(/ (Neuf|Occasion)$/, '');
 
 // Modèle exact correspondant à une ligne de stock, quand il n'y en a qu'un
-// possible (ex. "660 G11 Neuf" -> EliteBook 660 G11, mais pas "Zbook Occasion").
+// possible (ex. "G11 Neuf" -> HP EliteBook 660 16 inch G11, mais pas "Zbook Occasion").
 export function exactModelFromStockKey(stockKey) {
     const key = String(stockKey || '');
     const base = baseOfStockKey(key);
@@ -95,14 +95,14 @@ export function shortModelName(name) {
         .replace(/^Samsung Galaxy /, 'Galaxy ');
 }
 
-// Nom à afficher pour un modèle : celui de l'appli ("660 G11"), ou le nom précis
+// Nom à afficher pour un modèle : celui de l'appli ("G11"), ou le nom précis
 // raccourci quand il n'a pas de ligne à l'accueil.
 export function modelLabel(name) {
     const model = modelOf(name);
     return LINES.has(model) ? model : shortModelName(model);
 }
 
-// Nom à afficher pour une ligne de stock ("660 G11 Occasion").
+// Nom à afficher pour une ligne de stock ("G11 Occasion").
 export function stockKeyLabel(stockKey) {
     const condition = conditionOfStockKey(stockKey);
     const base = baseOfStockKey(stockKey);

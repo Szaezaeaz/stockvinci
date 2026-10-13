@@ -7,7 +7,7 @@ function normalize(text) {
 }
 
 // Vrai si chaque mot saisi se retrouve dans au moins un des textes
-// (ex. "g11 occ" retrouve "660 G11 Neuf" + sa ligne "Occasion").
+// (ex. "g11 occ" retrouve "G11 Neuf" + sa ligne "Occasion").
 export function matchesQuery(query, texts) {
     const words = normalize(query).split(/\s+/).filter(Boolean);
     if (words.length === 0) return true;

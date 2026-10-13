@@ -22,7 +22,7 @@ function conditionFor(model, previous = null) {
 // s'il n'est pas reconnu, la ligne attend qu'on le choisisse (model null), et ce
 // choix sera retenu (learnKey). Un code sans modèle (téléphone, simple
 // code-barres) prend le modèle sélectionné en haut du formulaire.
-// model : modèle de l'appli ("660 G11") ; qrModel : modèle précis lu dans le QR.
+// model : modèle de l'appli ("G11") ; qrModel : modèle précis lu dans le QR.
 // sessionChoices : modèles déjà choisis à la main dans cette liste, par learnKey.
 function createEntry(scan, selectedModel, sessionChoices = {}) {
     const fromQr = Boolean(scan.modelName);

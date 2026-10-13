@@ -5,7 +5,7 @@
 // line  : ligne de stock de l'accueil qui compte ce modèle. Dans l'appli, un
 //         modèle qui a une ligne porte le nom de cette ligne (un ZBook Fury 16
 //         G11 est un "Zbook") ; son nom exact reste enregistré sur l'appareil.
-//           - PC : la famille ('660 G11', '850 G8/G10', 'X360', 'Zbook'), le
+//           - PC : la famille ('G11', 'G8/G10', 'X360', 'Zbook'), le
 //             stock étant tenu en "<famille> Neuf" / "<famille> Occasion" ;
 //           - téléphone : le nom de la ligne ('iPhone 16e', ...).
 //         Sans `line`, le modèle a sa propre ligne de stock, qui n'apparaît pas
@@ -14,10 +14,10 @@
 // L'ordre est celui de la fréquence dans le parc : les plus courants d'abord.
 export const MODEL_CATALOG = [
     // --- PC ---------------------------------------------------------------
-    { name: 'HP EliteBook 660 16 inch G11 Notebook PC', kind: 'pc', group: 'PC', line: '660 G11' },
-    { name: 'HP EliteBook 650 15.6 inch G10 Notebook PC', kind: 'pc', group: 'PC', line: '850 G8/G10' },
+    { name: 'HP EliteBook 660 16 inch G11 Notebook PC', kind: 'pc', group: 'PC', line: 'G11' },
+    { name: 'HP EliteBook 650 15.6 inch G10 Notebook PC', kind: 'pc', group: 'PC', line: 'G8/G10' },
     { name: 'HP EliteBook 6 G1i 16 inch Notebook AI PC', kind: 'pc', group: 'PC' },
-    { name: 'HP EliteBook 850 G8 Notebook PC', kind: 'pc', group: 'PC', line: '850 G8/G10' },
+    { name: 'HP EliteBook 850 G8 Notebook PC', kind: 'pc', group: 'PC', line: 'G8/G10' },
     { name: 'HP ZBook Fury 16 G11 Mobile Workstation PC', kind: 'pc', group: 'PC', line: 'Zbook' },
     { name: 'HP EliteBook 640 14 inch G11 Notebook PC', kind: 'pc', group: 'PC' },
     { name: 'HP ZBook Fury 16 G10 Mobile Workstation PC', kind: 'pc', group: 'PC', line: 'Zbook' },
@@ -66,7 +66,7 @@ export const MODEL_CATALOG = [
 ];
 
 // Lignes de l'accueil, dans l'ordre où les proposer dans les listes de choix.
-export const HOME_LINES = ['660 G11', '850 G8/G10', 'X360', 'Zbook', 'iPhone 16e', 'iPhone 17', 'Samsung XCOVER 7', 'Samsung A36'];
+export const HOME_LINES = ['G11', 'G8/G10', 'X360', 'Zbook', 'iPhone 16e', 'iPhone 17', 'Samsung XCOVER 7', 'Samsung A36'];
 
 // Familles de PC de l'accueil qui n'existent qu'en Occasion.
-export const OCCASION_ONLY_LINES = new Set(['850 G8/G10']);
+export const OCCASION_ONLY_LINES = new Set(['G8/G10']);
