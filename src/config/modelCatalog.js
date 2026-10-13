@@ -2,7 +2,9 @@
 //
 // kind  : 'pc' ou 'phone'.
 // group : titre du groupe dans les listes de choix.
-// line  : ligne de stock de l'accueil qui compte ce modèle.
+// line  : ligne de stock de l'accueil qui compte ce modèle. Dans l'appli, un
+//         modèle qui a une ligne porte le nom de cette ligne (un EliteBook 660
+//         G11 est un "650 G11") ; son nom exact reste enregistré sur l'appareil.
 //           - PC : la famille ('650 G11', '850 G8/G10', 'X360', 'Zbook'), le
 //             stock étant tenu en "<famille> Neuf" / "<famille> Occasion" ;
 //           - téléphone : le nom de la ligne ('iPhone 16e', ...).
@@ -62,6 +64,9 @@ export const MODEL_CATALOG = [
     { name: 'Samsung Galaxy S23', kind: 'phone', group: 'Android' },
     { name: 'Samsung Galaxy S25', kind: 'phone', group: 'Android' }
 ];
+
+// Lignes de l'accueil, dans l'ordre où les proposer dans les listes de choix.
+export const HOME_LINES = ['650 G11', '850 G8/G10', 'X360', 'Zbook', 'iPhone 16e', 'iPhone 17', 'Samsung XCOVER 7', 'Samsung A36'];
 
 // Familles de PC de l'accueil qui n'existent qu'en Occasion.
 export const OCCASION_ONLY_LINES = new Set(['850 G8/G10']);

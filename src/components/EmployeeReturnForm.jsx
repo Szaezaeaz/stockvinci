@@ -1,15 +1,14 @@
 import React, { useState } from 'react';
 import ModelPicker from './ModelPicker';
-import { MODEL_CATALOG } from '../config/modelCatalog';
 import { PHONE_CASE_INFO } from '../config/phoneAccessories';
 import { normalizeSerial } from '../utils/serial';
 import { parseScan } from '../utils/scanParse';
-import { deviceModelLabel, kindOfModel, shortModelName, stockKeyOf } from '../utils/models';
+import { deviceModelLabel, kindOfModel, listModelChoices, modelLabel, modelOf, stockKeyOf } from '../utils/models';
 import { useScanCapture } from '../hooks/useScanCapture';
 
-// Modèles présélectionnés : les plus courants du parc.
-const DEFAULT_PC_MODEL = MODEL_CATALOG.find(entry => entry.kind === 'pc').name;
-const DEFAULT_PHONE_MODEL = MODEL_CATALOG.find(entry => entry.kind === 'phone').name;
+// Modèles présélectionnés : les premiers de la liste de choix.
+const DEFAULT_PC_MODEL = listModelChoices().find(name => kindOfModel(name) === 'pc');
+const DEFAULT_PHONE_MODEL = listModelChoices().find(name => kindOfModel(name) === 'phone');
 
 const ACCESSORY_OPTIONS = [
     { key: 'mouse', label: 'Souris' },
@@ -45,11 +44,12 @@ export default function EmployeeReturnForm({ devices, onSubmit, onDone }) {
     const [name, setName] = useState('');
 
     const [includePC, setIncludePC] = useState(true);
-    const [pcModel, setPcModel] = useState(DEFAULT_PC_MODEL); // modèle précis
+    const [pcModel, setPcModel] = useState(DEFAULT_PC_MODEL);
+    const [pcQrModel, setPcQrModel] = useState(null); // modèle précis lu dans le QR code
     const [pcSerial, setPcSerial] = useState('');
 
     const [includePhone, setIncludePhone] = useState(false);
-    const [phoneModel, setPhoneModel] = useState(DEFAULT_PHONE_MODEL); // modèle précis
+    const [phoneModel, setPhoneModel] = useState(DEFAULT_PHONE_MODEL);
     const [phoneSerial, setPhoneSerial] = useState('');
     const [phoneCase, setPhoneCase] = useState(false);
 
@@ -61,7 +61,7 @@ export default function EmployeeReturnForm({ devices, onSubmit, onDone }) {
     // tout seul (QR code HP, ou appareil déjà connu du registre).
     const knownModel = (serial, kind) => {
         const exactModel = devices?.[serial]?.exactModel;
-        return exactModel && kindOfModel(exactModel) === kind ? exactModel : null;
+        return exactModel && kindOfModel(exactModel) === kind ? modelOf(exactModel) : null;
     };
     const pcScan = useScanCapture({
         value: pcSerial,
@@ -69,9 +69,11 @@ export default function EmployeeReturnForm({ devices, onSubmit, onDone }) {
         onScan: (raw) => {
             const scan = parseScan(raw);
             setPcSerial(scan.serial);
-            const detected = (scan.model && kindOfModel(scan.model) === 'pc' ? scan.model : null) || knownModel(scan.serial, 'pc');
+            const fromQr = scan.model && kindOfModel(scan.model) === 'pc' ? scan.model : null;
+            const detected = (fromQr && modelOf(fromQr)) || knownModel(scan.serial, 'pc');
+            setPcQrModel(fromQr);
             if (detected) setPcModel(detected);
-            setPcDetected(detected ? `Modèle détecté : ${shortModelName(detected)}` : '');
+            setPcDetected(detected ? `Modèle détecté : ${modelLabel(detected)}` : '');
         }
     });
 
@@ -84,7 +86,7 @@ export default function EmployeeReturnForm({ devices, onSubmit, onDone }) {
             setPhoneSerial(serial);
             const detected = knownModel(serial, 'phone');
             if (detected) setPhoneModel(detected);
-            setPhoneDetected(detected ? `Modèle détecté : ${shortModelName(detected)}` : '');
+            setPhoneDetected(detected ? `Modèle détecté : ${modelLabel(detected)}` : '');
         }
     });
 
@@ -107,10 +109,9 @@ export default function EmployeeReturnForm({ devices, onSubmit, onDone }) {
         // Le PC rendu rejoint le stock Occasion de son modèle.
         onSubmit(name.trim(), {
             pcModel: includePC ? stockKeyOf(pcModel, 'Occasion') : null,
-            pcExactModel: includePC ? pcModel : null,
+            pcExactModel: includePC ? pcQrModel : null,
             pcSerial: includePC ? pcSerial : '',
             phoneModel: includePhone ? phoneStockKey : null,
-            phoneExactModel: includePhone ? phoneModel : null,
             phoneSerial: includePhone ? phoneSerial : '',
             phoneCase: includePhone && phoneCase && Boolean(caseInfo),
             accessories

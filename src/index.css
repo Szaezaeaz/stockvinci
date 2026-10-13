@@ -2379,9 +2379,9 @@ input[type="checkbox"]:focus {
 
 .model-option {
   display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 10px;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
   width: 100%;
   padding: 12px 14px;
   border: none;
@@ -2399,14 +2399,11 @@ input[type="checkbox"]:focus {
   color: #1d4ed8;
 }
 
-.model-option-line {
-  flex-shrink: 0;
-  padding: 2px 8px;
-  border-radius: 999px;
-  background: #f1f5f9;
-  color: #64748b;
-  font-size: 0.7rem;
-  font-weight: 600;
+.model-option-hint {
+  color: #94a3b8;
+  font-size: 0.75rem;
+  font-weight: 500;
+  line-height: 1.35;
 }
 
 .unknown-picker {

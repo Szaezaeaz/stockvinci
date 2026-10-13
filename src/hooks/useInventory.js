@@ -4,7 +4,10 @@ import { getLowStockThreshold } from '../config/thresholds';
 import { PHONE_CASE_INFO } from '../config/phoneAccessories';
 import { normalizeSerial } from '../utils/serial';
 import { getLoanSerials } from '../utils/loans';
-import { exactModelFromStockKey, kindOfModel, matchModelName, setLearnedAliases, stockKeyLabel, stockKeyOf } from '../utils/models';
+import {
+    baseOfStockKey, exactModelFor, exactModelFromStockKey, exactModelOf, kindOfModel, matchModelName, setLearnedAliases,
+    stockKeyLabel, stockKeyOf
+} from '../utils/models';
 import { applyUndoPatch, diffState } from '../utils/undo';
 import { fetchCloud, pushCloud, getPasscode, savePasscode, loadSyncMeta, saveSyncMeta } from '../services/cloudSync';
 
@@ -105,7 +108,8 @@ function migrateLoanItem(itemStr) {
 // correspond qu'à un seul modèle.
 function withExactModel(device) {
     if (device.exactModel) return device;
-    const exactModel = matchModelName(device.modelName, device.productId).model || exactModelFromStockKey(device.model);
+    const matched = matchModelName(device.modelName, device.productId).model;
+    const exactModel = (matched && exactModelOf(matched)) || exactModelFromStockKey(device.model);
     return exactModel ? { ...device, exactModel } : device;
 }
 
@@ -781,7 +785,7 @@ export function useInventory() {
                 add(model);
                 if (!serial) return stockKeyLabel(model);
                 if (known?.status === 'assigned') loans = detachFromLoans(loans, serial, known.model);
-                const resolved = exactModel || known?.exactModel || exactModelFromStockKey(model);
+                const resolved = exactModelFor(baseOfStockKey(model), exactModel || known?.exactModel);
                 devices[serial] = {
                     ...known,
                     serial,
@@ -839,10 +843,10 @@ export function useInventory() {
     // Réception de matériel scanné : chaque n° de série devient une fiche
     // d'appareil "en stock" et le stock du modèle augmente d'autant. Les n° de
     // série déjà connus sont ignorés.
-    // entries : [{ serial, model, exactModel?, modelName?, productId?, learnKey? }] —
-    // chaque appareil porte sa ligne de stock (model) et son modèle précis
-    // (exactModel), reconnu depuis le QR code ou choisi à la main. learnKey : clé
-    // sous laquelle retenir ce choix pour les prochains scans (QR non reconnu).
+    // entries : [{ serial, model, exactModel?, modelName?, productId?, learnKey?, learnModel? }] —
+    // chaque appareil porte sa ligne de stock (model) et, s'il est connu, son modèle
+    // précis (exactModel), lu dans le QR code. learnKey / learnModel : pour un QR
+    // code non reconnu, la clé sous laquelle retenir le modèle choisi à la main.
     const receiveDevices = (entries) => {
         setData(prev => {
             const devices = { ...(prev.devices || {}) };
@@ -855,8 +859,9 @@ export function useInventory() {
                 const serial = normalizeSerial(entry.serial);
                 if (!serial || devices[serial]) continue;
                 const exactModel = entry.exactModel || exactModelFromStockKey(entry.model);
-                if (entry.learnKey && exactModel && modelAliases[entry.learnKey] !== exactModel) {
-                    modelAliases = { ...modelAliases, [entry.learnKey]: exactModel };
+                const learnModel = entry.learnModel || exactModel;
+                if (entry.learnKey && learnModel && modelAliases[entry.learnKey] !== learnModel) {
+                    modelAliases = { ...modelAliases, [entry.learnKey]: learnModel };
                 }
                 devices[serial] = {
                     serial,

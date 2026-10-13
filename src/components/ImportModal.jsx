@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import Modal from './Modal';
 import { readWorkbook } from '../utils/xlsxRead';
 import { analyzeInventory, resolveImport, summarizeImport } from '../utils/inventoryImport';
-import { shortModelName } from '../utils/models';
+import { modelLabel } from '../utils/models';
 
 const count = (number) => number.toLocaleString('fr-FR');
 const plural = (number, word) => `${count(number)} ${word}${number > 1 ? 's' : ''}`;
@@ -120,7 +120,7 @@ export default function ImportModal({ isOpen, onClose, devices, onImport }) {
                                         <div key={conflict.serial} className="import-conflict">
                                             <div className="import-conflict-device">
                                                 <span className="device-serial">{conflict.serial}</span>
-                                                <span className="device-sub">{shortModelName(conflict.model)}</span>
+                                                <span className="device-sub">{modelLabel(conflict.model)}</span>
                                             </div>
                                             <div className="pill-row">
                                                 {[...conflict.people, ''].map(person => (

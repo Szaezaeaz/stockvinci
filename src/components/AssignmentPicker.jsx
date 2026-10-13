@@ -5,8 +5,8 @@ import { TRACKED_MODELS } from '../config/trackedModels';
 import { matchesQuery } from '../utils/search';
 import { parseScan } from '../utils/scanParse';
 import {
-    aliasKeyToLearn, conditionOfStockKey, deviceModelLabel, exactModelFromStockKey, isOccasionOnly, kindOfModel,
-    shortModelName, stockKeyOf
+    aliasKeyToLearn, conditionOfStockKey, deviceModelLabel, exactModelFor, exactModelFromStockKey, isOccasionOnly, kindOfModel,
+    modelLabel, modelOf, stockKeyOf
 } from '../utils/models';
 import { useScanCapture } from '../hooks/useScanCapture';
 
@@ -16,14 +16,12 @@ const MAX_STOCK_SHOWN = 30;
 
 const iconOf = (kind) => (kind === 'phone' ? '📱' : '💻');
 
-// Nom affiché d'un appareil de la liste : son modèle précis s'il est suivi, sinon
-// sa ligne de stock.
-const itemLabel = (item) => (item.serial && item.exactModel ? shortModelName(item.exactModel) : item.model);
+// Nom affiché d'un appareil de la liste, puis son n° de série et son état.
+const itemLabel = (item) => deviceModelLabel(item);
 
 function itemDetail(item) {
-    if (!item.serial) return 'sans n° de série';
-    const condition = item.exactModel ? conditionOfStockKey(item.model) : '';
-    return `S/N ${item.serial}${condition ? ` · ${condition}` : ''}`;
+    const condition = conditionOfStockKey(item.model);
+    return `${item.serial ? `S/N ${item.serial}` : 'sans n° de série'}${condition ? ` · ${condition}` : ''}`;
 }
 
 // Matériel à attribuer : un seul champ de scan pour les PC et les téléphones, la
@@ -85,18 +83,21 @@ export default function AssignmentPicker({ devices, stock, items, onItemsChange,
     }, []);
 
     // --- Appareil inconnu : on le crée puis on l'ajoute à la liste ---------------
-    const createUnknown = (exactModel, condition) => {
-        const model = stockKeyOf(exactModel, condition);
+    // chosen : modèle de l'appli choisi (ou reconnu) pour cet appareil.
+    const createUnknown = (chosen, condition) => {
+        const model = stockKeyOf(chosen, condition);
+        const exactModel = exactModelFor(chosen, unknown.model) || undefined;
         onCreateDevice({
             serial: unknown.serial,
             model,
             exactModel,
             modelName: unknown.modelName,
             productId: unknown.productId,
-            learnKey: unknown.modelName && !unknown.model ? aliasKeyToLearn(unknown) : ''
+            learnKey: unknown.modelName && !unknown.model ? aliasKeyToLearn(unknown) : '',
+            learnModel: chosen
         });
-        addItem({ serial: unknown.serial, kind: kindOfModel(exactModel), model, exactModel });
-        setMessage({ ok: true, text: `${unknown.serial} ajouté à la base · ${shortModelName(exactModel)}` });
+        addItem({ serial: unknown.serial, kind: kindOfModel(chosen), model, exactModel });
+        setMessage({ ok: true, text: `${unknown.serial} ajouté à la base · ${modelLabel(chosen)}` });
         setUnknown(null);
         refocus();
     };
@@ -190,7 +191,7 @@ export default function AssignmentPicker({ devices, stock, items, onItemsChange,
                                     <span className="pc-card-serial">{device.serial}</span>
                                     <span className="pc-card-sub">
                                         {iconOf(device.kind)} {deviceModelLabel(device)}
-                                        {device.exactModel && conditionOfStockKey(device.model) ? ` · ${conditionOfStockKey(device.model)}` : ''}
+                                        {conditionOfStockKey(device.model) ? ` · ${conditionOfStockKey(device.model)}` : ''}
                                     </span>
                                 </span>
                                 <span className="pc-card-check">+</span>
@@ -216,7 +217,7 @@ export default function AssignmentPicker({ devices, stock, items, onItemsChange,
 // Fenêtre « appareil absent de la base » : le modèle vient du QR code quand il est
 // reconnu, sinon on le choisit ; puis, pour un PC, son état.
 function UnknownDeviceModal({ unknown, devices, onCreate, onCancel }) {
-    const [model, setModel] = useState(unknown?.model || '');
+    const [model, setModel] = useState(unknown?.model ? modelOf(unknown.model) : '');
 
     if (!unknown) return null;
     const kind = model ? kindOfModel(model) : null;
@@ -249,7 +250,7 @@ function UnknownDeviceModal({ unknown, devices, onCreate, onCancel }) {
                 )}
                 {kind === 'phone' && (
                     <button type="button" className="unknown-yes" onClick={() => onCreate(model, null)}>
-                        Ajouter ce {shortModelName(model)}
+                        Ajouter ce {modelLabel(model)}
                     </button>
                 )}
                 <button type="button" className="unknown-no" onClick={onCancel}>Non</button>

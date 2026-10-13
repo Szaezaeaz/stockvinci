@@ -1,58 +1,90 @@
-import { MODEL_CATALOG, OCCASION_ONLY_LINES } from '../config/modelCatalog';
+import { HOME_LINES, MODEL_CATALOG, OCCASION_ONLY_LINES } from '../config/modelCatalog';
+
+// Deux façons de nommer un appareil :
+//  - son modèle précis, tel que l'inventaire et le QR code le donnent
+//    ("HP EliteBook 660 16 inch G11 Notebook PC") ;
+//  - son modèle dans l'appli, celui qu'on affiche et qu'on compte : la ligne de
+//    l'accueil dont il fait partie ("650 G11", "Zbook", "Samsung XCOVER 7"), ou
+//    son modèle précis quand il n'a pas de ligne à l'accueil.
+// Un EliteBook 660 G11 EST un "650 G11" : même modèle, même stock.
 
 const BY_NAME = new Map(MODEL_CATALOG.map(entry => [entry.name, entry]));
 
+// Lignes de l'accueil : nom -> { kind, group, names: modèles précis qui en font partie }.
+const LINES = new Map();
+for (const entry of MODEL_CATALOG) {
+    if (!entry.line) continue;
+    if (!LINES.has(entry.line)) LINES.set(entry.line, { kind: entry.kind, group: entry.group, names: [] });
+    LINES.get(entry.line).names.push(entry.name);
+}
+
 export const catalogEntry = (name) => BY_NAME.get(name) || null;
+
+// Modèle dans l'appli d'un modèle précis (ou d'un nom qui l'est déjà).
+export const modelOf = (name) => catalogEntry(name)?.line || String(name || '');
+
+// Modèles précis regroupés sous un modèle de l'appli ([] s'il n'est pas une ligne de l'accueil).
+export const exactNamesOf = (model) => LINES.get(model)?.names || [];
+
+// Modèle précis d'un modèle de l'appli quand il n'y en a qu'un possible
+// ("650 G11" -> EliteBook 660 G11, mais pas "Zbook" qui en regroupe plusieurs).
+export function exactModelOf(name) {
+    if (catalogEntry(name)) return name;
+    const names = LINES.get(name)?.names;
+    if (names) return names.length === 1 ? names[0] : null;
+    return name || null;
+}
+
+// Modèle précis à enregistrer pour un appareil du modèle `model` : celui lu dans
+// le QR code ou déjà connu (hint) s'il en fait bien partie, sinon celui du modèle
+// quand il n'y en a qu'un.
+export function exactModelFor(model, hint) {
+    return hint && catalogEntry(hint) && modelOf(hint) === modelOf(model) ? hint : exactModelOf(model);
+}
 
 const looksLikePhone = (name) => /iphone|samsung|galaxy|xcover|pixel|android/i.test(String(name));
 
 // 'pc' ou 'phone'. Un modèle absent du catalogue est classé d'après son nom.
 export function kindOfModel(name) {
-    return catalogEntry(name)?.kind || (looksLikePhone(name) ? 'phone' : 'pc');
+    return catalogEntry(name)?.kind || LINES.get(name)?.kind || (looksLikePhone(name) ? 'phone' : 'pc');
 }
 
 export function groupOfModel(name) {
-    const entry = catalogEntry(name);
-    if (entry) return entry.group;
+    const known = catalogEntry(name) || LINES.get(name);
+    if (known) return known.group;
     if (!looksLikePhone(name)) return 'PC';
     return /iphone/i.test(name) ? 'iPhone' : 'Android';
 }
 
 // Les PC de ces modèles n'existent qu'en Occasion dans le stock.
-export const isOccasionOnly = (name) => OCCASION_ONLY_LINES.has(catalogEntry(name)?.line);
+export const isOccasionOnly = (name) => OCCASION_ONLY_LINES.has(modelOf(name));
 
 // Ligne de stock qui compte un appareil de ce modèle. Un PC se range en Neuf ou
 // en Occasion ; un téléphone n'a qu'une ligne.
 export function stockKeyOf(name, condition) {
-    const entry = catalogEntry(name);
-    if (kindOfModel(name) === 'phone') return entry?.line || name;
-    const suffix = condition === 'Occasion' || isOccasionOnly(name) ? 'Occasion' : 'Neuf';
-    return `${entry?.line || name} ${suffix}`;
+    const model = modelOf(name);
+    if (kindOfModel(name) === 'phone') return model;
+    return `${model} ${condition === 'Occasion' || isOccasionOnly(name) ? 'Occasion' : 'Neuf'}`;
 }
 
 // "650 G11 Occasion" -> "Occasion" ; '' pour une ligne sans état (téléphones).
 export const conditionOfStockKey = (stockKey) => String(stockKey || '').match(/ (Neuf|Occasion)$/)?.[1] || '';
 
-// Nom à afficher pour une ligne de stock : les lignes de l'accueil gardent leur
-// nom ("650 G11 Occasion"), celles d'un modèle précis sont raccourcies.
-export function stockKeyLabel(stockKey) {
-    const condition = conditionOfStockKey(stockKey);
-    const base = condition ? stockKey.slice(0, -condition.length - 1) : String(stockKey || '');
-    return BY_NAME.has(base) ? shortModelName(base) + (condition ? ` ${condition}` : '') : String(stockKey || '');
-}
+// "650 G11 Occasion" -> "650 G11" : le modèle d'une ligne de stock.
+export const baseOfStockKey = (stockKey) => String(stockKey || '').replace(/ (Neuf|Occasion)$/, '');
 
 // Modèle exact correspondant à une ligne de stock, quand il n'y en a qu'un
 // possible (ex. "650 G11 Neuf" -> EliteBook 660 G11, mais pas "Zbook Occasion").
 export function exactModelFromStockKey(stockKey) {
     const key = String(stockKey || '');
-    const base = key.replace(/ (Neuf|Occasion)$/, '');
+    const base = baseOfStockKey(key);
     if (BY_NAME.has(key)) return key;
     if (BY_NAME.has(base)) return base;
-    const matches = MODEL_CATALOG.filter(entry => entry.line && (entry.line === key || entry.line === base));
-    return matches.length === 1 ? matches[0].name : null;
+    const names = LINES.get(key)?.names || LINES.get(base)?.names || [];
+    return names.length === 1 ? names[0] : null;
 }
 
-// Nom plus court pour l'affichage : sans la marque ni les mentions génériques,
+// Nom plus court d'un modèle précis : sans la marque ni les mentions génériques,
 // la taille d'écran en pouces (16").
 export function shortModelName(name) {
     return String(name || '')
@@ -63,19 +95,34 @@ export function shortModelName(name) {
         .replace(/^Samsung Galaxy /, 'Galaxy ');
 }
 
-// Nom à afficher pour un appareil : son modèle exact s'il est connu, sinon sa
-// ligne de stock.
-export const deviceModelLabel = (device) => shortModelName(device?.exactModel || device?.model || '');
+// Nom à afficher pour un modèle : celui de l'appli ("650 G11"), ou le nom précis
+// raccourci quand il n'a pas de ligne à l'accueil.
+export function modelLabel(name) {
+    const model = modelOf(name);
+    return LINES.has(model) ? model : shortModelName(model);
+}
 
-// Tous les modèles proposables : le catalogue, plus ceux rencontrés dans la base
-// (un import peut en apporter de nouveaux).
-export function listModels(devices) {
-    const names = MODEL_CATALOG.map(entry => entry.name);
+// Nom à afficher pour une ligne de stock ("650 G11 Occasion").
+export function stockKeyLabel(stockKey) {
+    const condition = conditionOfStockKey(stockKey);
+    const base = baseOfStockKey(stockKey);
+    return BY_NAME.has(base) && !LINES.has(base) ? shortModelName(base) + (condition ? ` ${condition}` : '') : String(stockKey || '');
+}
+
+// Nom à afficher pour un appareil (sans son état Neuf / Occasion).
+export const deviceModelLabel = (device) => modelLabel(device?.exactModel || baseOfStockKey(device?.model));
+
+// Tous les modèles proposables dans une liste de choix : les lignes de l'accueil
+// d'abord, puis les autres modèles du catalogue, plus ceux rencontrés dans la
+// base (un import peut en apporter de nouveaux).
+export function listModelChoices(devices) {
+    const names = [...HOME_LINES.filter(line => LINES.has(line)), ...MODEL_CATALOG.filter(entry => !entry.line).map(entry => entry.name)];
     const seen = new Set(names);
     Object.values(devices || {}).forEach(device => {
-        if (device.exactModel && !seen.has(device.exactModel)) {
-            seen.add(device.exactModel);
-            names.push(device.exactModel);
+        const model = modelOf(device.exactModel);
+        if (model && !seen.has(model)) {
+            seen.add(model);
+            names.push(model);
         }
     });
     return names;
@@ -132,8 +179,9 @@ export const setLearnedAliases = (aliases) => { learnedAliases = aliases || {}; 
 
 const productKey = (productId) => (normalize(productId) ? `#${normalize(productId)}` : '');
 
-// Retourne { model, candidates } : `model` est le modèle exact s'il est reconnu
-// sans ambiguïté ; sinon null, avec les modèles possibles dans `candidates`.
+// Retourne { model, candidates } : `model` est le modèle reconnu sans ambiguïté
+// (son nom précis, ou le modèle de l'appli retenu à la main pour ce QR code) ;
+// sinon null, avec les modèles précis possibles dans `candidates`.
 export function matchModelName(rawName, productId = '') {
     const byProduct = learnedAliases[productKey(productId)];
     if (byProduct) return { model: byProduct, candidates: [byProduct] };
