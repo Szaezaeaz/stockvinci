@@ -2,6 +2,7 @@ import React, { useMemo, useState } from 'react';
 import { matchesQuery } from '../utils/search';
 import { getLoanSerials } from '../utils/loans';
 import { deviceFullName } from '../utils/models';
+import { nameKey } from '../utils/person';
 import LoanChips from './LoanChips';
 
 // Avec tout le parc importé, il y a plus de mille personnes : on n'en affiche
@@ -9,7 +10,6 @@ import LoanChips from './LoanChips';
 const PAGE_SIZE = 40;
 
 const dateOf = (value) => (value ? new Date(value).toLocaleDateString() : '');
-const nameKey = (name) => String(name || '').trim().toLowerCase();
 
 // Regroupe par personne : ses fiches de matériel (loans : celles à afficher) et
 // les appareils attribués qui ne figurent dans aucune fiche (allLoans).

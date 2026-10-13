@@ -7,6 +7,8 @@ import AssignedTab from './components/AssignedTab';
 import BottomNav from './components/BottomNav';
 import { useInventory } from './hooks/useInventory';
 import { getStockStats } from './utils/stockStats';
+import { PeopleContext } from './utils/PeopleContext';
+import { listPeople } from './utils/person';
 
 import AlertBanner from './components/AlertBanner';
 import SyncStatus from './components/SyncStatus';
@@ -18,6 +20,8 @@ function App() {
         syncStatus, syncNotice, submitPasscode, dismissSyncNotice, syncNow, syncChoice, resolveSyncChoice } = useInventory();
   const [activeTab, setActiveTab] = useState('stock'); // 'stock' | 'assigned' | 'history'
   const { totalUnits } = useMemo(() => getStockStats(stock), [stock]);
+  // Personnes connues, proposées pendant la saisie d'un nom.
+  const people = useMemo(() => listPeople(loans, devices), [loans, devices]);
 
   // Un scan hors d'un champ de saisie est confié à l'onglet affiché :
   // Stock -> fiche du PC ou ajout ; Attribué -> formulaire d'attribution ou recherche.
@@ -29,6 +33,7 @@ function App() {
   });
 
   return (
+    <PeopleContext.Provider value={people}>
     <Layout
       totalUnits={totalUnits}
       headerExtra={(
@@ -84,6 +89,7 @@ function App() {
 
       <BottomNav activeTab={activeTab} onChange={setActiveTab} />
     </Layout>
+    </PeopleContext.Provider>
   );
 }
 

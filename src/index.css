@@ -2521,3 +2521,42 @@ input[type="checkbox"]:focus {
   width: 100%;
   min-width: 0;
 }
+
+/* Personnes connues proposées pendant la saisie du nom */
+.name-suggestions {
+  list-style: none;
+  margin: 6px 0 0;
+  padding: 0;
+  border: 1px solid var(--accent-gray);
+  border-radius: 12px;
+  background: #fff;
+  overflow: hidden;
+}
+
+.name-suggestions li + li {
+  border-top: 1px solid #f1f5f9;
+}
+
+.name-suggestion {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  width: 100%;
+  padding: 10px 14px;
+  border: none;
+  background: #fff;
+  color: #0f172a;
+  font-family: inherit;
+  font-size: 0.95rem;
+  font-weight: 600;
+  text-align: left;
+  cursor: pointer;
+}
+
+.name-suggestion small {
+  flex-shrink: 0;
+  color: #94a3b8;
+  font-size: 0.75rem;
+  font-weight: 500;
+}

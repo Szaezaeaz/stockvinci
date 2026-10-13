@@ -4,9 +4,10 @@ import { getLowStockThreshold } from '../config/thresholds';
 import { PHONE_CASE_INFO } from '../config/phoneAccessories';
 import { normalizeSerial } from '../utils/serial';
 import { getLoanSerials } from '../utils/loans';
+import { canonicalName, nameIndex, nameKey } from '../utils/person';
 import {
     baseOfStockKey, exactModelFor, exactModelFromStockKey, exactModelOf, kindOfModel, matchModelName, setLearnedAliases,
-    stockKeyLabel, stockKeyOf
+    stockKeyLabel, stockKeyOf, toOccasionKey
 } from '../utils/models';
 import { applyUndoPatch, diffState } from '../utils/undo';
 import { fetchCloud, pushCloud, getPasscode, savePasscode, loadSyncMeta, saveSyncMeta } from '../services/cloudSync';
@@ -491,8 +492,9 @@ export function useInventory() {
     // pcs / phones : [{ model, serial }] — chaque appareil peut porter son n° de série
     // (vide pour du stock ancien non suivi). Les appareils suivis passent "attribués"
     // à la personne.
-    const addLoan = (name, { pcs = [], phones = [], accessories = DEFAULT_LOAN_ACCESSORIES } = {}) => {
+    const addLoan = (typedName, { pcs = [], phones = [], accessories = DEFAULT_LOAN_ACCESSORIES } = {}) => {
         setData(prev => {
+            const name = canonicalName(typedName, nameIndex(prev.loans, prev.devices));
             const stockUpdates = {};
             // On crée UNE seule entrée d'historique pour toute l'attribution.
             const loanedItems = []; // noms de stock (utilisés pour le retour en stock)
@@ -607,8 +609,9 @@ export function useInventory() {
         });
     };
 
-    const addWithdrawal = (recipient, type, items) => {
+    const addWithdrawal = (typedRecipient, type, items) => {
         setData(prev => {
+            const recipient = canonicalName(typedRecipient, nameIndex(prev.loans, prev.devices));
             const stockUpdates = {};
             const withdrawnItemsList = [];
             const newDate = new Date();
@@ -726,6 +729,8 @@ export function useInventory() {
                 }
                 // Entrées créées avant le découpage / renommage des chargeurs : on les remet dans la bonne catégorie.
                 id = LEGACY_KEY_MIGRATIONS[id] || id;
+                // Un PC rendu a servi : il rejoint le stock Occasion, même attribué en Neuf.
+                id = toOccasionKey(id);
                 stockUpdates[id] = (stockUpdates[id] || 0) + count;
             });
 
@@ -742,6 +747,7 @@ export function useInventory() {
                 if (!devices[serial]) return;
                 devices[serial] = {
                     ...devices[serial],
+                    model: toOccasionKey(devices[serial].model),
                     status: 'stock',
                     holder: null,
                     events: [{ date: returnedDate, action: 'Retour', person: loan.name || loan.recipient }, ...(devices[serial].events || [])].slice(0, 20)
@@ -754,7 +760,7 @@ export function useInventory() {
                 category: 'Retour matériel',
                 delta: 1,
                 recipient: loan.recipient,
-                details: loan.items.map(stockKeyLabel),
+                details: loan.items.map(item => stockKeyLabel(toOccasionKey(item))),
                 date: returnedDate
             };
 
@@ -772,8 +778,9 @@ export function useInventory() {
     // Occasion de son modèle, le téléphone son stock, plus les accessoires.
     // Les numéros de série saisis alimentent le registre `devices`.
     // pcModel / phoneModel : lignes de stock ; pcExactModel / phoneExactModel : modèles précis.
-    const returnFromEmployee = (name, { pcModel, pcExactModel, pcSerial, phoneModel, phoneExactModel, phoneSerial, phoneCase, accessories = {} }) => {
+    const returnFromEmployee = (typedName, { pcModel, pcExactModel, pcSerial, phoneModel, phoneExactModel, phoneSerial, phoneCase, accessories = {} }) => {
         setData(prev => {
+            const name = canonicalName(typedName, nameIndex(prev.loans, prev.devices));
             const stockUpdates = {};
             const details = [];
             const devices = { ...(prev.devices || {}) };
@@ -918,12 +925,13 @@ export function useInventory() {
             const stock = { ...prev.stock };
             const date = new Date();
             const byPerson = new Map();
+            const known = nameIndex(prev.loans, prev.devices);
             let inStock = 0;
 
             for (const row of rows) {
                 const serial = normalizeSerial(row.serial);
                 if (!serial || !row.model || devices[serial]) continue;
-                const person = String(row.person || '').trim() || null;
+                const person = String(row.person || '').trim() ? canonicalName(row.person, known) : null;
                 const model = stockKeyOf(row.model, 'Occasion');
                 devices[serial] = {
                     serial,
@@ -935,7 +943,7 @@ export function useInventory() {
                     events: [{ date, action: 'Import', person }]
                 };
                 if (person) {
-                    const key = person.toLowerCase();
+                    const key = nameKey(person);
                     if (!byPerson.has(key)) byPerson.set(key, { name: person, items: [], serials: [] });
                     byPerson.get(key).items.push(model);
                     byPerson.get(key).serials.push(serial);
@@ -1064,13 +1072,15 @@ export function useInventory() {
             const device = prev.devices?.[serial];
             if (!device || device.status !== 'assigned') return prev;
             const date = new Date();
+            const backTo = toOccasionKey(device.model); // un PC rendu a servi : stock Occasion
             return {
                 ...prev,
-                stock: { ...prev.stock, [device.model]: (prev.stock[device.model] || 0) + 1 },
+                stock: { ...prev.stock, [backTo]: (prev.stock[backTo] || 0) + 1 },
                 devices: {
                     ...prev.devices,
                     [serial]: {
                         ...device,
+                        model: backTo,
                         status: 'stock',
                         holder: null,
                         events: [{ date, action: 'Retour', person: device.holder }, ...(device.events || [])].slice(0, 20)
@@ -1082,7 +1092,7 @@ export function useInventory() {
                     category: 'Retour matériel',
                     delta: 1,
                     recipient: device.holder,
-                    details: [`${stockKeyLabel(device.model)} (S/N ${serial})`],
+                    details: [`${stockKeyLabel(backTo)} (S/N ${serial})`],
                     date
                 }, ...prev.history].slice(0, 50)
             };

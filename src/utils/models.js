@@ -73,6 +73,9 @@ export const conditionOfStockKey = (stockKey) => String(stockKey || '').match(/ 
 // "G11 Occasion" -> "G11" : le modèle d'une ligne de stock.
 export const baseOfStockKey = (stockKey) => String(stockKey || '').replace(/ (Neuf|Occasion)$/, '');
 
+// Un PC rendu par un collaborateur a servi : il rejoint le stock Occasion.
+export const toOccasionKey = (stockKey) => String(stockKey || '').replace(/ Neuf$/, ' Occasion');
+
 // Modèle exact correspondant à une ligne de stock, quand il n'y en a qu'un
 // possible (ex. "G11 Neuf" -> HP EliteBook 660 16 inch G11, mais pas "Zbook Occasion").
 export function exactModelFromStockKey(stockKey) {

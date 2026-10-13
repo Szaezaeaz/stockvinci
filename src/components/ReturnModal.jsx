@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import Modal from './Modal';
 import EmployeeReturnForm from './EmployeeReturnForm';
 import { stockKeyLabel } from '../utils/models';
+import { matchesQuery } from '../utils/search';
 
 const MAX_LOANS_SHOWN = 30;
 
@@ -18,9 +19,7 @@ export default function ReturnModal({
 
     // Avec tout le parc, la liste peut dépasser mille personnes : on n'affiche que
     // les premières, la recherche sert à trouver les autres.
-    const matchingLoans = loans.filter(loan =>
-        (loan.recipient || loan.name || '').toLowerCase().includes(searchQuery.toLowerCase())
-    );
+    const matchingLoans = loans.filter(loan => matchesQuery(searchQuery, [loan.recipient || loan.name || '']));
     const filteredLoans = matchingLoans.slice(0, MAX_LOANS_SHOWN);
 
     return (
