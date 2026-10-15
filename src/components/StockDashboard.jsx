@@ -1,7 +1,6 @@
 import React, { useImperativeHandle, useMemo, useState } from 'react';
 import { parseScan } from '../utils/scanParse';
 import GlobalWithdrawModal from './GlobalWithdrawModal';
-import ReturnModal from './ReturnModal';
 import AddMaterielModal from './AddMaterielModal';
 import DeviceListModal from './DeviceListModal';
 import { TRACKED_MODELS } from '../config/trackedModels';
@@ -93,16 +92,14 @@ export default function StockDashboard({
     stock,
     onWithdraw,
     onAddStock,
-    loans,
     devices,
-    onReturn,
+    onOpenReturn,
     onReceiveDevices,
     onRemoveUntracked,
     onDeleteDevice,
     ref
 }) {
     const [isWithdrawModalOpen, setIsWithdrawModalOpen] = useState(false);
-    const [isReturnModalOpen, setIsReturnModalOpen] = useState(false);
     const [isAddModalOpen, setIsAddModalOpen] = useState(false);
     const [query, setQuery] = useState('');
     const [deviceModel, setDeviceModel] = useState(null); // modèle dont on consulte les n° de série
@@ -151,14 +148,6 @@ export default function StockDashboard({
                 onConfirm={onWithdraw}
             />
 
-            <ReturnModal
-                isOpen={isReturnModalOpen}
-                onClose={() => setIsReturnModalOpen(false)}
-                loans={loans}
-                devices={devices}
-                onReturn={onReturn}
-            />
-
             <AddMaterielModal
                 key={scanForAdd ? scanForAdd.key : 'manual'}
                 isOpen={isAddModalOpen}
@@ -182,7 +171,7 @@ export default function StockDashboard({
             />
 
             <div className="action-buttons-row">
-                <button type="button" className="action-pill" onClick={() => setIsReturnModalOpen(true)}>
+                <button type="button" className="action-pill" onClick={() => onOpenReturn()}>
                     <span className="action-pill-icon">↩</span> Retour
                 </button>
                 <button type="button" className="action-pill" onClick={() => setIsWithdrawModalOpen(true)}>

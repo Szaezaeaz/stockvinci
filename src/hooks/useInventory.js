@@ -711,69 +711,6 @@ export function useInventory() {
         });
     };
 
-    const returnLoan = (loanId) => {
-        setData(prev => {
-            const loan = prev.loans.find(l => l.id === loanId);
-            if (!loan) return prev;
-
-            const stockUpdates = {};
-            // Parse items from "Souris (x2)" or "Casque" strings
-            loan.items.forEach(itemStr => {
-                let id = itemStr;
-                let count = 1;
-                // Check for (xN) pattern
-                const match = itemStr.match(/(.+) \(x(\d+)\)/);
-                if (match) {
-                    id = match[1];
-                    count = parseInt(match[2], 10);
-                }
-                // Entrées créées avant le découpage / renommage des chargeurs : on les remet dans la bonne catégorie.
-                id = LEGACY_KEY_MIGRATIONS[id] || id;
-                // Un PC rendu a servi : il rejoint le stock Occasion, même attribué en Neuf.
-                id = toOccasionKey(id);
-                stockUpdates[id] = (stockUpdates[id] || 0) + count;
-            });
-
-            // Update Stock
-            const newStock = { ...prev.stock };
-            for (const [id, count] of Object.entries(stockUpdates)) {
-                newStock[id] = (newStock[id] || 0) + count;
-            }
-
-            // Les appareils attribués (PC, téléphone) retournent "en stock".
-            const devices = { ...(prev.devices || {}) };
-            const returnedDate = new Date();
-            getLoanSerials(loan).forEach(serial => {
-                if (!devices[serial]) return;
-                devices[serial] = {
-                    ...devices[serial],
-                    model: toOccasionKey(devices[serial].model),
-                    status: 'stock',
-                    holder: null,
-                    events: [{ date: returnedDate, action: 'Retour', person: loan.name || loan.recipient }, ...(devices[serial].events || [])].slice(0, 20)
-                };
-            });
-
-            // History Log
-            const historyEntry = {
-                id: Date.now(),
-                category: 'Retour matériel',
-                delta: 1,
-                recipient: loan.recipient,
-                details: loan.items.map(item => stockKeyLabel(toOccasionKey(item))),
-                date: returnedDate
-            };
-
-            return {
-                ...prev,
-                stock: newStock,
-                devices,
-                history: [historyEntry, ...prev.history].slice(0, 50),
-                loans: prev.loans.filter(l => l.id !== loanId) // Remove from active loans
-            };
-        });
-    };
-
     // Retour de matériel par une personne (départ, changement de PC...) : chaque appareil
     // rendu rejoint le stock (un PC toujours en Occasion), le matériel secondaire aussi.
     // returned : [{ serial, kind }] pour un appareil connu de l'appli ; un appareil
@@ -1068,40 +1005,6 @@ export function useInventory() {
         }));
     };
 
-    // Un appareil attribué revient en stock, seul (le reste de l'attribution de la
-    // personne ne change pas).
-    const returnAssignedDevice = (serial) => {
-        setData(prev => {
-            const device = prev.devices?.[serial];
-            if (!device || device.status !== 'assigned') return prev;
-            const date = new Date();
-            const backTo = toOccasionKey(device.model); // un PC rendu a servi : stock Occasion
-            return {
-                ...prev,
-                stock: { ...prev.stock, [backTo]: (prev.stock[backTo] || 0) + 1 },
-                devices: {
-                    ...prev.devices,
-                    [serial]: {
-                        ...device,
-                        model: backTo,
-                        status: 'stock',
-                        holder: null,
-                        events: [{ date, action: 'Retour', person: device.holder }, ...(device.events || [])].slice(0, 20)
-                    }
-                },
-                loans: detachFromLoans(prev.loans, serial, device.model),
-                history: [{
-                    id: Date.now(),
-                    category: 'Retour matériel',
-                    delta: 1,
-                    recipient: device.holder,
-                    details: [`${stockKeyLabel(backTo)} (S/N ${serial})`],
-                    date
-                }, ...prev.history].slice(0, 50)
-            };
-        });
-    };
-
     return {
         stock: data.stock,
         history: data.history,
@@ -1118,8 +1021,6 @@ export function useInventory() {
         handOverLoan,
         undoStack,
         rollbackTo,
-        returnAssignedDevice,
-        returnLoan,
         syncStatus,
         syncNotice,
         submitPasscode,

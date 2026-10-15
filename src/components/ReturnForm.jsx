@@ -5,7 +5,7 @@ import { PHONE_CASE_INFO } from '../config/phoneAccessories';
 import { RETURN_ITEMS } from '../config/secondaryItems';
 import { useScanCapture } from '../hooks/useScanCapture';
 import { parseScan } from '../utils/scanParse';
-import { fullName, nameKey } from '../utils/person';
+import { fullName, nameKey, splitName } from '../utils/person';
 import {
     aliasKeyToLearn, conditionOfStockKey, deviceFullName, exactModelFor, kindOfModel, modelLabel, modelOf, stockKeyOf
 } from '../utils/models';
@@ -110,16 +110,40 @@ function ReturnSection({ kind, isOpen, onToggle, listed, isPicked, onPick, added
 
 const NO_CHOICES = { picked: {}, items: {}, open: {}, phoneCase: null };
 
+// Ouvert depuis une attribution ("Matériel rendu" de l'onglet Attribué) : on ne coche que
+// ce qu'elle contient, car la personne peut avoir d'autres attributions qui restent chez elle.
+function initialChoices(personKey, devices, preselect) {
+    if (!personKey || !preselect) return { key: '', ...NO_CHOICES };
+    const serials = new Set(preselect.serials || []);
+    const items = preselect.items || [];
+    const picked = {};
+    for (const device of Object.values(devices || {})) {
+        if (device.status === 'assigned' && nameKey(device.holder) === personKey) picked[device.serial] = serials.has(device.serial);
+    }
+    return {
+        key: personKey,
+        open: {},
+        picked,
+        items: Object.fromEntries(RETURN_ITEMS.map(item => [item.id, items.includes(item.id)])),
+        phoneCase: items.some(item => /^(Coque|Vitre)/.test(item))
+    };
+}
+
 // Retour de matériel : on indique la personne, ce qui lui est attribué apparaît
 // déjà coché (on décoche ce qu'elle garde), puis le matériel secondaire. Si la
 // personne ou l'appareil n'existe pas encore dans l'appli (ou n'est pas attribué à
 // cette personne), on le scanne : il entre en stock (Occasion pour un PC).
-export default function ReturnForm({ devices, loans, onSubmit, onDone }) {
-    const [lastName, setLastName] = useState('');
-    const [firstName, setFirstName] = useState('');
+// initialName : "NOM Prénom" à préremplir ; preselect : { serials, items } à cocher d'office
+// (sinon tout ce que la personne a est coché).
+export default function ReturnForm({ devices, loans, onSubmit, onDone, initialName = '', preselect = null }) {
+    const [lastName, setLastName] = useState(() => splitName(initialName).last);
+    const [firstName, setFirstName] = useState(() => splitName(initialName).first);
     // Choix modifiés à la main pour la personne saisie (un autre nom les écarte). Ce qui
     // n'est pas modifié suit ce que la personne a déjà : tout est coché d'office.
-    const [choices, setChoices] = useState({ key: '', ...NO_CHOICES });
+    const [choices, setChoices] = useState(() => {
+        const { last, first } = splitName(initialName);
+        return initialChoices(last && first ? nameKey(fullName(last, first)) : '', devices, preselect);
+    });
     const [extras, setExtras] = useState([]); // appareils scannés en plus
     const [scanValues, setScanValues] = useState({ pc: '', phone: '' });
     const [messages, setMessages] = useState({ pc: null, phone: null });

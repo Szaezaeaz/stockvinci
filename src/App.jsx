@@ -13,12 +13,16 @@ import { listPeople } from './utils/person';
 import AlertBanner from './components/AlertBanner';
 import SyncStatus from './components/SyncStatus';
 import RollbackButton from './components/RollbackButton';
+import ReturnModal from './components/ReturnModal';
 
 function App() {
-  const { stock, history, loans, addLoan, handOverLoan, returnAssignedDevice, addWithdrawal, addStock, returnLoan,
+  const { stock, history, loans, addLoan, handOverLoan, addWithdrawal, addStock,
         devices, returnEquipment, receiveDevices, importInventory, removeUntrackedStock, deleteDevice, undoStack, rollbackTo,
         syncStatus, syncNotice, submitPasscode, dismissSyncNotice, syncNow, syncChoice, resolveSyncChoice } = useInventory();
   const [activeTab, setActiveTab] = useState('stock'); // 'stock' | 'assigned' | 'history'
+  // Fenêtre "Retour matériel" : null = fermée ; sinon { name, serials, items } à préremplir.
+  const [returnRequest, setReturnRequest] = useState(null);
+  const openReturn = (prefill = {}) => setReturnRequest(prefill);
   const { totalUnits } = useMemo(() => getStockStats(stock), [stock]);
   // Personnes connues, proposées pendant la saisie d'un nom.
   const people = useMemo(() => listPeople(loans, devices), [loans, devices]);
@@ -59,9 +63,8 @@ function App() {
             stock={stock}
             onWithdraw={addWithdrawal}
             onAddStock={addStock}
-            loans={loans}
             devices={devices}
-            onReturn={returnEquipment}
+            onOpenReturn={openReturn}
             onReceiveDevices={receiveDevices}
             onRemoveUntracked={removeUntrackedStock}
             onDeleteDevice={deleteDevice}
@@ -75,8 +78,7 @@ function App() {
             stock={stock}
             onAdd={addLoan}
             onHandOver={handOverLoan}
-            onReturnLoan={returnLoan}
-            onReturnDevice={returnAssignedDevice}
+            onOpenReturn={openReturn}
             onReceiveDevices={receiveDevices}
             onImport={importInventory}
           />
@@ -85,6 +87,15 @@ function App() {
           <HistoryLog history={history} />
         )}
       </div>
+
+      <ReturnModal
+        isOpen={returnRequest !== null}
+        onClose={() => setReturnRequest(null)}
+        devices={devices}
+        loans={loans}
+        onReturn={returnEquipment}
+        prefill={returnRequest}
+      />
 
       <BottomNav activeTab={activeTab} onChange={setActiveTab} />
     </Layout>

@@ -45,7 +45,7 @@ function searchTexts(person, devices) {
 // Volet "Remis" (ou "Tout") de l'onglet Attribué : qui a quoi, une carte par
 // personne. scope 'given' = matériel déjà remis ; 'all' = aussi celui à remettre.
 // La recherche (query) est celle de l'onglet.
-export default function AssignedMaterial({ loans, devices, onReturnLoan, onReturnDevice, query = '', scope = 'given' }) {
+export default function AssignedMaterial({ loans, devices, onOpenReturn, query = '', scope = 'given' }) {
     const [limit, setLimit] = useState(PAGE_SIZE);
     const everyone = useMemo(
         () => groupByPerson(scope === 'all' ? loans : loans.filter(loan => loan.pickedUpAt), loans, devices),
@@ -57,16 +57,13 @@ export default function AssignedMaterial({ loans, devices, onReturnLoan, onRetur
     );
     const shown = visible.slice(0, limit);
 
+    // "Matériel rendu" ouvre la fenêtre Retour, avec la personne et le matériel de cette attribution.
     const handleReturnLoan = (person, loan) => {
-        if (window.confirm(`${person.name} rend tout ce matériel ? Il retournera en stock.`)) {
-            onReturnLoan(loan.id);
-        }
+        onOpenReturn({ name: person.name, serials: getLoanSerials(loan), items: loan.items || [] });
     };
 
-    const handleReturnDevice = (device) => {
-        if (window.confirm(`Remettre ${device.serial} (${deviceFullName(device)}) en stock ?`)) {
-            onReturnDevice(device.serial);
-        }
+    const handleReturnDevice = (person, device) => {
+        onOpenReturn({ name: person.name, serials: [device.serial], items: [] });
     };
 
     return (
@@ -113,8 +110,8 @@ export default function AssignedMaterial({ loans, devices, onReturnLoan, onRetur
                                 <span className="assignment-badge assignment-badge-given">
                                     Attribué le {dateOf(device.events?.[0]?.date)}
                                 </span>
-                                <button type="button" className="assignment-return" onClick={() => handleReturnDevice(device)}>
-                                    Remettre en stock
+                                <button type="button" className="assignment-return" onClick={() => handleReturnDevice(person, device)}>
+                                    Matériel rendu
                                 </button>
                             </div>
                             <div className="assignment-items">
