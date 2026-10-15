@@ -94,9 +94,8 @@ export default function StockDashboard({
     onWithdraw,
     onAddStock,
     loans,
-    onReturnLoan,
     devices,
-    onEmployeeReturn,
+    onReturn,
     onReceiveDevices,
     onRemoveUntracked,
     onDeleteDevice,
@@ -156,9 +155,8 @@ export default function StockDashboard({
                 isOpen={isReturnModalOpen}
                 onClose={() => setIsReturnModalOpen(false)}
                 loans={loans}
-                onReturnLoan={onReturnLoan}
                 devices={devices}
-                onEmployeeReturn={onEmployeeReturn}
+                onReturn={onReturn}
             />
 
             <AddMaterielModal
@@ -185,7 +183,7 @@ export default function StockDashboard({
 
             <div className="action-buttons-row">
                 <button type="button" className="action-pill" onClick={() => setIsReturnModalOpen(true)}>
-                    <span className="action-pill-icon">↓</span> Entrée
+                    <span className="action-pill-icon">↩</span> Retour
                 </button>
                 <button type="button" className="action-pill" onClick={() => setIsWithdrawModalOpen(true)}>
                     <span className="action-pill-icon">↑</span> Sortie

@@ -107,18 +107,6 @@ const DEFAULT_LOAN_ACCESSORIES = {
     phoneCase: true, phoneScreen: true
 };
 
-// Accessoires récupérables avec un collaborateur : case à cocher -> article de stock.
-const RETURN_ACCESSORY_ITEMS = {
-    mouse: 'Souris',
-    charger: 'Chargeur USB-C',
-    headset: 'Casque',
-    bag: 'Sacoche',
-    backpack: 'Sac à Dos',
-    screen: 'Écran',
-    dock: 'Dock',
-    keyboard: 'Clavier'
-};
-
 function migrateLegacyStock(stock) {
     const migrated = { ...stock };
     for (const [legacyKey, newKey] of Object.entries(LEGACY_KEY_MIGRATIONS)) {
@@ -165,6 +153,18 @@ function detachFromLoans(loans, serial, stockKey) {
         if (items.length > 0 || remaining.length > 0) next.push({ ...loan, items, serials: remaining });
     }
     return next;
+}
+
+// Retire un article secondaire (ex. "Souris") de l'attribution d'une personne. Une
+// attribution qui n'a plus rien disparaît.
+function removeItemFromLoans(loans, personKey, item) {
+    const index = loans.findIndex(loan => nameKey(loan.name || loan.recipient) === personKey && (loan.items || []).includes(item));
+    if (index === -1) return loans;
+    const loan = loans[index];
+    const items = [...loan.items];
+    items.splice(items.indexOf(item), 1);
+    if (items.length === 0 && getLoanSerials(loan).length === 0) return loans.filter((_, i) => i !== index);
+    return loans.map((other, i) => (i === index ? { ...loan, items } : other));
 }
 
 function normalizeData(parsed) {
@@ -774,60 +774,62 @@ export function useInventory() {
         });
     };
 
-    // Retour d'un collaborateur (départ CDI/CDD...) : le PC rejoint le stock
-    // Occasion de son modèle, le téléphone son stock, plus les accessoires.
-    // Les numéros de série saisis alimentent le registre `devices`.
-    // pcModel / phoneModel : lignes de stock ; pcExactModel / phoneExactModel : modèles précis.
-    const returnFromEmployee = (typedName, { pcModel, pcExactModel, pcSerial, phoneModel, phoneExactModel, phoneSerial, phoneCase, accessories = {} }) => {
+    // Retour de matériel par une personne (départ, changement de PC...) : chaque appareil
+    // rendu rejoint le stock (un PC toujours en Occasion), le matériel secondaire aussi.
+    // returned : [{ serial, kind }] pour un appareil connu de l'appli ; un appareil
+    // inconnu porte en plus { model (ligne de stock), exactModel?, modelName?, productId?,
+    // learnKey?, learnModel? } et crée sa fiche. items : articles secondaires rendus ;
+    // phoneCase : coque et vitre des téléphones rendus. Ce qui est rendu quitte
+    // l'attribution de la personne ; le reste de son matériel ne change pas.
+    const returnEquipment = (typedName, { returned = [], items = [], phoneCase = false }) => {
         setData(prev => {
             const name = canonicalName(typedName, nameIndex(prev.loans, prev.devices));
+            const personKey = nameKey(name);
             const stockUpdates = {};
             const details = [];
             const devices = { ...(prev.devices || {}) };
             let loans = prev.loans;
+            let modelAliases = prev.modelAliases || {};
             const date = new Date();
 
             const add = (item) => { stockUpdates[item] = (stockUpdates[item] || 0) + 1; };
-            // Appareil rendu : il rejoint la ligne de stock `model`. Avec un n° de série,
-            // sa fiche passe "en stock" et il quitte l'attribution qui le mentionnait.
-            const giveBack = (rawSerial, kind, model, exactModel) => {
-                const serial = normalizeSerial(rawSerial);
-                const known = serial ? devices[serial] : null;
-                if (known?.status === 'stock') {
-                    // déjà compté dans le stock : il change seulement de ligne si besoin
-                    stockUpdates[known.model] = (stockUpdates[known.model] || 0) - 1;
-                }
+            const giveBackItem = (item) => {
+                add(item);
+                details.push(item);
+                loans = removeItemFromLoans(loans, personKey, item);
+            };
+
+            for (const entry of returned) {
+                const serial = normalizeSerial(entry.serial);
+                if (!serial) continue;
+                const known = devices[serial];
+                if (known?.status === 'stock') continue; // déjà en stock : rien à rendre
+                const model = toOccasionKey(known ? known.model : entry.model);
+                if (!model) continue;
+                const kind = known?.kind || entry.kind;
+
                 add(model);
-                if (!serial) return stockKeyLabel(model);
-                if (known?.status === 'assigned') loans = detachFromLoans(loans, serial, known.model);
-                const resolved = exactModelFor(baseOfStockKey(model), exactModel || known?.exactModel);
+                if (known) loans = detachFromLoans(loans, serial, known.model);
+                if (entry.learnKey && entry.learnModel && modelAliases[entry.learnKey] !== entry.learnModel) {
+                    modelAliases = { ...modelAliases, [entry.learnKey]: entry.learnModel };
+                }
+                const exactModel = exactModelFor(baseOfStockKey(model), entry.exactModel || known?.exactModel);
                 devices[serial] = {
-                    ...known,
+                    ...(known || { modelName: entry.modelName || '', productId: entry.productId || '' }),
                     serial,
                     kind,
                     model,
-                    ...(resolved ? { exactModel: resolved } : {}),
+                    ...(exactModel ? { exactModel } : {}),
                     status: 'stock',
                     holder: null,
                     events: [{ date, action: 'Retour', person: name }, ...(known?.events || [])].slice(0, 20)
                 };
-                return `${stockKeyLabel(model)} (S/N ${serial})`;
-            };
+                details.push(`${stockKeyLabel(model)} (S/N ${serial})`);
 
-            if (pcModel) {
-                details.push(giveBack(pcSerial, 'pc', pcModel, pcExactModel));
+                const caseInfo = kind === 'phone' && phoneCase ? PHONE_CASE_INFO[model] : null;
+                if (caseInfo) (caseInfo.bundled ? [caseInfo.comboItem] : [caseInfo.caseItem, caseInfo.screenItem]).forEach(giveBackItem);
             }
-            if (phoneModel) {
-                details.push(giveBack(phoneSerial, 'phone', phoneModel, phoneExactModel));
-                const caseInfo = PHONE_CASE_INFO[phoneModel];
-                if (phoneCase && caseInfo) {
-                    const caseItems = caseInfo.bundled ? [caseInfo.comboItem] : [caseInfo.caseItem, caseInfo.screenItem];
-                    caseItems.forEach(item => { add(item); details.push(item); });
-                }
-            }
-            for (const [flag, item] of Object.entries(RETURN_ACCESSORY_ITEMS)) {
-                if (accessories[flag]) { add(item); details.push(item); }
-            }
+            items.forEach(giveBackItem);
 
             if (details.length === 0) return prev;
 
@@ -850,6 +852,7 @@ export function useInventory() {
                 stock: newStock,
                 devices,
                 loans,
+                modelAliases,
                 history: [historyEntry, ...prev.history].slice(0, 50)
             };
         });
@@ -1104,7 +1107,7 @@ export function useInventory() {
         history: data.history,
         loans: data.loans,
         devices: data.devices,
-        returnFromEmployee,
+        returnEquipment,
         receiveDevices,
         importInventory,
         removeUntrackedStock,
