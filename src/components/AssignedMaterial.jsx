@@ -57,14 +57,38 @@ export default function AssignedMaterial({ loans, devices, onOpenReturn, query =
     );
     const shown = visible.slice(0, limit);
 
-    // "Matériel rendu" ouvre la fenêtre Retour, avec la personne et le matériel de cette attribution.
-    const handleReturnLoan = (person, loan) => {
-        onOpenReturn({ name: person.name, serials: getLoanSerials(loan), items: loan.items || [] });
-    };
+    // "Retour matériel" ouvre la fenêtre Retour, avec la personne et le matériel de cette attribution.
+    const entriesOf = (person) => [
+        ...person.loans.map(loan => ({
+            key: `loan-${loan.id}`,
+            handedOver: Boolean(loan.pickedUpAt),
+            label: loan.pickedUpAt ? `Remis le ${dateOf(loan.pickedUpAt)}` : 'À remettre',
+            onReturn: () => onOpenReturn({ name: person.name, serials: getLoanSerials(loan), items: loan.items || [] }),
+            chips: <LoanChips loan={loan} devices={devices} />
+        })),
+        ...person.orphans.map(device => ({
+            key: `device-${device.serial}`,
+            handedOver: true,
+            label: `Attribué le ${dateOf(device.events?.[0]?.date)}`,
+            onReturn: () => onOpenReturn({ name: person.name, serials: [device.serial], items: [] }),
+            chips: (
+                <div className="assignment-items">
+                    <span className="assignment-chip assignment-chip-pc">
+                        {deviceFullName(device)}
+                        <small>S/N {device.serial}</small>
+                    </span>
+                </div>
+            )
+        }))
+    ];
 
-    const handleReturnDevice = (person, device) => {
-        onOpenReturn({ name: person.name, serials: [device.serial], items: [] });
-    };
+    // Date (ou "À remettre") et bouton de retour d'une attribution.
+    const actions = (entry) => (
+        <>
+            <span className={`assignment-badge ${entry.handedOver ? 'assignment-badge-given' : 'assignment-badge-pending'}`}>{entry.label}</span>
+            <button type="button" className="assignment-return" onClick={entry.onReturn}>Retour matériel</button>
+        </>
+    );
 
     return (
         <div className="assigned-section">
@@ -78,52 +102,31 @@ export default function AssignedMaterial({ loans, devices, onOpenReturn, query =
                 </p>
             )}
 
-            {shown.map(person => (
-                <div key={nameKey(person.name)} className="person-card">
-                    <div className="person-header">
-                        <span className="person-name">{person.name}</span>
-                        <span className="person-count">
-                            {person.loans.length + person.orphans.length} attribution{person.loans.length + person.orphans.length > 1 ? 's' : ''}
-                        </span>
-                    </div>
-
-                    {person.loans.map(loan => {
-                        const handedOver = Boolean(loan.pickedUpAt);
-                        return (
-                            <div key={loan.id} className="assignment">
-                                <div className="assignment-top">
-                                    <span className={`assignment-badge ${handedOver ? 'assignment-badge-given' : 'assignment-badge-pending'}`}>
-                                        {handedOver ? `Remis le ${dateOf(loan.pickedUpAt)}` : 'À remettre'}
-                                    </span>
-                                    <button type="button" className="assignment-return" onClick={() => handleReturnLoan(person, loan)}>
-                                        Matériel rendu
-                                    </button>
-                                </div>
-                                <LoanChips loan={loan} devices={devices} />
-                            </div>
-                        );
-                    })}
-
-                    {person.orphans.map(device => (
-                        <div key={device.serial} className="assignment">
-                            <div className="assignment-top">
-                                <span className="assignment-badge assignment-badge-given">
-                                    Attribué le {dateOf(device.events?.[0]?.date)}
-                                </span>
-                                <button type="button" className="assignment-return" onClick={() => handleReturnDevice(person, device)}>
-                                    Matériel rendu
-                                </button>
-                            </div>
-                            <div className="assignment-items">
-                                <span className="assignment-chip assignment-chip-pc">
-                                    {deviceFullName(device)}
-                                    <small>S/N {device.serial}</small>
-                                </span>
-                            </div>
+            {shown.map(person => {
+                const entries = entriesOf(person);
+                // Une seule attribution : la date et le bouton passent sur la ligne du nom,
+                // la carte reste basse. Plusieurs : une ligne par attribution.
+                const single = entries.length === 1;
+                return (
+                    <div key={nameKey(person.name)} className="person-card">
+                        <div className="person-header">
+                            <span className="person-name">{person.name}</span>
+                            {single ? (
+                                <span className="person-header-actions">{actions(entries[0])}</span>
+                            ) : (
+                                <span className="person-count">{entries.length} attributions</span>
+                            )}
                         </div>
-                    ))}
-                </div>
-            ))}
+
+                        {single ? entries[0].chips : entries.map(entry => (
+                            <div key={entry.key} className="assignment">
+                                <div className="assignment-top">{actions(entry)}</div>
+                                {entry.chips}
+                            </div>
+                        ))}
+                    </div>
+                );
+            })}
 
             {visible.length > shown.length && (
                 <button type="button" className="show-more" onClick={() => setLimit(limit + PAGE_SIZE)}>

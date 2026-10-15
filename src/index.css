@@ -1895,8 +1895,8 @@ input[type="checkbox"]:focus {
 }
 
 .person-card {
-  margin-bottom: 14px;
-  padding: 14px;
+  margin-bottom: 10px;
+  padding: 10px 14px;
   border: 1px solid var(--accent-gray);
   border-radius: var(--radius);
   background: #fff;
@@ -1905,10 +1905,17 @@ input[type="checkbox"]:focus {
 
 .person-header {
   display: flex;
-  align-items: baseline;
+  flex-wrap: wrap;
+  align-items: center;
   justify-content: space-between;
-  gap: 10px;
-  margin-bottom: 10px;
+  gap: 6px 10px;
+  margin-bottom: 8px;
+}
+
+.person-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
 }
 
 .person-name {
@@ -1923,7 +1930,7 @@ input[type="checkbox"]:focus {
 }
 
 .assignment {
-  padding: 10px 0;
+  padding: 8px 0;
   border-top: 1px solid #f1f5f9;
 }
 
@@ -1932,7 +1939,7 @@ input[type="checkbox"]:focus {
   align-items: center;
   justify-content: space-between;
   gap: 10px;
-  margin-bottom: 8px;
+  margin-bottom: 6px;
 }
 
 .assignment-badge {
@@ -1948,7 +1955,7 @@ input[type="checkbox"]:focus {
 .assignment-return {
   border: 1px solid var(--accent-gray);
   border-radius: 10px;
-  padding: 6px 10px;
+  padding: 5px 10px;
   background: #fff;
   color: #475569;
   font-size: 0.8rem;
@@ -1964,8 +1971,10 @@ input[type="checkbox"]:focus {
 
 .assignment-chip {
   display: inline-flex;
-  flex-direction: column;
-  padding: 5px 10px;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0 8px;
+  padding: 4px 10px;
   border-radius: 10px;
   background: #f1f5f9;
   color: #334155;
