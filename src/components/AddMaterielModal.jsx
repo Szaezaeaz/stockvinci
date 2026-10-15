@@ -45,7 +45,7 @@ export default function AddMaterielModal({ isOpen, onClose, onConfirm, stock, de
         <Modal
             isOpen={isOpen}
             onClose={close}
-            title="Ajout Matériel"
+            title="Réception stock"
         >
             <div className="segmented-control" style={{ marginBottom: '16px' }}>
                 <button

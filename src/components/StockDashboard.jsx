@@ -172,13 +172,13 @@ export default function StockDashboard({
 
             <div className="action-buttons-row">
                 <button type="button" className="action-pill" onClick={() => onOpenReturn()}>
-                    <span className="action-pill-icon">↩</span> Retour
+                    <span className="action-pill-icon">↩</span> Retour matériels
                 </button>
                 <button type="button" className="action-pill" onClick={() => setIsWithdrawModalOpen(true)}>
-                    <span className="action-pill-icon">↑</span> Sortie
+                    <span className="action-pill-icon">↑</span> Sortie accessoires
                 </button>
                 <button type="button" className="action-pill action-pill-primary" onClick={() => setIsAddModalOpen(true)}>
-                    <span className="action-pill-icon">+</span> Ajout
+                    <span className="action-pill-icon">↓</span> Réception stock
                 </button>
             </div>
 

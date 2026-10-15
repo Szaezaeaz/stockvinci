@@ -6,7 +6,7 @@ import ReturnForm from './ReturnForm';
 // de l'onglet Attribué (prefill : { name, serials, items } à préremplir).
 export default function ReturnModal({ isOpen, onClose, devices, loans, onReturn, prefill }) {
     return (
-        <Modal isOpen={isOpen} onClose={onClose} title="Retour matériel">
+        <Modal isOpen={isOpen} onClose={onClose} title="Retour matériels">
             <ReturnForm
                 devices={devices}
                 loans={loans}
