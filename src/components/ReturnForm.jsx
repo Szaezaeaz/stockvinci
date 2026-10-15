@@ -19,7 +19,7 @@ const plural = (count, word) => `${count} ${word}${count > 1 ? 's' : ''}`;
 
 // Une section "Retour PC" ou "Retour Téléphone" : le matériel déjà attribué à la
 // personne (à cocher), les appareils scannés en plus, et le champ de scan.
-function ReturnSection({ kind, isOpen, onToggle, listed, picked, onPick, added, onModel, onRemove, devices, scan, message, hint }) {
+function ReturnSection({ kind, isOpen, onToggle, listed, isPicked, onPick, added, onModel, onRemove, devices, scan, message, hint }) {
     const { title, icon } = KINDS[kind];
     return (
         <div className="return-section">
@@ -34,10 +34,11 @@ function ReturnSection({ kind, isOpen, onToggle, listed, picked, onPick, added, 
                         <ul className="return-devices">
                             {listed.map(device => {
                                 const condition = conditionOfStockKey(device.model);
+                                const on = isPicked(device.serial);
                                 return (
                                     <li key={device.serial}>
-                                        <label className={`return-device${picked[device.serial] ? ' return-device-on' : ''}`}>
-                                            <input type="checkbox" checked={Boolean(picked[device.serial])} onChange={() => onPick(device.serial)} />
+                                        <label className={`return-device${on ? ' return-device-on' : ''}`}>
+                                            <input type="checkbox" checked={on} onChange={() => onPick(device.serial)} />
                                             <span className="assign-item-icon">{icon}</span>
                                             <span className="assign-item-main">
                                                 <span className="assign-item-model">{deviceFullName(device)}</span>
@@ -91,7 +92,7 @@ function ReturnSection({ kind, isOpen, onToggle, listed, picked, onPick, added, 
                             {...scan.inputProps}
                             type="text"
                             className="assign-scan-input"
-                            placeholder={kind === 'pc' ? 'Scanner un PC (QR code ou n° de série)…' : 'Scanner un téléphone (n° de série)…'}
+                            placeholder={kind === 'pc' ? 'Scanner un PC…' : 'Scanner un téléphone…'}
                             inputMode="text"
                             autoCapitalize="characters"
                             autoComplete="off"
@@ -107,18 +108,19 @@ function ReturnSection({ kind, isOpen, onToggle, listed, picked, onPick, added, 
     );
 }
 
-// Retour de matériel : on indique la personne, ce qui lui est attribué apparaît,
-// on coche ce qu'elle rapporte, puis le matériel secondaire. Si la personne ou
-// l'appareil n'existe pas encore dans l'appli (ou n'est pas attribué à cette
-// personne), on le scanne : il entre en stock (Occasion pour un PC).
+const NO_CHOICES = { picked: {}, items: {}, open: {}, phoneCase: null };
+
+// Retour de matériel : on indique la personne, ce qui lui est attribué apparaît
+// déjà coché (on décoche ce qu'elle garde), puis le matériel secondaire. Si la
+// personne ou l'appareil n'existe pas encore dans l'appli (ou n'est pas attribué à
+// cette personne), on le scanne : il entre en stock (Occasion pour un PC).
 export default function ReturnForm({ devices, loans, onSubmit, onDone }) {
     const [lastName, setLastName] = useState('');
     const [firstName, setFirstName] = useState('');
-    const [open, setOpen] = useState({ pc: null, phone: null }); // null = ouvert si la personne a du matériel de ce type
-    const [picked, setPicked] = useState({}); // n° de série -> coché
+    // Choix modifiés à la main pour la personne saisie (un autre nom les écarte). Ce qui
+    // n'est pas modifié suit ce que la personne a déjà : tout est coché d'office.
+    const [choices, setChoices] = useState({ key: '', ...NO_CHOICES });
     const [extras, setExtras] = useState([]); // appareils scannés en plus
-    const [items, setItems] = useState({}); // article secondaire -> rendu
-    const [phoneCase, setPhoneCase] = useState(false);
     const [scanValues, setScanValues] = useState({ pc: '', phone: '' });
     const [messages, setMessages] = useState({ pc: null, phone: null });
 
@@ -145,8 +147,19 @@ export default function ReturnForm({ devices, loans, onSubmit, onDone }) {
         };
     }, [personKey, devices, loans]);
 
+    // --- Choix de l'utilisateur, par rapport à ce que la personne a déjà ---------------
+    const own = choices.key === personKey ? choices : NO_CHOICES;
+    const patchChoices = (patch) => setChoices(prev => {
+        const base = prev.key === personKey ? prev : { key: personKey, ...NO_CHOICES };
+        return { ...base, ...patch(base) };
+    });
+
     const attributed = (kind) => person?.[kind] || [];
-    const sectionOpen = (kind) => open[kind] ?? (person ? person[kind].length > 0 || !person.known : false);
+    const sectionOpen = (kind) => own.open[kind] ?? (person ? person[kind].length > 0 || !person.known : false);
+    const isPicked = (serial) => own.picked[serial] ?? true; // le matériel attribué est coché d'office
+    const isItemOn = (id) => own.items[id] ?? Boolean(person?.given.has(id));
+    const setPicked = (serial, on) => patchChoices(base => ({ picked: { ...base.picked, [serial]: on } }));
+    const setItem = (id, on) => patchChoices(base => ({ items: { ...base.items, [id]: on } }));
 
     // --- Scan d'un appareil -------------------------------------------------------
     const say = (kind, ok, text) => setMessages(prev => ({ ...prev, [kind]: { ok, text } }));
@@ -166,7 +179,7 @@ export default function ReturnForm({ devices, loans, onSubmit, onDone }) {
             }
             if (known.status === 'stock') return say(kind, false, `${serial} : déjà en stock.`);
             if (personKey && nameKey(known.holder) === personKey) {
-                setPicked(prev => ({ ...prev, [serial]: true }));
+                setPicked(serial, true);
                 return say(kind, true, `${serial} coché · ${deviceFullName(known)}`);
             }
             setExtras(prev => [...prev, { serial, kind, known: true, holder: known.holder || '?' }]);
@@ -208,24 +221,26 @@ export default function ReturnForm({ devices, loans, onSubmit, onDone }) {
 
     // --- Ce qui est rendu ---------------------------------------------------------
     const returnedOf = (kind) => (sectionOpen(kind)
-        ? { listed: attributed(kind).filter(device => picked[device.serial]), added: extras.filter(entry => entry.kind === kind) }
+        ? { listed: attributed(kind).filter(device => isPicked(device.serial)), added: extras.filter(entry => entry.kind === kind) }
         : { listed: [], added: [] });
     const pcs = returnedOf('pc');
     const phones = returnedOf('phone');
     const returnedCount = pcs.listed.length + pcs.added.length + phones.listed.length + phones.added.length;
-    const itemNames = RETURN_ITEMS.map(item => item.id).filter(id => items[id]);
+    const itemNames = RETURN_ITEMS.map(item => item.id).filter(isItemOn);
     const missingModel = [...pcs.added, ...phones.added].some(entry => !entry.known && !entry.model);
 
-    // Coque et vitre : proposées quand un téléphone rendu en a en stock.
+    // Coque et vitre : proposées quand un téléphone rendu en a en stock, cochées d'office
+    // si la personne les avait reçues.
     const phoneStockKeys = [
         ...phones.listed.map(device => device.model),
         ...phones.added.map(entry => (entry.known ? devices[entry.serial].model : entry.model ? stockKeyOf(entry.model) : ''))
     ];
     const caseInfos = phoneStockKeys.map(key => PHONE_CASE_INFO[key]).filter(Boolean);
     const caseLabel = caseInfos.length > 0 && caseInfos.every(info => info.bundled) ? 'Coque + Vitre' : 'Coque et Vitre';
-    const returnCase = phoneCase && caseInfos.length > 0;
+    const caseGiven = caseInfos.some(info => person?.given.has(info.bundled ? info.comboItem : info.caseItem));
+    const caseOn = caseInfos.length > 0 && (own.phoneCase ?? caseGiven);
 
-    const count = returnedCount + itemNames.length + (returnCase ? 1 : 0);
+    const count = returnedCount + itemNames.length + (caseOn ? 1 : 0);
     const blocker = !personKey
         ? 'Indique le NOM et le prénom'
         : missingModel
@@ -250,20 +265,23 @@ export default function ReturnForm({ devices, loans, onSubmit, onDone }) {
                 learnKey: entry.learnKey,
                 learnModel: entry.model
             }));
-        onSubmit(name, { returned: [...listed, ...added], items: itemNames, phoneCase: returnCase });
+        onSubmit(name, { returned: [...listed, ...added], items: itemNames, phoneCase: caseOn });
         onDone();
     };
 
-    // --- Tout sélectionner : tout ce qui est attribué à la personne -----------------
+    // --- Tout sélectionner / désélectionner : tout ce qui est attribué à la personne ---
     const myDevices = person ? [...person.pc, ...person.phone] : [];
     const givenItems = person ? RETURN_ITEMS.map(item => item.id).filter(id => person.given.has(id)) : [];
     const allSelected = myDevices.length + givenItems.length > 0
-        && myDevices.every(device => picked[device.serial]) && givenItems.every(id => items[id]);
+        && myDevices.every(device => isPicked(device.serial)) && givenItems.every(isItemOn);
     const toggleAll = () => {
         const on = !allSelected;
-        setPicked(prev => ({ ...prev, ...Object.fromEntries(myDevices.map(device => [device.serial, on])) }));
-        setItems(prev => ({ ...prev, ...Object.fromEntries(givenItems.map(id => [id, on])) }));
-        if (on) setOpen(prev => ({ pc: person.pc.length > 0 ? true : prev.pc, phone: person.phone.length > 0 ? true : prev.phone }));
+        patchChoices(base => ({
+            picked: { ...base.picked, ...Object.fromEntries(myDevices.map(device => [device.serial, on])) },
+            items: { ...base.items, ...Object.fromEntries(givenItems.map(id => [id, on])) },
+            open: on ? { pc: person.pc.length > 0 ? true : base.open.pc, phone: person.phone.length > 0 ? true : base.open.phone } : base.open,
+            phoneCase: on ? null : false
+        }));
     };
 
     const summary = person?.known
@@ -283,10 +301,10 @@ export default function ReturnForm({ devices, loans, onSubmit, onDone }) {
     const sectionProps = (kind, scan, returned) => ({
         kind,
         isOpen: sectionOpen(kind),
-        onToggle: (checked) => setOpen(prev => ({ ...prev, [kind]: checked })),
+        onToggle: (checked) => patchChoices(base => ({ open: { ...base.open, [kind]: checked } })),
         listed: attributed(kind),
-        picked,
-        onPick: (serial) => setPicked(prev => ({ ...prev, [serial]: !prev[serial] })),
+        isPicked,
+        onPick: (serial) => setPicked(serial, !isPicked(serial)),
         added: returned.added,
         onModel: setExtraModel,
         onRemove: removeExtra,
@@ -327,26 +345,30 @@ export default function ReturnForm({ devices, loans, onSubmit, onDone }) {
             <div className="form-group">
                 <label>Matériel secondaire rendu</label>
                 <div className="pill-row">
-                    {RETURN_ITEMS.map(({ id }) => (
-                        <button
-                            key={id}
-                            type="button"
-                            className={`pill-toggle${items[id] ? ' active' : ''}`}
-                            aria-pressed={Boolean(items[id])}
-                            onClick={() => setItems(prev => ({ ...prev, [id]: !prev[id] }))}
-                        >
-                            {items[id] ? '✓ ' : ''}{id}
-                            {person?.given.has(id) && <small className="pill-hint"> attribué</small>}
-                        </button>
-                    ))}
+                    {RETURN_ITEMS.map(({ id }) => {
+                        const on = isItemOn(id);
+                        return (
+                            <button
+                                key={id}
+                                type="button"
+                                className={`pill-toggle${on ? ' active' : ''}`}
+                                aria-pressed={on}
+                                onClick={() => setItem(id, !on)}
+                            >
+                                {on ? '✓ ' : ''}{id}
+                                {person?.given.has(id) && <small className="pill-hint"> attribué</small>}
+                            </button>
+                        );
+                    })}
                     {caseInfos.length > 0 && (
                         <button
                             type="button"
-                            className={`pill-toggle${phoneCase ? ' active' : ''}`}
-                            aria-pressed={phoneCase}
-                            onClick={() => setPhoneCase(on => !on)}
+                            className={`pill-toggle${caseOn ? ' active' : ''}`}
+                            aria-pressed={caseOn}
+                            onClick={() => patchChoices(() => ({ phoneCase: !caseOn }))}
                         >
-                            {phoneCase ? '✓ ' : ''}{caseLabel}
+                            {caseOn ? '✓ ' : ''}{caseLabel}
+                            {caseGiven && <small className="pill-hint"> attribué</small>}
                         </button>
                     )}
                 </div>

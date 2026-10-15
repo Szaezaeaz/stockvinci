@@ -2653,11 +2653,6 @@ input[type="checkbox"]:focus {
   cursor: pointer;
 }
 
-.return-section-toggle input {
-  width: 22px;
-  height: 22px;
-}
-
 .return-section-body {
   margin-top: 12px;
   padding: 12px;
@@ -2690,12 +2685,6 @@ input[type="checkbox"]:focus {
   cursor: default;
 }
 
-.return-device input {
-  flex-shrink: 0;
-  width: 22px;
-  height: 22px;
-}
-
 .return-device-on {
   border-color: #2563eb;
   background: #eff6ff;
@@ -2726,4 +2715,58 @@ input[type="checkbox"]:focus {
   font-size: 0.7rem;
   font-weight: 500;
   opacity: 0.75;
+}
+
+/* Cases à cocher du retour : un seul style, sans le contour noir du navigateur */
+.return-section-toggle input,
+.return-device input {
+  appearance: none;
+  -webkit-appearance: none;
+  flex-shrink: 0;
+  display: grid;
+  place-content: center;
+  width: 26px;
+  height: 26px;
+  margin: 0;
+  border: 2px solid #94a3b8;
+  border-radius: 8px;
+  background: #fff;
+  cursor: pointer;
+}
+
+.return-section-toggle input:checked,
+.return-device input:checked {
+  border-color: #2563eb;
+  background: #2563eb;
+}
+
+.return-section-toggle input:checked::after,
+.return-device input:checked::after {
+  content: '';
+  width: 6px;
+  height: 12px;
+  margin-top: -2px;
+  border: solid #fff;
+  border-width: 0 3px 3px 0;
+  transform: rotate(45deg);
+}
+
+.modal-content button,
+.modal-content label {
+  -webkit-tap-highlight-color: transparent;
+}
+
+.modal-content button:focus,
+.modal-content input[type='checkbox']:focus {
+  outline: none;
+}
+
+.modal-content button:focus-visible,
+.modal-content input[type='checkbox']:focus-visible {
+  outline: 2px solid #93c5fd;
+  outline-offset: 2px;
+}
+
+.return-form > .form-group:first-child {
+  margin-bottom: 26px;
 }
