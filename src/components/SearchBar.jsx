@@ -1,4 +1,5 @@
 import React, { useRef, useState } from 'react';
+import KeyboardToggle from './KeyboardToggle';
 import OnScreenKeyboard from './OnScreenKeyboard';
 import { isKeyboardPrefOn, setKeyboardPref, useKeyboardPref } from '../hooks/useKeyboardPref';
 
@@ -55,19 +56,7 @@ export default function SearchBar({ value, onChange, placeholder = 'Rechercher�
                         &times;
                     </button>
                 )}
-                <button
-                    type="button"
-                    className={`search-bar-keyboard${keyboardShown ? ' active' : ''}`}
-                    onMouseDown={(e) => e.preventDefault()}
-                    onClick={toggleKeyboard}
-                    aria-label={keyboardShown ? 'Masquer le clavier à l’écran' : 'Clavier à l’écran'}
-                    aria-pressed={keyboardShown}
-                >
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                        <rect x="2" y="5" width="20" height="14" rx="2" />
-                        <path d="M6 9h.01M10 9h.01M14 9h.01M18 9h.01M6 13h.01M18 13h.01M9 15h6" />
-                    </svg>
-                </button>
+                <KeyboardToggle active={keyboardShown} onToggle={toggleKeyboard} />
             </div>
 
             {keyboardShown && (

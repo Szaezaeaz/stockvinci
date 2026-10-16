@@ -1,4 +1,5 @@
 import React, { useContext, useRef, useState } from 'react';
+import KeyboardToggle from './KeyboardToggle';
 import OnScreenKeyboard from './OnScreenKeyboard';
 import { PeopleContext } from '../utils/PeopleContext';
 import { findPeople, nameKey } from '../utils/person';
@@ -62,8 +63,13 @@ export default function PersonNameFields({ last, first, onLastChange, onFirstCha
         }
     };
 
-    const enableKeyboard = () => {
-        setKeyboardPref(true);
+    // Bouton clavier : ouvre (en activant le clavier de l'appli sur l'appareil) ou ferme.
+    const toggleKeyboard = () => {
+        if (keyboardShown) {
+            setKeyboardShown(false);
+            return;
+        }
+        if (!keyboardOn) setKeyboardPref(true);
         setKeyboardShown(true);
     };
     const disableKeyboard = () => {
@@ -106,6 +112,7 @@ export default function PersonNameFields({ last, first, onLastChange, onFirstCha
                     autoCorrect="off"
                     spellCheck={false}
                 />
+                <div className="name-field-with-toggle">
                 <input
                     type="text"
                     className="loan-input"
@@ -124,6 +131,8 @@ export default function PersonNameFields({ last, first, onLastChange, onFirstCha
                     autoCorrect="off"
                     spellCheck={false}
                 />
+                <KeyboardToggle active={keyboardShown} onToggle={toggleKeyboard} />
+                </div>
             </div>
 
             {suggestions.length > 0 && (
@@ -149,21 +158,9 @@ export default function PersonNameFields({ last, first, onLastChange, onFirstCha
                     onBackspace={backspace}
                     onNext={next}
                     nextLabel={active === 'last' ? 'Prénom ›' : 'OK'}
+                    onUseDeviceKeyboard={disableKeyboard}
                 />
             )}
-
-            <div className="name-keyboard-links">
-                {keyboardShown ? (
-                    <button type="button" className="scan-link" onClick={() => setKeyboardShown(false)}>Masquer le clavier à l’écran</button>
-                ) : (
-                    <button type="button" className="scan-link" onClick={keyboardOn ? () => setKeyboardShown(true) : enableKeyboard}>
-                        Clavier à l’écran
-                    </button>
-                )}
-                {keyboardOn && (
-                    <button type="button" className="scan-link" onClick={disableKeyboard}>Revenir au clavier de la tablette</button>
-                )}
-            </div>
         </div>
     );
 }

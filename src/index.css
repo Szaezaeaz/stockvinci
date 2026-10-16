@@ -2574,10 +2574,17 @@ input[type="checkbox"]:focus {
 }
 
 /* Clavier à l'écran (NOM / Prénom) */
-.name-keyboard-links {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 4px 20px;
+.name-field-with-toggle {
+  position: relative;
+  min-width: 0;
+}
+
+.name-fields .name-field-with-toggle .loan-input {
+  padding-right: 46px;
+}
+
+.name-picker .osk {
+  margin-top: 10px;
 }
 
 .osk {
@@ -2856,10 +2863,12 @@ input[type="checkbox"]:focus {
   cursor: pointer;
 }
 
-/* Bouton "clavier à l'écran" des barres de recherche */
-.search-bar-keyboard {
+/* Bouton "clavier à l'écran" (barres de recherche, champ Prénom) */
+.keyboard-toggle {
   position: absolute;
   right: 6px;
+  top: 50%;
+  transform: translateY(-50%);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -2873,7 +2882,7 @@ input[type="checkbox"]:focus {
   -webkit-tap-highlight-color: transparent;
 }
 
-.search-bar-keyboard.active {
+.keyboard-toggle.active {
   background: #eff6ff;
   color: #2563eb;
 }
