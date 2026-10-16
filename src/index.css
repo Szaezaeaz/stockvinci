@@ -3091,3 +3091,112 @@ input[type="checkbox"]:focus {
   font-weight: 600;
   cursor: pointer;
 }
+
+/* Commentaires types de l'équipe */
+.note-preset-custom {
+  display: inline-flex;
+  align-items: center;
+  padding: 0;
+  border-style: solid;
+  overflow: hidden;
+}
+
+.note-preset-custom > button {
+  border: none;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  padding: 5px 4px 5px 12px;
+  cursor: pointer;
+}
+
+.note-preset-custom > .note-preset-remove {
+  padding: 5px 10px 5px 6px;
+  color: #94a3b8;
+  font-size: 1rem;
+  line-height: 1;
+}
+
+.note-preset-save {
+  border-color: #93c5fd;
+  background: #fff;
+  color: #2563eb;
+}
+
+/* Filtre "commentaires" de l'onglet Attribution */
+.note-filter {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 10px 0 8px;
+}
+
+.note-filter-chip {
+  padding: 6px 12px;
+  border: 1px solid var(--accent-gray);
+  border-radius: 999px;
+  background: #fff;
+  color: #475569;
+  font-family: inherit;
+  font-size: 0.82rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.note-filter-chip small {
+  margin-left: 4px;
+  opacity: 0.7;
+}
+
+.note-filter-chip.active {
+  border-color: #f59e0b;
+  background: #fffbeb;
+  color: #92400e;
+}
+
+/* Historique : filtres par type, n° de série cliquables */
+.history-filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 10px 0 6px;
+}
+
+.history-filter {
+  padding: 6px 12px;
+  border: 1px solid var(--accent-gray);
+  border-radius: 999px;
+  background: #fff;
+  color: #475569;
+  font-family: inherit;
+  font-size: 0.82rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.history-filter small {
+  margin-left: 4px;
+  opacity: 0.7;
+}
+
+.history-filter.active {
+  border-color: #2563eb;
+  background: #eff6ff;
+  color: #1d4ed8;
+}
+
+.history-type-icon {
+  margin-right: 6px;
+}
+
+.history-serial {
+  border: none;
+  background: none;
+  padding: 0;
+  color: #2563eb;
+  font: inherit;
+  font-style: normal;
+  font-weight: 600;
+  text-decoration: underline;
+  cursor: pointer;
+}

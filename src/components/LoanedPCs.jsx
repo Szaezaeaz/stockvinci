@@ -11,6 +11,7 @@ import { PHONE_CASE_INFO } from '../config/phoneAccessories';
 import { matchesQuery } from '../utils/search';
 import { getLoanSerials } from '../utils/loans';
 import { fullName } from '../utils/person';
+import { loanNote, noteMatches } from '../utils/notes';
 
 const DEFAULT_ACCESSORIES = {
     mouse: true,
@@ -37,7 +38,7 @@ const ACCESSORY_PILLS = [
 // Volet "À remettre" de l'onglet Attribué : formulaire "Attribuer du matériel" et
 // liste du matériel préparé en stock, pas encore remis (bouton "Remis"). La
 // liste n'est affichée que si showList ; le formulaire reste disponible.
-export default function LoanedPCs({ loans, onAdd, onHandOver, onSetLoanNote, devices, stock, onReceiveDevices, query = '', showList = true, ref }) {
+export default function LoanedPCs({ loans, onAdd, onHandOver, onSetLoanNote, devices, stock, onReceiveDevices, query = '', noteFilter = null, showList = true, ref }) {
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [scanRaw, setScanRaw] = useState(null); // scan reçu de la page, traité à l'ouverture du formulaire
     const nameRef = useRef(null);
@@ -65,10 +66,11 @@ export default function LoanedPCs({ loans, onAdd, onHandOver, onSetLoanNote, dev
     // Seul le matériel pas encore remis est listé ici ; le reste est chez les utilisateurs.
     const filteredLoans = loans.filter(loan =>
         !loan.pickedUpAt &&
+        noteMatches(loanNote(loan, devices), noteFilter) &&
         matchesQuery(query, [
             loan.name || loan.recipient || '',
             ...(loan.items || []),
-            loan.note || '',
+            loanNote(loan, devices),
             ...getLoanSerials(loan).flatMap(serial => [serial, devices?.[serial]?.exactModel || ''])
         ])
     );
@@ -148,7 +150,7 @@ export default function LoanedPCs({ loans, onAdd, onHandOver, onSetLoanNote, dev
             {noteRequest?.mode === 'note' && (
                 <NoteDialog
                     title={`Commentaire · ${requestName}`}
-                    initial={noteRequest.loan.note || ''}
+                    initial={loanNote(noteRequest.loan, devices)}
                     presets={ASSIGN_NOTE_PRESETS}
                     allowClear
                     onConfirm={(text) => onSetLoanNote(noteRequest.loan.id, text)}
@@ -214,7 +216,7 @@ export default function LoanedPCs({ loans, onAdd, onHandOver, onSetLoanNote, dev
             {showList && (
                 <div className="pending-list">
                     {filteredLoans.length === 0 && (
-                        <div className="search-empty">{query ? 'Aucun résultat.' : 'Aucun matériel à remettre.'}</div>
+                        <div className="search-empty">{query || noteFilter !== null ? 'Aucun résultat.' : 'Aucun matériel à remettre.'}</div>
                     )}
 
                     {filteredLoans.map((loan) => (
@@ -226,8 +228,8 @@ export default function LoanedPCs({ loans, onAdd, onHandOver, onSetLoanNote, dev
                                 </span>
                             </div>
                             <LoanChips loan={loan} devices={devices} />
-                            <button type="button" className={`loan-note${loan.note ? '' : ' loan-note-empty'}`} onClick={() => setNoteRequest({ loan, mode: 'note' })}>
-                                {loan.note ? <>💬 {loan.note}</> : '+ Commentaire'}
+                            <button type="button" className={`loan-note${loanNote(loan, devices) ? '' : ' loan-note-empty'}`} onClick={() => setNoteRequest({ loan, mode: 'note' })}>
+                                {loanNote(loan, devices) ? <>💬 {loanNote(loan, devices)}</> : '+ Commentaire'}
                             </button>
                             <button
                                 type="button"

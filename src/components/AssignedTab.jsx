@@ -1,9 +1,13 @@
-import React, { useImperativeHandle, useRef, useState } from 'react';
+import React, { useImperativeHandle, useMemo, useRef, useState } from 'react';
 import AssignedMaterial from './AssignedMaterial';
 import ImportModal from './ImportModal';
 import LoanedPCs from './LoanedPCs';
 import SearchBar from './SearchBar';
 import { parseScan } from '../utils/scanParse';
+import { loanNote, noteMatches, orphanDevices, usedNotes } from '../utils/notes';
+
+// Commentaires proposés en filtre : les plus fréquents du volet affiché.
+const MAX_NOTE_CHIPS = 8;
 
 const PANES = ['given', 'pending', 'all'];
 
@@ -17,6 +21,7 @@ export default function AssignedTab({ loans, devices, stock, onAdd, onHandOver, 
     const [pane, setPane] = useState('given');
     const [importOpen, setImportOpen] = useState(false);
     const [query, setQuery] = useState('');
+    const [noteFilter, setNoteFilter] = useState(null); // null = tous, '' = avec commentaire, sinon ce commentaire
     const formRef = useRef(null);
 
     // Scan hors champ : sur "À remettre", on ouvre le formulaire avec le PC choisi ;
@@ -35,6 +40,18 @@ export default function AssignedTab({ loans, devices, stock, onAdd, onHandOver, 
     const givenCount = loans.filter(loan => loan.pickedUpAt).length;
     const pendingCount = loans.length - givenCount;
     const labels = { given: `Remis (${givenCount})`, pending: `À remettre (${pendingCount})`, all: 'Tout' };
+
+    // Commentaires des attributions du volet affiché.
+    const paneNotes = useMemo(() => {
+        const paneLoans = pane === 'given' ? loans.filter(loan => loan.pickedUpAt)
+            : pane === 'pending' ? loans.filter(loan => !loan.pickedUpAt)
+                : loans;
+        const notes = paneLoans.map(loan => loanNote(loan, devices));
+        if (pane !== 'pending') notes.push(...orphanDevices(loans, devices).map(device => device.note || ''));
+        return notes.filter(Boolean);
+    }, [pane, loans, devices]);
+    const noteChips = usedNotes(paneNotes).slice(0, MAX_NOTE_CHIPS);
+    const filterOn = noteFilter !== null;
 
     return (
         <div className="assigned-tab">
@@ -65,7 +82,34 @@ export default function AssignedTab({ loans, devices, stock, onAdd, onHandOver, 
                 ))}
             </div>
 
-            <SearchBar value={query} onChange={setQuery} placeholder="Rechercher une personne, un n° de série, un matériel…" />
+            <SearchBar value={query} onChange={setQuery} placeholder="Personne, n° de série, matériel, commentaire…" />
+
+            {(paneNotes.length > 0 || filterOn) && (
+                <div className="note-filter">
+                    <button
+                        type="button"
+                        className={`note-filter-chip${noteFilter === '' ? ' active' : ''}`}
+                        onClick={() => setNoteFilter(noteFilter === '' ? null : '')}
+                        aria-pressed={noteFilter === ''}
+                    >
+                        💬 Avec commentaire<small>{paneNotes.length}</small>
+                    </button>
+                    {noteChips.map(({ note, count }) => {
+                        const active = noteFilter !== null && noteFilter !== '' && noteMatches(note, noteFilter);
+                        return (
+                            <button
+                                key={note}
+                                type="button"
+                                className={`note-filter-chip${active ? ' active' : ''}`}
+                                onClick={() => setNoteFilter(active ? null : note)}
+                                aria-pressed={active}
+                            >
+                                {note}<small>{count}</small>
+                            </button>
+                        );
+                    })}
+                </div>
+            )}
 
             <LoanedPCs
                 ref={formRef}
@@ -77,18 +121,20 @@ export default function AssignedTab({ loans, devices, stock, onAdd, onHandOver, 
                 onSetLoanNote={onSetLoanNote}
                 onReceiveDevices={onReceiveDevices}
                 query={query}
+                noteFilter={noteFilter}
                 showList={pane === 'pending'}
             />
 
             {pane !== 'pending' && (
                 <AssignedMaterial
-                    key={`${pane}:${query}`} // repart de la première page à chaque recherche
+                    key={`${pane}:${query}:${noteFilter}`} // repart de la première page à chaque recherche
                     loans={loans}
                     devices={devices}
                     onOpenReturn={onOpenReturn}
                     onSetLoanNote={onSetLoanNote}
                     onSetDeviceNote={onSetDeviceNote}
                     query={query}
+                    noteFilter={noteFilter}
                     scope={pane === 'all' ? 'all' : 'given'}
                 />
             )}

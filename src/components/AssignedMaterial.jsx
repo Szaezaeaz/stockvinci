@@ -3,6 +3,7 @@ import { matchesQuery } from '../utils/search';
 import { getLoanSerials } from '../utils/loans';
 import { deviceFullName } from '../utils/models';
 import { nameKey } from '../utils/person';
+import { loanNote, noteMatches } from '../utils/notes';
 import LoanChips from './LoanChips';
 import NoteDialog from './NoteDialog';
 import { ASSIGN_NOTE_PRESETS, DEVICE_NOTE_PRESETS } from '../config/notePresets';
@@ -37,17 +38,24 @@ function groupByPerson(loans, allLoans, devices) {
 function searchTexts(person, devices) {
     const texts = [person.name];
     person.loans.forEach(loan => {
-        texts.push(...(loan.items || []), loan.note || '');
+        texts.push(...(loan.items || []), loanNote(loan, devices));
         getLoanSerials(loan).forEach(serial => texts.push(serial, devices?.[serial]?.exactModel || '', devices?.[serial]?.modelName || ''));
     });
     person.orphans.forEach(device => texts.push(device.serial, device.model, device.exactModel || '', device.modelName || '', device.note || ''));
     return texts;
 }
 
+// Commentaires des attributions d'une personne.
+const notesOf = (person, devices) => [
+    ...person.loans.map(loan => loanNote(loan, devices)),
+    ...person.orphans.map(device => device.note || '')
+];
+
 // Volet "Remis" (ou "Tout") de l'onglet Attribué : qui a quoi, une carte par
 // personne. scope 'given' = matériel déjà remis ; 'all' = aussi celui à remettre.
-// La recherche (query) est celle de l'onglet.
-export default function AssignedMaterial({ loans, devices, onOpenReturn, onSetLoanNote, onSetDeviceNote, query = '', scope = 'given' }) {
+// La recherche (query) et le filtre "commentaires" (noteFilter, voir utils/notes)
+// sont ceux de l'onglet.
+export default function AssignedMaterial({ loans, devices, onOpenReturn, onSetLoanNote, onSetDeviceNote, query = '', noteFilter = null, scope = 'given' }) {
     const [limit, setLimit] = useState(PAGE_SIZE);
     // Commentaire en cours de modification : { title, note, presets, save }.
     const [editing, setEditing] = useState(null);
@@ -56,20 +64,22 @@ export default function AssignedMaterial({ loans, devices, onOpenReturn, onSetLo
         [loans, devices, scope]
     );
     const visible = useMemo(
-        () => everyone.filter(person => matchesQuery(query, searchTexts(person, devices))),
-        [everyone, query, devices]
+        () => everyone.filter(person =>
+            matchesQuery(query, searchTexts(person, devices))
+            && notesOf(person, devices).some(note => noteMatches(note, noteFilter))),
+        [everyone, query, devices, noteFilter]
     );
     const shown = visible.slice(0, limit);
 
     // "Retour matériel" ouvre la fenêtre Retour, avec la personne et le matériel de cette attribution.
-    const entriesOf = (person) => [
+    const allEntriesOf = (person) => [
         ...person.loans.map(loan => ({
             key: `loan-${loan.id}`,
             handedOver: Boolean(loan.pickedUpAt),
             label: loan.pickedUpAt ? `Remis le ${dateOf(loan.pickedUpAt)}` : 'À remettre',
             onReturn: () => onOpenReturn({ name: person.name, serials: getLoanSerials(loan), items: loan.items || [] }),
-            note: loan.note || '',
-            onEditNote: () => setEditing({ title: `Commentaire · ${person.name}`, note: loan.note || '', presets: ASSIGN_NOTE_PRESETS, save: (text) => onSetLoanNote(loan.id, text) }),
+            note: loanNote(loan, devices),
+            onEditNote: () => setEditing({ title: `Commentaire · ${person.name}`, note: loanNote(loan, devices), presets: ASSIGN_NOTE_PRESETS, save: (text) => onSetLoanNote(loan.id, text) }),
             chips: <LoanChips loan={loan} devices={devices} />
         })),
         ...person.orphans.map(device => ({
@@ -89,6 +99,9 @@ export default function AssignedMaterial({ loans, devices, onOpenReturn, onSetLo
             )
         }))
     ];
+
+    // Avec le filtre "commentaires", seules les attributions concernées sont affichées.
+    const entriesOf = (person) => allEntriesOf(person).filter(entry => noteMatches(entry.note, noteFilter));
 
     // Date (ou "À remettre") et bouton de retour d'une attribution.
     const actions = (entry) => (

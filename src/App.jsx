@@ -8,6 +8,7 @@ import BottomNav from './components/BottomNav';
 import { useInventory } from './hooks/useInventory';
 import { getStockStats } from './utils/stockStats';
 import { PeopleContext } from './utils/PeopleContext';
+import { NotePresetsContext } from './utils/NotePresetsContext';
 import { listPeople } from './utils/person';
 
 import AlertBanner from './components/AlertBanner';
@@ -17,7 +18,7 @@ import ReturnModal from './components/ReturnModal';
 import UpdateBanner from './components/UpdateBanner';
 
 function App() {
-  const { stock, history, loans, addLoan, handOverLoan, setLoanNote, setDeviceNote, addWithdrawal, addStock,
+  const { stock, history, loans, addLoan, handOverLoan, setLoanNote, setDeviceNote, notePresets, addNotePreset, removeNotePreset, addWithdrawal, addStock,
         devices, returnEquipment, receiveDevices, importInventory, removeUntrackedStock, deleteDevice, undoStack, rollbackTo,
         syncStatus, syncNotice, submitPasscode, dismissSyncNotice, syncNow, syncChoice, resolveSyncChoice } = useInventory();
   const [activeTab, setActiveTab] = useState('stock'); // 'stock' | 'assigned' | 'history'
@@ -27,6 +28,11 @@ function App() {
   const { totalUnits } = useMemo(() => getStockStats(stock), [stock]);
   // Personnes connues, proposées pendant la saisie d'un nom.
   const people = useMemo(() => listPeople(loans, devices, history), [loans, devices, history]);
+  const teamPresets = useMemo(
+    () => ({ custom: notePresets, add: addNotePreset, remove: removeNotePreset }),
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- add/remove passent par setData
+    [notePresets]
+  );
 
   // Un scan hors d'un champ de saisie est confié à l'onglet affiché :
   // Stock -> fiche du PC ou ajout ; Attribué -> formulaire d'attribution ou recherche.
@@ -39,6 +45,7 @@ function App() {
 
   return (
     <PeopleContext.Provider value={people}>
+    <NotePresetsContext.Provider value={teamPresets}>
     <Layout
       totalUnits={totalUnits}
       headerExtra={(
@@ -90,7 +97,14 @@ function App() {
           />
         )}
         {activeTab === 'history' && (
-          <HistoryLog history={history} />
+          <HistoryLog
+            history={history}
+            devices={devices}
+            stock={stock}
+            onRemoveUntracked={removeUntrackedStock}
+            onDeleteDevice={deleteDevice}
+            onSetDeviceNote={setDeviceNote}
+          />
         )}
       </div>
 
@@ -105,6 +119,7 @@ function App() {
 
       <BottomNav activeTab={activeTab} onChange={setActiveTab} />
     </Layout>
+    </NotePresetsContext.Provider>
     </PeopleContext.Provider>
   );
 }

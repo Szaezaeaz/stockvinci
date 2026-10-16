@@ -63,9 +63,29 @@ export function diffState(previous, current) {
     }
     const loans = diffList(previous.loans, current.loans);
     if (loans) patch.loans = loans;
-    // L'historique est court (50 lignes) : on garde l'ancienne liste entière.
-    if (previous.history !== current.history) patch.history = previous.history || [];
+    const history = diffHistory(previous.history || [], current.history || []);
+    if (history) patch.history = history;
+    if (previous.notePresets !== current.notePresets) patch.notePresets = previous.notePresets || [];
     return patch;
+}
+
+// Une action ajoute ses lignes en tête de l'historique (et la plus ancienne peut
+// tomber en fin de liste) : on note seulement combien en retirer en tête et ce qu'il
+// faut remettre en fin. Sinon (cas imprévu), l'ancienne liste entière.
+function diffHistory(previous, current) {
+    if (previous === current) return null;
+    const head = previous.length === 0 ? current.length : current.indexOf(previous[0]);
+    if (head < 0) return previous;
+    const kept = current.length - head;
+    for (let i = 0; i < kept; i++) {
+        if (current[head + i] !== previous[i]) return previous;
+    }
+    return { head, tail: previous.slice(kept) };
+}
+
+function applyHistory(current = [], patch) {
+    if (Array.isArray(patch)) return patch;
+    return [...current.slice(patch.head), ...patch.tail];
 }
 
 // Applique un patch produit par diffState à l'état qui a suivi l'action.
@@ -75,6 +95,7 @@ export function applyUndoPatch(state, patch) {
         if (patch[part]) next[part] = applyObject(state[part], patch[part]);
     }
     if (patch.loans) next.loans = applyList(state.loans, patch.loans);
-    if (patch.history) next.history = patch.history;
+    if (patch.history) next.history = applyHistory(state.history, patch.history);
+    if (patch.notePresets) next.notePresets = patch.notePresets;
     return next;
 }

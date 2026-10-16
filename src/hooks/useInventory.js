@@ -52,7 +52,9 @@ const INITIAL_STATE = {
     devices: {},
     // Modèles choisis à la main pour des QR codes non reconnus, retenus pour les
     // scans suivants (voir utils/models).
-    modelAliases: {}
+    modelAliases: {},
+    // Commentaires types ajoutés par l'équipe (en plus de ceux de config/notePresets).
+    notePresets: []
 };
 
 // Maps legacy generic category names (pre-model-tracking) to their closest
@@ -174,15 +176,28 @@ function removeItemFromLoans(loans, personKey, item) {
     return loans.map((other, i) => (i === index ? { ...loan, items } : other));
 }
 
+// Noms des types de mouvement d'avant le renommage (alignés sur les boutons).
+const RENAMED_CATEGORIES = {
+    'Attribution matériel': 'Attribution',
+    'Remise matériel': 'Remise',
+    'Ajout Matériel': 'Réception stock',
+    'Retour collaborateur': 'Retour matériels',
+    'Retrait (Prêt Temp.)': 'Sortie accessoires · prêt',
+    'Retrait (Don)': 'Sortie accessoires · don'
+};
+
+function normalizeHistoryEntry(entry) {
+    let next = entry;
+    if (RENAMED_CATEGORIES[next.category]) next = { ...next, category: RENAMED_CATEGORIES[next.category] };
+    if (Array.isArray(next.details) && next.details.some(hasRenamedModels)) next = { ...next, details: next.details.map(renameModels) };
+    return next;
+}
+
 function normalizeData(parsed) {
     setLearnedAliases(parsed.modelAliases);
     return {
         stock: { ...INITIAL_STATE.stock, ...migrateLegacyStock(renameStockKeys(parsed.stock || {})) },
-        history: (parsed.history || []).map(entry => (
-            Array.isArray(entry.details) && entry.details.some(hasRenamedModels)
-                ? { ...entry, details: entry.details.map(renameModels) }
-                : entry
-        )),
+        history: (parsed.history || []).map(normalizeHistoryEntry),
         loans: (parsed.loans || []).map(loan => ({
             ...loan,
             items: Array.isArray(loan.items) ? loan.items.map(item => migrateLoanItem(renameModels(item))) : loan.items
@@ -196,7 +211,8 @@ function normalizeData(parsed) {
         ),
         modelAliases: Object.fromEntries(
             Object.entries(parsed.modelAliases || {}).map(([key, model]) => [key, renameModels(model)])
-        )
+        ),
+        notePresets: Array.isArray(parsed.notePresets) ? parsed.notePresets.filter(preset => typeof preset === 'string' && preset.trim()) : []
     };
 }
 
@@ -449,6 +465,8 @@ export function useInventory() {
         for (let i = 0; i <= index; i++) {
             restored = stack[i].snapshot ? normalizeData(stack[i].snapshot) : applyUndoPatch(restored, stack[i].patch);
         }
+        // Les lignes d'historique remises en place peuvent porter les anciens noms de type.
+        restored = { ...restored, history: (restored.history || []).map(normalizeHistoryEntry) };
         skipUndoRef.current = true;
         updateUndoStack(stack.slice(index + 1));
         setData(restored);
@@ -582,7 +600,7 @@ export function useInventory() {
 
             const loanPackageEntry = withNote({
                 id: Date.now(),
-                category: 'Attribution matériel',
+                category: 'Attribution',
                 delta: -1, // Logical decrement (1 package out)
                 recipient: name,
                 details,
@@ -659,10 +677,9 @@ export function useInventory() {
             }
 
             // 3. Create History Entry
-            const typeLabel = type === 'don' ? 'Don' : 'Prêt Temp.';
             const historyEntry = withNote({
                 id: Date.now(),
-                category: `Retrait (${typeLabel})`,
+                category: `Sortie accessoires · ${type === 'don' ? 'don' : 'prêt'}`,
                 delta: -1, // Logical decrement for grouping
                 recipient: recipient,
                 details: withdrawnItemsList,
@@ -708,7 +725,7 @@ export function useInventory() {
 
             const historyEntry = {
                 id: Date.now(),
-                category: 'Ajout Matériel',
+                category: 'Réception stock',
                 delta: 1,
                 recipient: null,
                 details: addedItemsList,
@@ -791,7 +808,7 @@ export function useInventory() {
 
             const historyEntry = withNote({
                 id: Date.now(),
-                category: 'Retour collaborateur',
+                category: 'Retour matériels',
                 delta: 1,
                 recipient: name,
                 details,
@@ -851,7 +868,7 @@ export function useInventory() {
 
             const historyEntry = {
                 id: Date.now(),
-                category: 'Ajout Matériel',
+                category: 'Réception stock',
                 delta: 1,
                 recipient: null,
                 details,
@@ -1039,7 +1056,7 @@ export function useInventory() {
             });
             details.push(...otherItems.map(stockKeyLabel));
             // Pas de mouvement de stock (delta 0) : la remise est tracée dans l'historique.
-            const historyEntry = withNote({ id: Date.now(), category: 'Remise matériel', delta: 0, recipient: name, details, date }, comment || target.note || '');
+            const historyEntry = withNote({ id: Date.now(), category: 'Remise', delta: 0, recipient: name, details, date }, comment || target.note || '');
             return {
                 ...prev,
                 devices,
@@ -1098,11 +1115,26 @@ export function useInventory() {
         });
     };
 
+    // Commentaires types de l'équipe, proposés sous chaque champ "Commentaire".
+    const addNotePreset = (note) => {
+        const preset = cleanNote(note);
+        if (!preset) return;
+        pendingLabelRef.current = `Commentaire type ajouté · ${preset}`;
+        setData(prev => ((prev.notePresets || []).includes(preset) ? prev : { ...prev, notePresets: [...(prev.notePresets || []), preset] }));
+    };
+    const removeNotePreset = (preset) => {
+        pendingLabelRef.current = `Commentaire type retiré · ${preset}`;
+        setData(prev => ({ ...prev, notePresets: (prev.notePresets || []).filter(other => other !== preset) }));
+    };
+
     return {
         stock: data.stock,
         history: data.history,
         loans: data.loans,
         devices: data.devices,
+        notePresets: data.notePresets || [],
+        addNotePreset,
+        removeNotePreset,
         returnEquipment,
         receiveDevices,
         importInventory,
