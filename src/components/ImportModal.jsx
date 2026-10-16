@@ -71,7 +71,7 @@ export default function ImportModal({ isOpen, onClose, devices, onImport }) {
                         {plural(done.total, 'appareil')} ajouté{done.total > 1 ? 's' : ''} : {count(done.total - done.inStock)} attribué{done.total - done.inStock > 1 ? 's' : ''} à {plural(done.people, 'personne')}, {count(done.inStock)} en stock.
                     </p>
                     <p className="scan-hint">
-                        Tu les retrouves dans l'onglet Attribué (recherche par nom, modèle ou n° de série). En cas d'erreur,
+                        Tu les retrouves dans l'onglet Attribution (recherche par nom, modèle ou n° de série). En cas d'erreur,
                         le bouton Rollback annule tout l'import.
                     </p>
                     <button type="button" className="btn-add full-width-btn" onClick={close}>Fermer</button>

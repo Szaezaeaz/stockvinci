@@ -7,7 +7,7 @@ import { parseScan } from '../utils/scanParse';
 
 const PANES = ['given', 'pending', 'all'];
 
-// Onglet "Matériel attribué" : tout ce qui est rattaché à une personne.
+// Onglet "Attribution" : tout ce qui est rattaché à une personne.
 //  - Remis : qui a quoi dans l'entreprise (une carte par personne).
 //  - À remettre : matériel préparé, encore en stock, avec le bouton "Remis".
 //  - Tout : les deux ensemble.
@@ -39,7 +39,7 @@ export default function AssignedTab({ loans, devices, stock, onAdd, onHandOver, 
     return (
         <div className="assigned-tab">
             <div className="loan-header-actions">
-                <h2>Matériel attribué</h2>
+                <h2>Attribution</h2>
                 <div className="assigned-header-buttons">
                     <button type="button" className="btn-import-trigger" onClick={() => setImportOpen(true)}>
                         Importer
