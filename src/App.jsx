@@ -14,6 +14,7 @@ import AlertBanner from './components/AlertBanner';
 import SyncStatus from './components/SyncStatus';
 import RollbackButton from './components/RollbackButton';
 import ReturnModal from './components/ReturnModal';
+import UpdateBanner from './components/UpdateBanner';
 
 function App() {
   const { stock, history, loans, addLoan, handOverLoan, addWithdrawal, addStock,
@@ -47,6 +48,8 @@ function App() {
         </div>
       )}
     >
+      <UpdateBanner />
+
       {syncNotice && (
         <div className="sync-notice">
           <span>{syncNotice}</span>

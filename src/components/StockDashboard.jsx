@@ -136,12 +136,16 @@ export default function StockDashboard({
     const stats = useMemo(() => getStockStats(stock), [stock]);
 
     // La recherche trouve aussi les PC et téléphones par n° de série, quel que soit leur
-    // modèle (y compris ceux qui n'ont pas de ligne sur l'accueil) et leur état.
+    // modèle (y compris ceux qui n'ont pas de ligne sur l'accueil) et leur état, ainsi
+    // que ceux attribués à une personne dont on tape le nom.
     const serialQuery = normalizeSerial(query);
-    const serialHits = useMemo(() => (serialQuery.length >= 3
-        ? Object.values(devices || {}).filter(device => device.serial.includes(serialQuery))
-            .sort((a, b) => a.serial.localeCompare(b.serial))
-        : []), [devices, serialQuery]);
+    const serialHits = useMemo(() => {
+        if (query.trim().length < 3) return [];
+        return Object.values(devices || {})
+            .filter(device => device.serial.includes(serialQuery)
+                || (device.status === 'assigned' && matchesQuery(query, [device.holder || ''])))
+            .sort((a, b) => (a.holder || '').localeCompare(b.holder || '', 'fr') || a.serial.localeCompare(b.serial));
+    }, [devices, query, serialQuery]);
 
     // Une ligne reste affichée si la recherche correspond à l'article ou à l'une
     // de ses sous-lignes (coque, vitre, occasion) ; on garde alors tout le bloc.
@@ -213,14 +217,14 @@ export default function StockDashboard({
                 </div>
             </div>
 
-            <SearchBar value={query} onChange={setQuery} placeholder="Rechercher un article ou un n° de série…" />
+            <SearchBar value={query} onChange={setQuery} placeholder="Rechercher un article, un n° de série, une personne…" />
 
             {visibleSections.length === 0 && serialHits.length === 0 && <div className="search-empty">Aucun article trouvé.</div>}
 
             {serialHits.length > 0 && (
                 <div className="section-card">
                     <div className="section-card-header">
-                        <h3>🔎 Numéros de série</h3>
+                        <h3>🔎 Appareils</h3>
                         <span className="section-card-count">
                             {serialHits.length} appareil{serialHits.length > 1 ? 's' : ''}
                         </span>
@@ -243,7 +247,7 @@ export default function StockDashboard({
                             </button>
                         ))}
                         {serialHits.length > MAX_SERIAL_HITS && (
-                            <p className="serial-hit-more">{serialHits.length - MAX_SERIAL_HITS} autres : précise le numéro.</p>
+                            <p className="serial-hit-more">{serialHits.length - MAX_SERIAL_HITS} autres : précise la recherche.</p>
                         )}
                     </div>
                 </div>
