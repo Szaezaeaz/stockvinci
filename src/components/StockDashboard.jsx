@@ -10,6 +10,11 @@ import { getStockStats } from '../utils/stockStats';
 import { IconPhoneCharger } from './icons';
 import SearchBar from './SearchBar';
 import { matchesQuery } from '../utils/search';
+import { normalizeSerial } from '../utils/serial';
+import { deviceFullName, stockKeyLabel } from '../utils/models';
+
+// Au-delà, on demande de préciser la recherche.
+const MAX_SERIAL_HITS = 20;
 
 const DASHBOARD_SECTIONS = [
     {
@@ -130,6 +135,14 @@ export default function StockDashboard({
 
     const stats = useMemo(() => getStockStats(stock), [stock]);
 
+    // La recherche trouve aussi les PC et téléphones par n° de série, quel que soit leur
+    // modèle (y compris ceux qui n'ont pas de ligne sur l'accueil) et leur état.
+    const serialQuery = normalizeSerial(query);
+    const serialHits = useMemo(() => (serialQuery.length >= 3
+        ? Object.values(devices || {}).filter(device => device.serial.includes(serialQuery))
+            .sort((a, b) => a.serial.localeCompare(b.serial))
+        : []), [devices, serialQuery]);
+
     // Une ligne reste affichée si la recherche correspond à l'article ou à l'une
     // de ses sous-lignes (coque, vitre, occasion) ; on garde alors tout le bloc.
     const visibleSections = DASHBOARD_SECTIONS
@@ -200,9 +213,41 @@ export default function StockDashboard({
                 </div>
             </div>
 
-            <SearchBar value={query} onChange={setQuery} placeholder="Rechercher dans le stock…" />
+            <SearchBar value={query} onChange={setQuery} placeholder="Rechercher un article ou un n° de série…" />
 
-            {visibleSections.length === 0 && <div className="search-empty">Aucun article trouvé.</div>}
+            {visibleSections.length === 0 && serialHits.length === 0 && <div className="search-empty">Aucun article trouvé.</div>}
+
+            {serialHits.length > 0 && (
+                <div className="section-card">
+                    <div className="section-card-header">
+                        <h3>🔎 Numéros de série</h3>
+                        <span className="section-card-count">
+                            {serialHits.length} appareil{serialHits.length > 1 ? 's' : ''}
+                        </span>
+                    </div>
+                    <div className="section-card-body">
+                        {serialHits.slice(0, MAX_SERIAL_HITS).map(device => (
+                            <button
+                                key={device.serial}
+                                type="button"
+                                className="serial-hit"
+                                onClick={() => { setDeviceSerial(device.serial); setDeviceModel(device.model); }}
+                            >
+                                <span className="serial-hit-main">
+                                    <span className="serial-hit-serial">{device.serial}</span>
+                                    <span className="serial-hit-sub">{deviceFullName(device)} · ligne {stockKeyLabel(device.model)}</span>
+                                </span>
+                                <span className={`device-badge ${device.status === 'assigned' ? 'device-badge-assigned' : 'device-badge-stock'}`}>
+                                    {device.status === 'assigned' ? `Attribué à ${device.holder || '?'}` : 'En stock'}
+                                </span>
+                            </button>
+                        ))}
+                        {serialHits.length > MAX_SERIAL_HITS && (
+                            <p className="serial-hit-more">{serialHits.length - MAX_SERIAL_HITS} autres : précise le numéro.</p>
+                        )}
+                    </div>
+                </div>
+            )}
 
             {visibleSections.map(section => (
                 <div key={section.title} className="section-card">

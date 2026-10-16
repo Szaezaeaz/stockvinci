@@ -2775,3 +2775,48 @@ input[type="checkbox"]:focus {
 .return-form > .form-group:first-child {
   margin-bottom: 26px;
 }
+
+/* Recherche par n° de série sur l'accueil */
+.serial-hit {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  width: 100%;
+  padding: 12px 4px;
+  border: none;
+  border-bottom: 1px solid #f1f5f9;
+  background: none;
+  font-family: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.serial-hit:last-child {
+  border-bottom: none;
+}
+
+.serial-hit-main {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.serial-hit-serial {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 1rem;
+  font-weight: 700;
+  color: #0f172a;
+  word-break: break-all;
+}
+
+.serial-hit-sub {
+  font-size: 0.8rem;
+  color: #64748b;
+}
+
+.serial-hit-more {
+  margin: 8px 4px 0;
+  font-size: 0.8rem;
+  color: #64748b;
+}
