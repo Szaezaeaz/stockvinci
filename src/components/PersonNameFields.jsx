@@ -2,24 +2,7 @@ import React, { useContext, useRef, useState } from 'react';
 import OnScreenKeyboard from './OnScreenKeyboard';
 import { PeopleContext } from '../utils/PeopleContext';
 import { findPeople, nameKey } from '../utils/person';
-
-// Préférence de l'appareil : utiliser le clavier à l'écran de l'appli plutôt que
-// celui de la tablette (qui disparaît quand la douchette est branchée).
-const KEYBOARD_PREF = 'vinci_onscreen_keyboard';
-const readKeyboardPref = () => {
-    try {
-        return localStorage.getItem(KEYBOARD_PREF) === '1';
-    } catch {
-        return false;
-    }
-};
-const saveKeyboardPref = (on) => {
-    try {
-        localStorage.setItem(KEYBOARD_PREF, on ? '1' : '0');
-    } catch {
-        // stockage indisponible : la préférence ne sera simplement pas retenue
-    }
-};
+import { isKeyboardPrefOn, setKeyboardPref, useKeyboardPref } from '../hooks/useKeyboardPref';
 
 // Saisie d'un collaborateur en deux champs : NOM (mis en majuscules tout seul) et
 // Prénom. "Entrée" dans le NOM passe au Prénom. Les personnes déjà connues dont le nom
@@ -30,8 +13,8 @@ export default function PersonNameFields({ last, first, onLastChange, onFirstCha
     const people = useContext(PeopleContext);
     const firstRef = useRef(null);
     const [open, setOpen] = useState(false);
-    const [keyboardOn, setKeyboardOn] = useState(readKeyboardPref); // préférence de l'appareil
-    const [keyboardShown, setKeyboardShown] = useState(() => autoFocus && readKeyboardPref()); // champ actif dès l'ouverture : le clavier suit
+    const keyboardOn = useKeyboardPref(); // préférence de l'appareil, commune à tous les champs
+    const [keyboardShown, setKeyboardShown] = useState(() => autoFocus && isKeyboardPrefOn()); // champ actif dès l'ouverture : le clavier suit
     const [active, setActive] = useState('last'); // champ qui reçoit le clavier à l'écran
     const [shiftOnce, setShiftOnce] = useState(false);
 
@@ -80,13 +63,11 @@ export default function PersonNameFields({ last, first, onLastChange, onFirstCha
     };
 
     const enableKeyboard = () => {
-        setKeyboardOn(true);
-        saveKeyboardPref(true);
+        setKeyboardPref(true);
         setKeyboardShown(true);
     };
     const disableKeyboard = () => {
-        setKeyboardOn(false);
-        saveKeyboardPref(false);
+        setKeyboardPref(false);
         setKeyboardShown(false);
     };
 

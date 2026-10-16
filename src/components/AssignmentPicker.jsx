@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import Modal from './Modal';
 import ModelPicker from './ModelPicker';
+import SearchBar from './SearchBar';
 import { TRACKED_MODELS } from '../config/trackedModels';
 import { matchesQuery } from '../utils/search';
 import { parseScan } from '../utils/scanParse';
@@ -169,15 +170,7 @@ export default function AssignmentPicker({ devices, stock, items, onItemsChange,
 
             {stockOpen && (
                 <div className="assign-stock">
-                    <input
-                        type="text"
-                        className="loan-input"
-                        placeholder="Chercher un modèle ou un n° de série…"
-                        value={stockQuery}
-                        onChange={(e) => setStockQuery(e.target.value)}
-                        autoComplete="off"
-                        spellCheck={false}
-                    />
+                    <SearchBar value={stockQuery} onChange={setStockQuery} placeholder="Chercher un modèle ou un n° de série…" />
                     {stockCards.length === 0 && untracked.length === 0 && (
                         <div className="search-empty">{stockQuery ? 'Aucun appareil trouvé en stock.' : 'Aucun appareil en stock.'}</div>
                     )}

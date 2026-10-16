@@ -1,10 +1,11 @@
 import React, { useEffect, useRef } from 'react';
 
-// Clavier AZERTY à l'écran pour saisir un NOM et un Prénom quand la tablette ne
+// Clavier AZERTY à l'écran pour les noms et les recherches, quand la tablette ne
 // propose pas le sien (elle le masque dès qu'un clavier physique, comme la
-// douchette, est branché). Il ne contient que ce qu'il faut pour un nom : lettres,
-// accents courants, tiret, apostrophe et espace.
+// douchette, est branché) : lettres, accents courants, tiret, apostrophe, espace,
+// et en option les chiffres.
 
+const DIGITS = '1234567890'.split('');
 const LETTER_ROWS = ['azertyuiop'.split(''), 'qsdfghjklm'.split('')];
 const LAST_ROW = 'wxcvbn'.split('');
 const ACCENTS = 'éèêëàâîïôùûç'.split('');
@@ -14,7 +15,9 @@ const REPEAT_EVERY_MS = 70;
 
 // upper : les lettres s'affichent (et se saisissent) en majuscules.
 // shiftOn : la touche ⇧ est enfoncée pour la prochaine lettre.
-export default function OnScreenKeyboard({ upper, shiftOn, onShift, onChar, onBackspace, onNext, nextLabel }) {
+// digits : ajoute une rangée de chiffres (recherches, n° de série).
+// onUseDeviceKeyboard : affiche un lien pour revenir au clavier de la tablette.
+export default function OnScreenKeyboard({ upper, shiftOn, onShift, onChar, onBackspace, onNext, nextLabel, digits = false, onUseDeviceKeyboard }) {
     const backspaceRef = useRef(onBackspace);
     const timersRef = useRef({ delay: null, repeat: null });
 
@@ -49,6 +52,7 @@ export default function OnScreenKeyboard({ upper, shiftOn, onShift, onChar, onBa
 
     return (
         <div className="osk" role="group" aria-label="Clavier à l’écran">
+            {digits && <div className="osk-row">{DIGITS.map(char => charKey(char, 'osk-key-small'))}</div>}
             {LETTER_ROWS.map(row => (
                 <div key={row.join('')} className="osk-row">{row.map(char => charKey(char))}</div>
             ))}
@@ -88,6 +92,11 @@ export default function OnScreenKeyboard({ upper, shiftOn, onShift, onChar, onBa
                     {nextLabel}
                 </button>
             </div>
+            {onUseDeviceKeyboard && (
+                <button type="button" className="osk-device-link" onMouseDown={keepFocus} onClick={onUseDeviceKeyboard}>
+                    Revenir au clavier de la tablette
+                </button>
+            )}
         </div>
     );
 }

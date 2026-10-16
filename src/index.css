@@ -1343,11 +1343,18 @@ input[type="checkbox"]:focus {
 .sync-needs-choice .sync-dot { background: #f59e0b; }
 
 /* Barre de recherche */
+.search-bar-wrap {
+  margin-bottom: 16px;
+}
+
+.search-bar-wrap .osk {
+  margin-top: 8px;
+}
+
 .search-bar {
   position: relative;
   display: flex;
   align-items: center;
-  margin-bottom: 16px;
 }
 
 .search-bar-icon {
@@ -1360,7 +1367,7 @@ input[type="checkbox"]:focus {
 .search-bar-input {
   width: 100%;
   box-sizing: border-box;
-  padding: 12px 40px 12px 40px;
+  padding: 12px 84px 12px 40px;
   border: 1px solid var(--accent-gray);
   border-radius: 14px;
   background: #fff;
@@ -1376,7 +1383,7 @@ input[type="checkbox"]:focus {
 
 .search-bar-clear {
   position: absolute;
-  right: 8px;
+  right: 46px;
   width: 30px;
   height: 30px;
   border: none;
@@ -2846,5 +2853,40 @@ input[type="checkbox"]:focus {
   color: #fff;
   font-family: inherit;
   font-weight: 700;
+  cursor: pointer;
+}
+
+/* Bouton "clavier à l'écran" des barres de recherche */
+.search-bar-keyboard {
+  position: absolute;
+  right: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border: none;
+  border-radius: 10px;
+  background: transparent;
+  color: #94a3b8;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.search-bar-keyboard.active {
+  background: #eff6ff;
+  color: #2563eb;
+}
+
+.osk-device-link {
+  align-self: center;
+  margin-top: 2px;
+  padding: 4px 8px;
+  border: none;
+  background: none;
+  color: #2563eb;
+  font-family: inherit;
+  font-size: 0.8rem;
+  font-weight: 600;
   cursor: pointer;
 }
