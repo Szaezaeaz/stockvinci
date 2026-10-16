@@ -1,12 +1,13 @@
 import React from 'react';
 
-// Petit bouton "clavier" : ouvre ou ferme le clavier à l'écran de l'appli. Placé à
-// droite d'un champ (barres de recherche, NOM / Prénom).
-export default function KeyboardToggle({ active, onToggle }) {
+// Petit bouton "clavier" : ouvre ou ferme le clavier à l'écran de l'appli. Dans une
+// barre de recherche il est placé dans le champ ; standalone : sa propre petite bulle,
+// à côté des champs (NOM / Prénom).
+export default function KeyboardToggle({ active, onToggle, standalone = false }) {
     return (
         <button
             type="button"
-            className={`keyboard-toggle${active ? ' active' : ''}`}
+            className={`keyboard-toggle${standalone ? ' keyboard-toggle-standalone' : ''}${active ? ' active' : ''}`}
             onMouseDown={(e) => e.preventDefault()}
             onClick={onToggle}
             aria-label={active ? 'Masquer le clavier à l’écran' : 'Clavier à l’écran'}

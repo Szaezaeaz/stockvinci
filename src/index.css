@@ -2574,13 +2574,24 @@ input[type="checkbox"]:focus {
 }
 
 /* Clavier à l'écran (NOM / Prénom) */
-.name-field-with-toggle {
-  position: relative;
-  min-width: 0;
+/* NOM | Prénom | bouton clavier dans sa propre bulle */
+.name-picker .name-fields {
+  grid-template-columns: 1fr 1fr auto;
 }
 
-.name-fields .name-field-with-toggle .loan-input {
-  padding-right: 46px;
+.keyboard-toggle.keyboard-toggle-standalone {
+  position: static;
+  transform: none;
+  width: 48px;
+  height: auto;
+  border: 2px solid var(--accent-gray);
+  border-radius: 12px;
+  background: #fff;
+}
+
+.keyboard-toggle.keyboard-toggle-standalone.active {
+  border-color: #93c5fd;
+  background: #eff6ff;
 }
 
 .name-picker .osk {

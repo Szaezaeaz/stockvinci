@@ -112,7 +112,6 @@ export default function PersonNameFields({ last, first, onLastChange, onFirstCha
                     autoCorrect="off"
                     spellCheck={false}
                 />
-                <div className="name-field-with-toggle">
                 <input
                     type="text"
                     className="loan-input"
@@ -131,8 +130,7 @@ export default function PersonNameFields({ last, first, onLastChange, onFirstCha
                     autoCorrect="off"
                     spellCheck={false}
                 />
-                <KeyboardToggle active={keyboardShown} onToggle={toggleKeyboard} />
-                </div>
+                <KeyboardToggle standalone active={keyboardShown} onToggle={toggleKeyboard} />
             </div>
 
             {suggestions.length > 0 && (
