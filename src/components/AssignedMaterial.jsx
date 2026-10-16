@@ -4,6 +4,8 @@ import { getLoanSerials } from '../utils/loans';
 import { deviceFullName } from '../utils/models';
 import { nameKey } from '../utils/person';
 import LoanChips from './LoanChips';
+import NoteDialog from './NoteDialog';
+import { ASSIGN_NOTE_PRESETS, DEVICE_NOTE_PRESETS } from '../config/notePresets';
 
 // Avec tout le parc importé, il y a plus de mille personnes : on n'en affiche
 // qu'une page à la fois (la recherche, elle, porte toujours sur tout le monde).
@@ -35,18 +37,20 @@ function groupByPerson(loans, allLoans, devices) {
 function searchTexts(person, devices) {
     const texts = [person.name];
     person.loans.forEach(loan => {
-        texts.push(...(loan.items || []));
+        texts.push(...(loan.items || []), loan.note || '');
         getLoanSerials(loan).forEach(serial => texts.push(serial, devices?.[serial]?.exactModel || '', devices?.[serial]?.modelName || ''));
     });
-    person.orphans.forEach(device => texts.push(device.serial, device.model, device.exactModel || '', device.modelName || ''));
+    person.orphans.forEach(device => texts.push(device.serial, device.model, device.exactModel || '', device.modelName || '', device.note || ''));
     return texts;
 }
 
 // Volet "Remis" (ou "Tout") de l'onglet Attribué : qui a quoi, une carte par
 // personne. scope 'given' = matériel déjà remis ; 'all' = aussi celui à remettre.
 // La recherche (query) est celle de l'onglet.
-export default function AssignedMaterial({ loans, devices, onOpenReturn, query = '', scope = 'given' }) {
+export default function AssignedMaterial({ loans, devices, onOpenReturn, onSetLoanNote, onSetDeviceNote, query = '', scope = 'given' }) {
     const [limit, setLimit] = useState(PAGE_SIZE);
+    // Commentaire en cours de modification : { title, note, presets, save }.
+    const [editing, setEditing] = useState(null);
     const everyone = useMemo(
         () => groupByPerson(scope === 'all' ? loans : loans.filter(loan => loan.pickedUpAt), loans, devices),
         [loans, devices, scope]
@@ -64,6 +68,8 @@ export default function AssignedMaterial({ loans, devices, onOpenReturn, query =
             handedOver: Boolean(loan.pickedUpAt),
             label: loan.pickedUpAt ? `Remis le ${dateOf(loan.pickedUpAt)}` : 'À remettre',
             onReturn: () => onOpenReturn({ name: person.name, serials: getLoanSerials(loan), items: loan.items || [] }),
+            note: loan.note || '',
+            onEditNote: () => setEditing({ title: `Commentaire · ${person.name}`, note: loan.note || '', presets: ASSIGN_NOTE_PRESETS, save: (text) => onSetLoanNote(loan.id, text) }),
             chips: <LoanChips loan={loan} devices={devices} />
         })),
         ...person.orphans.map(device => ({
@@ -71,6 +77,8 @@ export default function AssignedMaterial({ loans, devices, onOpenReturn, query =
             handedOver: true,
             label: `Attribué le ${dateOf(device.events?.[0]?.date)}`,
             onReturn: () => onOpenReturn({ name: person.name, serials: [device.serial], items: [] }),
+            note: device.note || '',
+            onEditNote: () => setEditing({ title: `Commentaire · ${device.serial}`, note: device.note || '', presets: DEVICE_NOTE_PRESETS, save: (text) => onSetDeviceNote(device.serial, text) }),
             chips: (
                 <div className="assignment-items">
                     <span className="assignment-chip assignment-chip-pc">
@@ -86,12 +94,32 @@ export default function AssignedMaterial({ loans, devices, onOpenReturn, query =
     const actions = (entry) => (
         <>
             <span className={`assignment-badge ${entry.handedOver ? 'assignment-badge-given' : 'assignment-badge-pending'}`}>{entry.label}</span>
-            <button type="button" className="assignment-return" onClick={entry.onReturn}>Retour matériel</button>
+            <span className="assignment-buttons">
+                {!entry.note && (
+                    <button type="button" className="assignment-note-add" onClick={entry.onEditNote} aria-label="Ajouter un commentaire" title="Ajouter un commentaire">💬</button>
+                )}
+                <button type="button" className="assignment-return" onClick={entry.onReturn}>Retour matériel</button>
+            </span>
         </>
+    );
+
+    // Commentaire d'une attribution, sous ses appareils ; un toucher le modifie.
+    const noteLine = (entry) => entry.note && (
+        <button type="button" className="loan-note" onClick={entry.onEditNote}>💬 {entry.note}</button>
     );
 
     return (
         <div className="assigned-section">
+            {editing && (
+                <NoteDialog
+                    title={editing.title}
+                    initial={editing.note}
+                    presets={editing.presets}
+                    allowClear
+                    onConfirm={editing.save}
+                    onClose={() => setEditing(null)}
+                />
+            )}
             {everyone.length === 0 && <div className="search-empty">Aucun matériel attribué pour le moment.</div>}
             {everyone.length > 0 && visible.length === 0 && <div className="search-empty">Aucun résultat.</div>}
 
@@ -118,10 +146,11 @@ export default function AssignedMaterial({ loans, devices, onOpenReturn, query =
                             )}
                         </div>
 
-                        {single ? entries[0].chips : entries.map(entry => (
+                        {single ? <>{entries[0].chips}{noteLine(entries[0])}</> : entries.map(entry => (
                             <div key={entry.key} className="assignment">
                                 <div className="assignment-top">{actions(entry)}</div>
                                 {entry.chips}
+                                {noteLine(entry)}
                             </div>
                         ))}
                     </div>

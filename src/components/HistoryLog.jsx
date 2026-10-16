@@ -1,20 +1,31 @@
 import React, { useState } from 'react';
+import SearchBar from './SearchBar';
+import { matchesQuery } from '../utils/search';
+
+// Texte retrouvable par la recherche : type, personne, matériel et n° de série, commentaire.
+// Date du jour au format des champs date (AAAA-MM-JJ), à l'heure locale.
+const localDay = (date) => `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+
+const searchTexts = (item) => [item.category, item.recipient || '', ...(Array.isArray(item.details) ? item.details : []), item.note || ''];
 
 export default function HistoryLog({ history }) {
     const [expandedMonths, setExpandedMonths] = useState({});
+    const [query, setQuery] = useState('');
+    const searching = query.trim() !== '';
 
     // Date Filtering State
     // Default to first day of current month and today
     const [startDate, setStartDate] = useState(() => {
         const now = new Date();
-        return new Date(now.getFullYear(), now.getMonth(), 1).toISOString().split('T')[0];
+        return localDay(new Date(now.getFullYear(), now.getMonth(), 1));
     });
     const [endDate, setEndDate] = useState(() => {
-        return new Date().toISOString().split('T')[0];
+        return localDay(new Date());
     });
 
-    // Filter History Logic
+    // Filter History Logic : une recherche porte sur tout l'historique, sans les dates.
     const filteredHistory = history.filter(item => {
+        if (searching) return matchesQuery(query, searchTexts(item));
         if (!startDate && !endDate) return true;
         const itemDate = new Date(item.date).setHours(0, 0, 0, 0);
         const start = startDate ? new Date(startDate).setHours(0, 0, 0, 0) : null;
@@ -32,7 +43,7 @@ export default function HistoryLog({ history }) {
         }
 
         // CSV Headers
-        const headers = ["Date", "Heure", "Type", "Bénéficiaire", "Quantité", "Détails"];
+        const headers = ["Date", "Heure", "Type", "Bénéficiaire", "Quantité", "Détails", "Commentaire"];
 
         // Prepare Rows
         const rows = filteredHistory.map(item => {
@@ -48,14 +59,16 @@ export default function HistoryLog({ history }) {
             // Escape quotes and wrap in quotes for CSV safety
             const safeDetails = `"${details.replace(/"/g, '""')}"`;
             const safeRecipient = `"${(item.recipient || 'N/A').replace(/"/g, '""')}"`;
+            const safeNote = `"${(item.note || '').replace(/"/g, '""')}"`;
 
             return [
                 dateStr,
                 timeStr,
-                item.delta > 0 ? "Entrée" : "Sortie",
+                item.delta > 0 ? "Entrée" : item.delta < 0 ? "Sortie" : "Remise",
                 safeRecipient,
                 item.delta, // Raw number
-                safeDetails
+                safeDetails,
+                safeNote
             ].join(';'); // Using semicolon for Excel FR compatibility
         });
 
@@ -67,7 +80,7 @@ export default function HistoryLog({ history }) {
         const url = URL.createObjectURL(blob);
         const link = document.createElement('a');
         link.href = url;
-        link.setAttribute('download', `rapport_stock_it_${startDate}_${endDate}.csv`);
+        link.setAttribute('download', searching ? 'rapport_stock_it_recherche.csv' : `rapport_stock_it_${startDate}_${endDate}.csv`);
         document.body.appendChild(link);
         link.click();
         document.body.removeChild(link);
@@ -127,7 +140,10 @@ export default function HistoryLog({ history }) {
 
             const lastItem = aggregated[aggregated.length - 1];
             const timeDiff = Math.abs(new Date(lastItem.date) - new Date(item.date));
-            const isSameCategory = lastItem.category === item.category;
+            // Seuls des mouvements identiques (même personne, même commentaire) sont réunis.
+            const isSameCategory = lastItem.category === item.category
+                && (lastItem.recipient || '') === (item.recipient || '')
+                && (lastItem.note || '') === (item.note || '');
             // Check if both are positive or both are negative (same direction)
             const isSameDirection = (lastItem.delta > 0 && item.delta > 0) || (lastItem.delta < 0 && item.delta < 0);
             const isWithinTimeWindow = timeDiff <= 3 * 60 * 1000; // 3 minutes
@@ -177,13 +193,21 @@ export default function HistoryLog({ history }) {
                 </div>
             </div>
 
+            <SearchBar value={query} onChange={setQuery} placeholder="Rechercher un nom, un n° de série, un matériel…" />
+            {searching && (
+                <p className="list-count">
+                    {filteredHistory.length} mouvement{filteredHistory.length > 1 ? 's' : ''} trouvé{filteredHistory.length > 1 ? 's' : ''} sur tout l’historique
+                </p>
+            )}
+
             <div className="history-container">
                 {filteredHistory.length === 0 && (
-                    <p style={{ color: '#999', textAlign: 'center', padding: '20px' }}>Aucun mouvement sur cette période.</p>
+                    <p style={{ color: '#999', textAlign: 'center', padding: '20px' }}>{searching ? 'Aucun mouvement trouvé.' : 'Aucun mouvement sur cette période.'}</p>
                 )}
 
                 {sortedMonths.map(monthKey => {
-                    const isExpanded = !!expandedMonths[monthKey];
+                    // Pendant une recherche, tous les mois trouvés sont dépliés.
+                    const isExpanded = searching || !!expandedMonths[monthKey];
                     const days = groupedByMonth[monthKey];
                     const sortedDays = Object.keys(days);
 
@@ -208,11 +232,12 @@ export default function HistoryLog({ history }) {
                                                 <ul className="history-list-compact">
                                                     {aggregatedItems.map(item => {
                                                         const isIn = item.delta > 0;
+                                                        const isNeutral = item.delta === 0; // remise : pas de mouvement de stock
                                                         const dateObj = new Date(item.date);
                                                         const timeStr = dateObj.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 
                                                         return (
-                                                            <li key={item.id} className={`history-item-compact ${isIn ? 'in' : 'out'}`} style={{ alignItems: 'flex-start' }}>
+                                                            <li key={item.id} className={`history-item-compact ${isNeutral ? 'neutral' : isIn ? 'in' : 'out'}`} style={{ alignItems: 'flex-start' }}>
                                                                 <span className="history-time-compact">{timeStr}</span>
                                                                 <div className="history-category-compact" style={{ display: 'flex', flexDirection: 'column' }}>
                                                                     <div style={{ fontWeight: 500 }}>
@@ -233,9 +258,11 @@ export default function HistoryLog({ history }) {
                                                                             {item.details.join(', ')}
                                                                         </div>
                                                                     )}
+
+                                                                    {item.note && <div className="history-note">💬 {item.note}</div>}
                                                                 </div>
                                                                 <span className="history-delta-compact">
-                                                                    {isIn ? '+' : ''}{item.delta}
+                                                                    {isNeutral ? '✓' : `${isIn ? '+' : ''}${item.delta}`}
                                                                 </span>
                                                             </li>
                                                         );

@@ -13,7 +13,7 @@ const PANES = ['given', 'pending', 'all'];
 //  - Tout : les deux ensemble.
 // Le bouton "Attribuer du matériel" ouvre le formulaire d'attribution ; "Importer"
 // reprend un inventaire existant depuis un classeur Excel.
-export default function AssignedTab({ loans, devices, stock, onAdd, onHandOver, onOpenReturn, onReceiveDevices, onImport, ref }) {
+export default function AssignedTab({ loans, devices, stock, onAdd, onHandOver, onSetLoanNote, onSetDeviceNote, onOpenReturn, onReceiveDevices, onImport, ref }) {
     const [pane, setPane] = useState('given');
     const [importOpen, setImportOpen] = useState(false);
     const [query, setQuery] = useState('');
@@ -74,6 +74,7 @@ export default function AssignedTab({ loans, devices, stock, onAdd, onHandOver, 
                 stock={stock}
                 onAdd={onAdd}
                 onHandOver={onHandOver}
+                onSetLoanNote={onSetLoanNote}
                 onReceiveDevices={onReceiveDevices}
                 query={query}
                 showList={pane === 'pending'}
@@ -85,6 +86,8 @@ export default function AssignedTab({ loans, devices, stock, onAdd, onHandOver, 
                     loans={loans}
                     devices={devices}
                     onOpenReturn={onOpenReturn}
+                    onSetLoanNote={onSetLoanNote}
+                    onSetDeviceNote={onSetDeviceNote}
                     query={query}
                     scope={pane === 'all' ? 'all' : 'given'}
                 />

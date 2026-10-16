@@ -155,6 +155,13 @@ function detachFromLoans(loans, serial, stockKey) {
     return next;
 }
 
+// Mouvements gardés dans l'historique (les plus récents).
+const MAX_HISTORY = 500;
+
+// Commentaire saisi lors d'un changement d'état ('' = aucun).
+const cleanNote = (note) => String(note || '').replace(/\s+/g, ' ').trim();
+const withNote = (object, note) => (note ? { ...object, note } : object);
+
 // Retire un article secondaire (ex. "Souris") de l'attribution d'une personne. Une
 // attribution qui n'a plus rien disparaît.
 function removeItemFromLoans(loans, personKey, item) {
@@ -492,7 +499,10 @@ export function useInventory() {
     // pcs / phones : [{ model, serial }] — chaque appareil peut porter son n° de série
     // (vide pour du stock ancien non suivi). Les appareils suivis passent "attribués"
     // à la personne.
-    const addLoan = (typedName, { pcs = [], phones = [], accessories = DEFAULT_LOAN_ACCESSORIES } = {}) => {
+    // note : commentaire facultatif (ex. "remis à l'assistante"), gardé sur l'attribution,
+    // les appareils et l'historique.
+    const addLoan = (typedName, { pcs = [], phones = [], accessories = DEFAULT_LOAN_ACCESSORIES, note = '' } = {}) => {
+        const comment = cleanNote(note);
         setData(prev => {
             const name = canonicalName(typedName, nameIndex(prev.loans, prev.devices));
             const stockUpdates = {};
@@ -570,22 +580,22 @@ export function useInventory() {
                 newStock[item] = (newStock[item] || 0) + delta;
             }
 
-            const loanPackageEntry = {
+            const loanPackageEntry = withNote({
                 id: Date.now(),
                 category: 'Attribution matériel',
                 delta: -1, // Logical decrement (1 package out)
                 recipient: name,
                 details,
                 date: newDate
-            };
+            }, comment);
 
-            const newLoan = {
+            const newLoan = withNote({
                 id: Date.now(),
                 name,
                 date: newDate,
                 items: loanedItems,
                 serials: trackedSerials
-            };
+            }, comment);
 
             // Les appareils précis passent "attribués" à la personne.
             const devices = { ...(prev.devices || {}) };
@@ -595,7 +605,8 @@ export function useInventory() {
                     ...devices[serial],
                     status: 'assigned',
                     holder: name,
-                    events: [{ date: newDate, action: 'Attribution', person: name }, ...(devices[serial].events || [])].slice(0, 20)
+                    note: comment,
+                    events: [withNote({ date: newDate, action: 'Attribution', person: name }, comment), ...(devices[serial].events || [])].slice(0, 20)
                 };
             });
 
@@ -603,13 +614,14 @@ export function useInventory() {
                 ...prev,
                 stock: newStock,
                 devices,
-                history: [loanPackageEntry, ...prev.history].slice(0, 50),
+                history: [loanPackageEntry, ...prev.history].slice(0, MAX_HISTORY),
                 loans: [...prev.loans, newLoan]
             };
         });
     };
 
-    const addWithdrawal = (typedRecipient, type, items) => {
+    const addWithdrawal = (typedRecipient, type, items, note = '') => {
+        const comment = cleanNote(note);
         setData(prev => {
             const recipient = canonicalName(typedRecipient, nameIndex(prev.loans, prev.devices));
             const stockUpdates = {};
@@ -648,30 +660,30 @@ export function useInventory() {
 
             // 3. Create History Entry
             const typeLabel = type === 'don' ? 'Don' : 'Prêt Temp.';
-            const historyEntry = {
+            const historyEntry = withNote({
                 id: Date.now(),
                 category: `Retrait (${typeLabel})`,
                 delta: -1, // Logical decrement for grouping
                 recipient: recipient,
                 details: withdrawnItemsList,
                 date: newDate
-            };
+            }, comment);
 
             const newState = {
                 ...prev,
                 stock: newStock,
-                history: [historyEntry, ...prev.history].slice(0, 50)
+                history: [historyEntry, ...prev.history].slice(0, MAX_HISTORY)
             };
 
             // 4. If type is 'pret', save it as an active loan
             if (type === 'pret') {
-                const newLoan = {
+                const newLoan = withNote({
                     id: Date.now(), // Unique ID for this loan
                     name: recipient,
                     recipient,
                     items: withdrawnItemsList,
                     date: newDate
-                };
+                }, comment);
                 newState.loans = [...prev.loans, newLoan];
             }
 
@@ -706,7 +718,7 @@ export function useInventory() {
             return {
                 ...prev,
                 stock: newStock,
-                history: [historyEntry, ...prev.history].slice(0, 50)
+                history: [historyEntry, ...prev.history].slice(0, MAX_HISTORY)
             };
         });
     };
@@ -718,7 +730,8 @@ export function useInventory() {
     // learnKey?, learnModel? } et crée sa fiche. items : articles secondaires rendus ;
     // phoneCase : coque et vitre des téléphones rendus. Ce qui est rendu quitte
     // l'attribution de la personne ; le reste de son matériel ne change pas.
-    const returnEquipment = (typedName, { returned = [], items = [], phoneCase = false }) => {
+    const returnEquipment = (typedName, { returned = [], items = [], phoneCase = false, note = '' }) => {
+        const comment = cleanNote(note);
         setData(prev => {
             const name = canonicalName(typedName, nameIndex(prev.loans, prev.devices));
             const personKey = nameKey(name);
@@ -759,7 +772,8 @@ export function useInventory() {
                     ...(exactModel ? { exactModel } : {}),
                     status: 'stock',
                     holder: null,
-                    events: [{ date, action: 'Retour', person: name }, ...(known?.events || [])].slice(0, 20)
+                    note: comment,
+                    events: [withNote({ date, action: 'Retour', person: name }, comment), ...(known?.events || [])].slice(0, 20)
                 };
                 details.push(`${stockKeyLabel(model)} (S/N ${serial})`);
 
@@ -775,14 +789,14 @@ export function useInventory() {
                 newStock[item] = (newStock[item] || 0) + count;
             }
 
-            const historyEntry = {
+            const historyEntry = withNote({
                 id: Date.now(),
                 category: 'Retour collaborateur',
                 delta: 1,
                 recipient: name,
                 details,
                 date
-            };
+            }, comment);
 
             return {
                 ...prev,
@@ -790,7 +804,7 @@ export function useInventory() {
                 devices,
                 loans,
                 modelAliases,
-                history: [historyEntry, ...prev.history].slice(0, 50)
+                history: [historyEntry, ...prev.history].slice(0, MAX_HISTORY)
             };
         });
     };
@@ -849,7 +863,7 @@ export function useInventory() {
                 stock,
                 devices,
                 modelAliases,
-                history: [historyEntry, ...prev.history].slice(0, 50)
+                history: [historyEntry, ...prev.history].slice(0, MAX_HISTORY)
             };
         });
     };
@@ -927,7 +941,7 @@ export function useInventory() {
                 stock,
                 devices,
                 loans: [...prev.loans, ...loans],
-                history: [historyEntry, ...prev.history].slice(0, 50)
+                history: [historyEntry, ...prev.history].slice(0, MAX_HISTORY)
             };
         });
     };
@@ -962,7 +976,7 @@ export function useInventory() {
                 stock,
                 devices,
                 loans: detachFromLoans(prev.loans, serial, device.model),
-                history: [historyEntry, ...prev.history].slice(0, 50)
+                history: [historyEntry, ...prev.history].slice(0, MAX_HISTORY)
             };
         });
     };
@@ -989,20 +1003,99 @@ export function useInventory() {
             return {
                 ...prev,
                 stock: { ...prev.stock, [model]: tracked },
-                history: [historyEntry, ...prev.history].slice(0, 50)
+                history: [historyEntry, ...prev.history].slice(0, MAX_HISTORY)
             };
         });
     };
 
     // Le matériel a été remis à la personne : la fiche quitte "À remettre" mais
     // reste dans "Matériel attribué" (avec sa date de remise) jusqu'à son retour.
-    const handOverLoan = (id) => {
+    // note : commentaire facultatif sur la remise (ex. "remis à l'assistante") ; sans
+    // commentaire, celui de l'attribution est gardé.
+    const handOverLoan = (id, note = '') => {
+        const comment = cleanNote(note);
         const loan = dataRef.current.loans.find(l => l.id === id);
         pendingLabelRef.current = `Matériel remis${loan ? ` · ${loan.name || loan.recipient}` : ''}`;
-        setData(prev => ({
-            ...prev,
-            loans: prev.loans.map(loan => (loan.id === id && !loan.pickedUpAt ? { ...loan, pickedUpAt: new Date() } : loan))
-        }));
+        setData(prev => {
+            const target = prev.loans.find(l => l.id === id);
+            if (!target || target.pickedUpAt) return prev;
+            const date = new Date();
+            const devices = { ...(prev.devices || {}) };
+            const name = target.name || target.recipient;
+            // Détail pour l'historique : les appareils (avec n° de série) puis les autres articles.
+            const otherItems = [...(target.items || [])];
+            const details = [];
+            getLoanSerials(target).forEach(serial => {
+                const device = devices[serial];
+                if (!device) return;
+                const index = otherItems.indexOf(device.model);
+                if (index !== -1) otherItems.splice(index, 1);
+                details.push(`${stockKeyLabel(device.model)} (S/N ${serial})`);
+                devices[serial] = {
+                    ...device,
+                    ...(comment ? { note: comment } : {}),
+                    events: [withNote({ date, action: 'Remise', person: name }, comment), ...(device.events || [])].slice(0, 20)
+                };
+            });
+            details.push(...otherItems.map(stockKeyLabel));
+            // Pas de mouvement de stock (delta 0) : la remise est tracée dans l'historique.
+            const historyEntry = withNote({ id: Date.now(), category: 'Remise matériel', delta: 0, recipient: name, details, date }, comment || target.note || '');
+            return {
+                ...prev,
+                devices,
+                history: [historyEntry, ...prev.history].slice(0, MAX_HISTORY),
+                loans: prev.loans.map(l => (l.id === id ? { ...l, pickedUpAt: date, ...(comment ? { note: comment } : {}) } : l))
+            };
+        });
+    };
+
+    // Commentaire d'un appareil, modifiable à tout moment depuis sa fiche (ex. "PC mis de
+    // côté pour X, revient en janvier"). '' l'efface.
+    const setDeviceNote = (serial, note) => {
+        const comment = cleanNote(note);
+        pendingLabelRef.current = `Commentaire · ${serial}`;
+        setData(prev => {
+            const device = prev.devices?.[serial];
+            if (!device || (device.note || '') === comment) return prev;
+            const date = new Date();
+            return {
+                ...prev,
+                devices: {
+                    ...prev.devices,
+                    [serial]: {
+                        ...device,
+                        note: comment,
+                        events: [{ date, action: comment ? 'Commentaire' : 'Commentaire effacé', person: null, ...(comment ? { note: comment } : {}) }, ...(device.events || [])].slice(0, 20)
+                    }
+                }
+            };
+        });
+    };
+
+    // Commentaire d'une attribution (carte de la personne dans l'onglet Attribution) ;
+    // il passe aussi sur la fiche de ses appareils.
+    const setLoanNote = (loanId, note) => {
+        const comment = cleanNote(note);
+        const loan = dataRef.current.loans.find(l => l.id === loanId);
+        pendingLabelRef.current = `Commentaire${loan ? ` · ${loan.name || loan.recipient}` : ''}`;
+        setData(prev => {
+            const target = prev.loans.find(l => l.id === loanId);
+            if (!target || (target.note || '') === comment) return prev;
+            const date = new Date();
+            const devices = { ...(prev.devices || {}) };
+            getLoanSerials(target).forEach(serial => {
+                const device = devices[serial];
+                if (!device || device.status !== 'assigned') return;
+                devices[serial] = {
+                    ...device,
+                    note: comment,
+                    events: [{ date, action: comment ? 'Commentaire' : 'Commentaire effacé', person: null, ...(comment ? { note: comment } : {}) }, ...(device.events || [])].slice(0, 20)
+                };
+            });
+            const { note: _old, ...rest } = target;
+            const updated = comment ? { ...rest, note: comment } : rest;
+            return { ...prev, devices, loans: prev.loans.map(l => (l.id === loanId ? updated : l)) };
+        });
     };
 
     return {
@@ -1019,6 +1112,8 @@ export function useInventory() {
         addWithdrawal,
         addStock,
         handOverLoan,
+        setDeviceNote,
+        setLoanNote,
         undoStack,
         rollbackTo,
         syncStatus,

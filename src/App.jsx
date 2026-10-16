@@ -17,7 +17,7 @@ import ReturnModal from './components/ReturnModal';
 import UpdateBanner from './components/UpdateBanner';
 
 function App() {
-  const { stock, history, loans, addLoan, handOverLoan, addWithdrawal, addStock,
+  const { stock, history, loans, addLoan, handOverLoan, setLoanNote, setDeviceNote, addWithdrawal, addStock,
         devices, returnEquipment, receiveDevices, importInventory, removeUntrackedStock, deleteDevice, undoStack, rollbackTo,
         syncStatus, syncNotice, submitPasscode, dismissSyncNotice, syncNow, syncChoice, resolveSyncChoice } = useInventory();
   const [activeTab, setActiveTab] = useState('stock'); // 'stock' | 'assigned' | 'history'
@@ -26,7 +26,7 @@ function App() {
   const openReturn = (prefill = {}) => setReturnRequest(prefill);
   const { totalUnits } = useMemo(() => getStockStats(stock), [stock]);
   // Personnes connues, proposées pendant la saisie d'un nom.
-  const people = useMemo(() => listPeople(loans, devices), [loans, devices]);
+  const people = useMemo(() => listPeople(loans, devices, history), [loans, devices, history]);
 
   // Un scan hors d'un champ de saisie est confié à l'onglet affiché :
   // Stock -> fiche du PC ou ajout ; Attribué -> formulaire d'attribution ou recherche.
@@ -71,6 +71,7 @@ function App() {
             onReceiveDevices={receiveDevices}
             onRemoveUntracked={removeUntrackedStock}
             onDeleteDevice={deleteDevice}
+            onSetDeviceNote={setDeviceNote}
           />
         )}
         {activeTab === 'assigned' && (
@@ -81,6 +82,8 @@ function App() {
             stock={stock}
             onAdd={addLoan}
             onHandOver={handOverLoan}
+            onSetLoanNote={setLoanNote}
+            onSetDeviceNote={setDeviceNote}
             onOpenReturn={openReturn}
             onReceiveDevices={receiveDevices}
             onImport={importInventory}

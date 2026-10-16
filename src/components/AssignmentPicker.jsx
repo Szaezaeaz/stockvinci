@@ -156,6 +156,7 @@ export default function AssignmentPicker({ devices, stock, items, onItemsChange,
                         <span className="assign-item-main">
                             <span className="assign-item-model">{itemLabel(item)}</span>
                             <span className="assign-item-serial">{itemDetail(item)}</span>
+                            {devices?.[item.serial]?.note && <span className="device-note">💬 {devices[item.serial].note}</span>}
                         </span>
                         <button type="button" className="assign-item-remove" onClick={() => removeItem(item.uid)} aria-label={`Retirer ${itemLabel(item)}`}>
                             &times;
@@ -186,6 +187,7 @@ export default function AssignmentPicker({ devices, stock, items, onItemsChange,
                                         {iconOf(device.kind)} {deviceFullName(device)}
                                         {conditionOfStockKey(device.model) ? ` · ${conditionOfStockKey(device.model)}` : ''}
                                     </span>
+                                    {device.note && <span className="device-note">💬 {device.note}</span>}
                                 </span>
                                 <span className="pc-card-check">+</span>
                             </button>

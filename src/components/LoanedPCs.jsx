@@ -3,6 +3,10 @@ import Modal from './Modal';
 import AssignmentPicker from './AssignmentPicker';
 import LoanChips from './LoanChips';
 import PersonNameFields from './PersonNameFields';
+import NoteField from './NoteField';
+import NoteDialog from './NoteDialog';
+import { useNewPersonCheck } from './NewPersonCheck';
+import { ASSIGN_NOTE_PRESETS, HANDOVER_NOTE_PRESETS } from '../config/notePresets';
 import { PHONE_CASE_INFO } from '../config/phoneAccessories';
 import { matchesQuery } from '../utils/search';
 import { getLoanSerials } from '../utils/loans';
@@ -33,7 +37,7 @@ const ACCESSORY_PILLS = [
 // Volet "À remettre" de l'onglet Attribué : formulaire "Attribuer du matériel" et
 // liste du matériel préparé en stock, pas encore remis (bouton "Remis"). La
 // liste n'est affichée que si showList ; le formulaire reste disponible.
-export default function LoanedPCs({ loans, onAdd, onHandOver, devices, stock, onReceiveDevices, query = '', showList = true, ref }) {
+export default function LoanedPCs({ loans, onAdd, onHandOver, onSetLoanNote, devices, stock, onReceiveDevices, query = '', showList = true, ref }) {
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [scanRaw, setScanRaw] = useState(null); // scan reçu de la page, traité à l'ouverture du formulaire
     const nameRef = useRef(null);
@@ -41,6 +45,10 @@ export default function LoanedPCs({ loans, onAdd, onHandOver, devices, stock, on
     const [firstName, setFirstName] = useState('');
     const [items, setItems] = useState([]); // appareils à attribuer (PC, téléphones)
     const [accessories, setAccessories] = useState(DEFAULT_ACCESSORIES);
+    const [note, setNote] = useState('');
+    // Fenêtre ouverte depuis une carte : { loan, mode: 'handover' | 'note' }.
+    const [noteRequest, setNoteRequest] = useState(null);
+    const { confirmPerson, dialog: newPersonDialog } = useNewPersonCheck();
 
     // Scan reçu quand aucun champ n'est actif : on ouvre le formulaire et le
     // sélecteur traite le code (appareil ajouté à la liste, ou proposition de le créer).
@@ -60,6 +68,7 @@ export default function LoanedPCs({ loans, onAdd, onHandOver, devices, stock, on
         matchesQuery(query, [
             loan.name || loan.recipient || '',
             ...(loan.items || []),
+            loan.note || '',
             ...getLoanSerials(loan).flatMap(serial => [serial, devices?.[serial]?.exactModel || ''])
         ])
     );
@@ -85,6 +94,7 @@ export default function LoanedPCs({ loans, onAdd, onHandOver, devices, stock, on
         setFirstName('');
         setItems([]);
         setAccessories(DEFAULT_ACCESSORIES);
+        setNote('');
     };
 
     const handleSubmit = (e) => {
@@ -106,17 +116,45 @@ export default function LoanedPCs({ loans, onAdd, onHandOver, devices, stock, on
             }
         }
         const toLoanItem = ({ model, serial }) => ({ model, serial });
-        onAdd(fullName(lastName, firstName), {
-            pcs: items.filter(item => item.kind === 'pc').map(toLoanItem),
-            phones: phones.map(toLoanItem),
-            accessories
+        // Personne absente de l'appli : confirmation d'abord (faute de frappe ?).
+        confirmPerson(fullName(lastName, firstName), (name) => {
+            onAdd(name, {
+                pcs: items.filter(item => item.kind === 'pc').map(toLoanItem),
+                phones: phones.map(toLoanItem),
+                accessories,
+                note
+            });
+            resetForm();
+            setIsModalOpen(false); // Close modal on success
         });
-        resetForm();
-        setIsModalOpen(false); // Close modal on success
     };
+
+    const requestName = noteRequest ? noteRequest.loan.name || noteRequest.loan.recipient : '';
 
     return (
         <div className={showList ? 'loan-container' : undefined}>
+            {newPersonDialog}
+
+            {noteRequest?.mode === 'handover' && (
+                <NoteDialog
+                    title={`Remise à ${requestName}`}
+                    intro="Le matériel passera dans « Remis »."
+                    presets={HANDOVER_NOTE_PRESETS}
+                    confirmLabel="Confirmer la remise"
+                    onConfirm={(text) => onHandOver(noteRequest.loan.id, text)}
+                    onClose={() => setNoteRequest(null)}
+                />
+            )}
+            {noteRequest?.mode === 'note' && (
+                <NoteDialog
+                    title={`Commentaire · ${requestName}`}
+                    initial={noteRequest.loan.note || ''}
+                    presets={ASSIGN_NOTE_PRESETS}
+                    allowClear
+                    onConfirm={(text) => onSetLoanNote(noteRequest.loan.id, text)}
+                    onClose={() => setNoteRequest(null)}
+                />
+            )}
             <Modal
                 isOpen={isModalOpen}
                 onClose={() => setIsModalOpen(false)}
@@ -165,6 +203,8 @@ export default function LoanedPCs({ loans, onAdd, onHandOver, devices, stock, on
                         </div>
                     </div>
 
+                    <NoteField value={note} onChange={setNote} presets={ASSIGN_NOTE_PRESETS} />
+
                     <button type="submit" className="btn-add full-width-btn">
                         Attribuer{items.length > 0 ? ` (${items.length} appareil${items.length > 1 ? 's' : ''})` : ''}
                     </button>
@@ -186,14 +226,13 @@ export default function LoanedPCs({ loans, onAdd, onHandOver, devices, stock, on
                                 </span>
                             </div>
                             <LoanChips loan={loan} devices={devices} />
+                            <button type="button" className={`loan-note${loan.note ? '' : ' loan-note-empty'}`} onClick={() => setNoteRequest({ loan, mode: 'note' })}>
+                                {loan.note ? <>💬 {loan.note}</> : '+ Commentaire'}
+                            </button>
                             <button
                                 type="button"
                                 className="btn-handover btn-handover-wide"
-                                onClick={() => {
-                                    if (window.confirm(`Matériel remis à ${loan.name || loan.recipient} ? Il passera dans « Remis ».`)) {
-                                        onHandOver(loan.id);
-                                    }
-                                }}
+                                onClick={() => setNoteRequest({ loan, mode: 'handover' })}
                             >
                                 ✓ Remis à {loan.name || loan.recipient}
                             </button>

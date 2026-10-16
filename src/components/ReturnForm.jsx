@@ -1,6 +1,8 @@
 import React, { useMemo, useState } from 'react';
 import ModelPicker from './ModelPicker';
 import PersonNameFields from './PersonNameFields';
+import NoteField from './NoteField';
+import { RETURN_NOTE_PRESETS } from '../config/notePresets';
 import { PHONE_CASE_INFO } from '../config/phoneAccessories';
 import { RETURN_ITEMS } from '../config/secondaryItems';
 import { useScanCapture } from '../hooks/useScanCapture';
@@ -147,6 +149,7 @@ export default function ReturnForm({ devices, loans, onSubmit, onDone, initialNa
     const [extras, setExtras] = useState([]); // appareils scannés en plus
     const [scanValues, setScanValues] = useState({ pc: '', phone: '' });
     const [messages, setMessages] = useState({ pc: null, phone: null });
+    const [note, setNote] = useState('');
 
     const name = fullName(lastName, firstName);
     const personKey = lastName.trim() && firstName.trim() ? nameKey(name) : '';
@@ -289,7 +292,7 @@ export default function ReturnForm({ devices, loans, onSubmit, onDone, initialNa
                 learnKey: entry.learnKey,
                 learnModel: entry.model
             }));
-        onSubmit(name, { returned: [...listed, ...added], items: itemNames, phoneCase: caseOn });
+        onSubmit(name, { returned: [...listed, ...added], items: itemNames, phoneCase: caseOn, note });
         onDone();
     };
 
@@ -397,6 +400,8 @@ export default function ReturnForm({ devices, loans, onSubmit, onDone, initialNa
                     )}
                 </div>
             </div>
+
+            <NoteField value={note} onChange={setNote} presets={RETURN_NOTE_PRESETS} />
 
             <button
                 type="submit"

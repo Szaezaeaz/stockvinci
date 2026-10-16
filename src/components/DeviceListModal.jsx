@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
 import Modal from './Modal';
 import SearchBar from './SearchBar';
+import NoteDialog from './NoteDialog';
+import { DEVICE_NOTE_PRESETS } from '../config/notePresets';
 import { matchesQuery } from '../utils/search';
 import { stockKeyLabel } from '../utils/models';
 
@@ -16,8 +18,9 @@ function statusLabel(device) {
 // Liste des appareils (n° de série) d'un modèle, avec leur état : en stock ou
 // attribué à une personne, plus l'historique de leurs mouvements.
 // initialSerial : appareil dont la fiche s'ouvre dès l'affichage (après un scan).
-export default function DeviceListModal({ model, devices, stock, onClose, onRemoveUntracked, onDeleteDevice, initialSerial }) {
+export default function DeviceListModal({ model, devices, stock, onClose, onRemoveUntracked, onDeleteDevice, onSetDeviceNote, initialSerial }) {
     const [query, setQuery] = useState('');
+    const [noteSerial, setNoteSerial] = useState(null); // appareil dont on modifie le commentaire
     const [openSerial, setOpenSerial] = useState(initialSerial || null);
     const [limit, setLimit] = useState(PAGE_SIZE);
 
@@ -25,7 +28,7 @@ export default function DeviceListModal({ model, devices, stock, onClose, onRemo
         .filter(device => device.model === model)
         .sort((a, b) => new Date(b.events?.[0]?.date || 0) - new Date(a.events?.[0]?.date || 0));
     const visible = all.filter(device =>
-        matchesQuery(query, [device.serial, device.holder || '', statusLabel(device), device.exactModel || '', device.modelName || '', device.productId || ''])
+        matchesQuery(query, [device.serial, device.holder || '', statusLabel(device), device.exactModel || '', device.modelName || '', device.productId || '', device.note || ''])
     );
 
     // L'appareil ouvert d'office (après un scan) reste affiché même au-delà de la première page.
@@ -53,6 +56,16 @@ export default function DeviceListModal({ model, devices, stock, onClose, onRemo
 
     return (
         <Modal isOpen={Boolean(model)} onClose={onClose} title={stockKeyLabel(model)}>
+            {noteSerial && (
+                <NoteDialog
+                    title={`Commentaire · ${noteSerial}`}
+                    initial={devices?.[noteSerial]?.note || ''}
+                    presets={DEVICE_NOTE_PRESETS}
+                    allowClear
+                    onConfirm={(text) => onSetDeviceNote(noteSerial, text)}
+                    onClose={() => setNoteSerial(null)}
+                />
+            )}
             <div className="device-summary">
                 <span className="device-chip device-chip-stock">{inStock} en stock</span>
                 <span className="device-chip device-chip-assigned">{assigned} attribué{assigned > 1 ? 's' : ''}</span>
@@ -87,6 +100,7 @@ export default function DeviceListModal({ model, devices, stock, onClose, onRemo
                                     <span className="device-sub">
                                         {last ? `${last.action}${last.person ? ` · ${last.person}` : ''} · ${dateOf(last.date)}` : ''}
                                     </span>
+                                    {device.note && <span className="device-note">💬 {device.note}</span>}
                                 </span>
                                 <span className={`device-badge ${device.status === 'assigned' ? 'device-badge-assigned' : 'device-badge-stock'}`}>
                                     {statusLabel(device)}
@@ -96,9 +110,15 @@ export default function DeviceListModal({ model, devices, stock, onClose, onRemo
                                 <ul className="device-events">
                                     {device.exactModel && <li>Modèle précis : {device.exactModel}</li>}
                                     {device.modelName && <li>QR code : {device.modelName}{device.productId ? ` (${device.productId})` : ''}</li>}
+                                    <li>
+                                        <button type="button" className="loan-note" onClick={() => setNoteSerial(device.serial)}>
+                                            {device.note ? <>💬 {device.note} <small>· modifier</small></> : '+ Ajouter un commentaire'}
+                                        </button>
+                                    </li>
                                     {(device.events || []).map((event, index) => (
                                         <li key={index}>
                                             {dateOf(event.date)} · {event.action}{event.person ? ` · ${event.person}` : ''}
+                                            {event.note && <span className="device-event-note"> — « {event.note} »</span>}
                                         </li>
                                     ))}
                                     <li className="device-delete-row">

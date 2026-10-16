@@ -102,6 +102,7 @@ export default function StockDashboard({
     onReceiveDevices,
     onRemoveUntracked,
     onDeleteDevice,
+    onSetDeviceNote,
     ref
 }) {
     const [isWithdrawModalOpen, setIsWithdrawModalOpen] = useState(false);
@@ -143,7 +144,8 @@ export default function StockDashboard({
         if (query.trim().length < 3) return [];
         return Object.values(devices || {})
             .filter(device => device.serial.includes(serialQuery)
-                || (device.status === 'assigned' && matchesQuery(query, [device.holder || ''])))
+                || (device.status === 'assigned' && matchesQuery(query, [device.holder || '']))
+                || (device.note && matchesQuery(query, [device.note])))
             .sort((a, b) => (a.holder || '').localeCompare(b.holder || '', 'fr') || a.serial.localeCompare(b.serial));
     }, [devices, query, serialQuery]);
 
@@ -185,6 +187,7 @@ export default function StockDashboard({
                 onClose={() => setDeviceModel(null)}
                 onRemoveUntracked={onRemoveUntracked}
                 onDeleteDevice={onDeleteDevice}
+                onSetDeviceNote={onSetDeviceNote}
             />
 
             <div className="action-buttons-row">
@@ -240,6 +243,7 @@ export default function StockDashboard({
                                 <span className="serial-hit-main">
                                     <span className="serial-hit-serial">{device.serial}</span>
                                     <span className="serial-hit-sub">{deviceFullName(device)} · ligne {stockKeyLabel(device.model)}</span>
+                                    {device.note && <span className="device-note">💬 {device.note}</span>}
                                 </span>
                                 <span className={`device-badge ${device.status === 'assigned' ? 'device-badge-assigned' : 'device-badge-stock'}`}>
                                     {device.status === 'assigned' ? `Attribué à ${device.holder || '?'}` : 'En stock'}

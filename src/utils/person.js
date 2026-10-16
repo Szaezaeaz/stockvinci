@@ -46,8 +46,9 @@ export function nameIndex(loans = [], devices = {}) {
 // sinon le nom tel que saisi.
 export const canonicalName = (name, index) => index.get(nameKey(name)) || String(name || '').trim();
 
-// Personnes connues, pour proposer leur nom pendant la saisie.
-export function listPeople(loans = [], devices = {}) {
+// Personnes connues, pour proposer leur nom pendant la saisie. L'historique ajoute
+// celles qui n'ont reçu que des accessoires (dons).
+export function listPeople(loans = [], devices = {}, history = []) {
     const people = new Map();
     const add = (name) => {
         const key = nameKey(name);
@@ -62,7 +63,52 @@ export function listPeople(loans = [], devices = {}) {
     Object.values(devices).forEach(device => {
         if (device.status === 'assigned' && device.holder) add(device.holder).devices++;
     });
+    history.forEach(entry => {
+        if (entry.recipient && entry.recipient !== 'Anonyme') add(entry.recipient);
+    });
     return [...people.values()];
+}
+
+export const isKnownPerson = (people, name) => {
+    const key = nameKey(name);
+    return people.some(person => nameKey(person.name) === key);
+};
+
+// Nombre de lettres à changer pour passer d'un mot à l'autre (distance de Levenshtein).
+function editDistance(a, b) {
+    let previous = Array.from({ length: b.length + 1 }, (_, j) => j);
+    for (let i = 1; i <= a.length; i++) {
+        const current = [i];
+        for (let j = 1; j <= b.length; j++) {
+            current[j] = Math.min(previous[j] + 1, current[j - 1] + 1, previous[j - 1] + (a[i - 1] === b[j - 1] ? 0 : 1));
+        }
+        previous = current;
+    }
+    return previous[b.length];
+}
+
+// Personnes connues dont le nom ressemble à celui saisi (faute de frappe, prénom
+// abrégé, NOM et prénom inversés) : proposées avant de créer une nouvelle personne.
+export function similarPeople(people, name, limit = 3) {
+    const { last, first } = splitName(name);
+    const key = nameKey(name);
+    const lastKey = nameKey(last);
+    const firstKey = nameKey(first);
+    const swapped = nameKey(`${first} ${last}`);
+    const scored = [];
+    for (const person of people) {
+        const personKey = nameKey(person.name);
+        const distance = Math.min(editDistance(key, personKey), editDistance(swapped, personKey));
+        const tolerance = Math.max(2, Math.floor(key.length / 6));
+        const sameLast = lastKey && person.lastKey === lastKey
+            && (!firstKey || !person.firstKey || person.firstKey[0] === firstKey[0]);
+        const lastTypo = lastKey.length >= 4 && editDistance(lastKey, person.lastKey) <= 1 && (!firstKey || person.firstKey === firstKey);
+        if (distance <= tolerance || sameLast || lastTypo) scored.push({ person, distance });
+    }
+    return scored
+        .sort((a, b) => a.distance - b.distance || a.person.name.localeCompare(b.person.name, 'fr'))
+        .slice(0, limit)
+        .map(entry => entry.person);
 }
 
 // Personnes dont le nom contient ce qui est saisi dans NOM et Prénom, celles qui

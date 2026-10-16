@@ -1,6 +1,9 @@
 import React, { useState } from 'react';
 import Modal from './Modal';
 import PersonNameFields from './PersonNameFields';
+import NoteField from './NoteField';
+import { useNewPersonCheck } from './NewPersonCheck';
+import { WITHDRAW_NOTE_PRESETS } from '../config/notePresets';
 import { SECONDARY_ITEMS } from '../config/secondaryItems';
 import { fullName } from '../utils/person';
 
@@ -9,6 +12,8 @@ export default function GlobalWithdrawModal({ isOpen, onClose, onConfirm, stock 
     const [firstName, setFirstName] = useState('');
     const [type, setType] = useState('pret'); // 'don' or 'pret'
     const [selectedItems, setSelectedItems] = useState({}); // { 'Souris': true, ... }
+    const [note, setNote] = useState('');
+    const { confirmPerson, dialog: newPersonDialog } = useNewPersonCheck();
 
     const toggleSelection = (itemId) => {
         const currentStock = stock[itemId] || 0;
@@ -35,13 +40,17 @@ export default function GlobalWithdrawModal({ isOpen, onClose, onConfirm, stock 
             return;
         }
 
-        onConfirm(fullName(lastName, firstName) || 'Anonyme', type, itemsToWithdraw);
+        // Personne absente de l'appli : confirmation d'abord (faute de frappe ?).
+        confirmPerson(fullName(lastName, firstName), (name) => {
+            onConfirm(name || 'Anonyme', type, itemsToWithdraw, note);
 
-        setLastName('');
-        setFirstName('');
-        setType('pret');
-        setSelectedItems({});
-        onClose();
+            setLastName('');
+            setFirstName('');
+            setType('pret');
+            setSelectedItems({});
+            setNote('');
+            onClose();
+        });
     };
 
     return (
@@ -50,6 +59,7 @@ export default function GlobalWithdrawModal({ isOpen, onClose, onConfirm, stock 
             onClose={onClose}
             title="Sortie accessoires"
         >
+            {newPersonDialog}
             <form onSubmit={handleSubmit} className="global-withdraw-form">
 
                 <div className="form-section">
@@ -107,7 +117,11 @@ export default function GlobalWithdrawModal({ isOpen, onClose, onConfirm, stock 
                     </div>
                 </div>
 
-                <button type="submit" className="btn-add full-width-btn" style={{ marginTop: '25px' }}>
+                <div style={{ marginTop: '20px' }}>
+                    <NoteField value={note} onChange={setNote} presets={WITHDRAW_NOTE_PRESETS} />
+                </div>
+
+                <button type="submit" className="btn-add full-width-btn" style={{ marginTop: '10px' }}>
                     Valider le retrait
                 </button>
             </form>
