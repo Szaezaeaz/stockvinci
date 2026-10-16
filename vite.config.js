@@ -13,7 +13,7 @@ export default defineConfig({
       devOptions: {
         enabled: true
       },
-      includeAssets: ['pwa-192x192.png', 'apple-touch-icon.png'],
+      includeAssets: ['icon.svg', 'favicon-32x32.png', 'apple-touch-icon.png'],
       manifest: {
         name: 'Vinci IT Inventory',
         short_name: 'VinciInventory',
@@ -32,6 +32,12 @@ export default defineConfig({
             src: 'pwa-512x512.png',
             sizes: '512x512',
             type: 'image/png'
+          },
+          {
+            src: 'maskable-512x512.png',
+            sizes: '512x512',
+            type: 'image/png',
+            purpose: 'maskable'
           }
         ]
       }
