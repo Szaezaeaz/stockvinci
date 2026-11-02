@@ -4,7 +4,11 @@ import { VitePWA } from 'vite-plugin-pwa'
 
 export default defineConfig({
   server: {
-    host: true
+    host: true,
+    // Fonctions /api en local : node scripts/dev-api.mjs
+    proxy: {
+      '/api': 'http://localhost:8787'
+    }
   },
   plugins: [
     react(),

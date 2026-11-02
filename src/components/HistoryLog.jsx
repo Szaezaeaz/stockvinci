@@ -22,10 +22,10 @@ const parseDay = (value) => {
 };
 
 // Texte retrouvable par la recherche : type, personne, matériel et n° de série, commentaire.
-const searchTexts = (item) => [item.category, item.recipient || '', ...(Array.isArray(item.details) ? item.details : []), item.note || ''];
+const searchTexts = (item) => [item.category, item.recipient || '', ...(Array.isArray(item.details) ? item.details : []), item.note || '', item.by || ''];
 
 // Réunit les mouvements identiques faits à moins de 3 minutes d'écart (même type, même
-// sens, même personne, même commentaire). Les plus récents d'abord.
+// sens, même personne, même commentaire, même auteur). Les plus récents d'abord.
 function aggregateHistory(items) {
     const sorted = [...items].sort((a, b) => new Date(b.date) - new Date(a.date));
     const aggregated = [];
@@ -35,6 +35,7 @@ function aggregateHistory(items) {
             && last.category === item.category
             && (last.recipient || '') === (item.recipient || '')
             && (last.note || '') === (item.note || '')
+            && (last.by || '') === (item.by || '')
             && ((last.delta > 0 && item.delta > 0) || (last.delta < 0 && item.delta < 0))
             && Math.abs(new Date(last.date) - new Date(item.date)) <= 3 * 60 * 1000;
         if (mergeable) {
@@ -79,7 +80,7 @@ export default function HistoryLog({ history, devices, stock, onRemoveUntracked,
             return;
         }
         const quote = (text) => `"${String(text).replace(/"/g, '""')}"`;
-        const headers = ['Date', 'Heure', 'Type', 'Mouvement', 'Bénéficiaire', 'Quantité', 'Détails', 'Commentaire'];
+        const headers = ['Date', 'Heure', 'Type', 'Mouvement', 'Bénéficiaire', 'Quantité', 'Détails', 'Commentaire', 'Par'];
         const rows = filteredHistory.map(item => {
             const date = new Date(item.date);
             return [
@@ -90,7 +91,8 @@ export default function HistoryLog({ history, devices, stock, onRemoveUntracked,
                 quote(item.recipient || 'N/A'),
                 item.delta,
                 quote(Array.isArray(item.details) ? item.details.join(', ') : ''),
-                quote(item.note || '')
+                quote(item.note || ''),
+                quote(item.by || '')
             ].join(';'); // point-virgule : Excel en français
         });
         // BOM : Excel lit l'UTF-8 (accents).
@@ -170,7 +172,7 @@ export default function HistoryLog({ history, devices, stock, onRemoveUntracked,
                 </div>
             </div>
 
-            <SearchBar value={query} onChange={setQuery} placeholder="Rechercher un nom, un n° de série, un matériel…" />
+            <SearchBar value={query} onChange={setQuery} placeholder="Nom, n° de série, matériel, auteur…" />
 
             <div className="history-filters">
                 <button type="button" className={`history-filter${typeFilter === null ? ' active' : ''}`} onClick={() => setTypeFilter(null)}>
@@ -251,6 +253,7 @@ export default function HistoryLog({ history, devices, stock, onRemoveUntracked,
                                                                 )}
 
                                                                 {item.note && <div className="history-note">💬 {item.note}</div>}
+                                                                {item.by && <div className="history-by">par {item.by}</div>}
                                                             </div>
                                                             <span className="history-delta-compact">
                                                                 {isNeutral ? '✓' : `${isIn ? '+' : ''}${item.delta}`}

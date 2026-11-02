@@ -1,9 +1,7 @@
-const PASSCODE_KEY = 'vinci_passcode';
+import { api } from './auth';
+
 const META_KEY = 'vinci_sync_meta';
 const ENDPOINT = '/api/inventory';
-
-export const getPasscode = () => localStorage.getItem(PASSCODE_KEY) || '';
-export const savePasscode = (code) => localStorage.setItem(PASSCODE_KEY, code);
 
 // meta = { rev, dirty } : révision du cloud sur laquelle cet appareil est
 // basé, et présence de modifications locales pas encore envoyées.
@@ -18,22 +16,9 @@ export function loadSyncMeta() {
 
 export const saveSyncMeta = (meta) => localStorage.setItem(META_KEY, JSON.stringify(meta));
 
-// Retourne { status, body } ; status 0 = réseau indisponible.
-async function request(method, payload, query = '') {
-    try {
-        const response = await fetch(ENDPOINT + query, {
-            method,
-            headers: { 'Content-Type': 'application/json', 'x-passcode': getPasscode() },
-            body: payload ? JSON.stringify(payload) : undefined
-        });
-        const body = await response.json().catch(() => ({}));
-        return { status: response.status, body };
-    } catch {
-        return { status: 0, body: {} };
-    }
-}
-
+// Les appels passent avec la session de la personne connectée (services/auth) ;
+// retournent { status, body }, status 0 = réseau indisponible.
 // knownRev : révision que cet appareil a déjà. Si le cloud est toujours à cette
 // révision, il répond { unchanged: true } sans renvoyer tout l'inventaire.
-export const fetchCloud = (knownRev = 0) => request('GET', null, knownRev > 0 ? `?rev=${knownRev}` : '');
-export const pushCloud = (data, baseRev) => request('PUT', { data, baseRev });
+export const fetchCloud = (knownRev = 0) => api(ENDPOINT + (knownRev > 0 ? `?rev=${knownRev}` : ''));
+export const pushCloud = (data, baseRev) => api(ENDPOINT, { method: 'PUT', body: { data, baseRev } });

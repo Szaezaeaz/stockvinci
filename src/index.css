@@ -3200,3 +3200,372 @@ input[type="checkbox"]:focus {
   text-decoration: underline;
   cursor: pointer;
 }
+
+/* Connexion */
+.login-screen {
+  min-height: 100vh;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding: 32px 16px;
+  box-sizing: border-box;
+  background: #f1f5f9;
+}
+
+.login-card {
+  width: 100%;
+  max-width: 420px;
+  background: #fff;
+  border-radius: 20px;
+  box-shadow: 0 10px 30px rgba(15, 23, 42, 0.08);
+  padding: 24px;
+  box-sizing: border-box;
+}
+
+.login-brand {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin-bottom: 18px;
+}
+
+.login-brand h1 {
+  margin: 0;
+  font-size: 1.4rem;
+  color: #0f172a;
+}
+
+.login-brand p {
+  margin: 2px 0 0;
+  color: #64748b;
+  font-size: 0.9rem;
+}
+
+.login-title {
+  margin: 0 0 12px;
+  font-size: 1.1rem;
+  color: #0f172a;
+}
+
+.login-intro {
+  margin: 0 0 14px;
+  color: #475569;
+  font-size: 0.9rem;
+}
+
+.login-people {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 14px;
+}
+
+.login-person {
+  display: inline-flex;
+  align-items: center;
+  border: 1px solid var(--accent-gray);
+  border-radius: 999px;
+  background: #fff;
+  color: #334155;
+  font-family: inherit;
+  font-size: 0.9rem;
+  font-weight: 600;
+  overflow: hidden;
+}
+
+.login-person > button {
+  border: none;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  padding: 8px 6px 8px 14px;
+  cursor: pointer;
+}
+
+.login-person > .login-person-forget {
+  padding: 8px 12px 8px 4px;
+  color: #94a3b8;
+}
+
+.login-person-other {
+  padding: 8px 14px;
+  cursor: pointer;
+  border-style: dashed;
+}
+
+.login-person.active {
+  border-color: #2563eb;
+  background: #eff6ff;
+  color: #1d4ed8;
+}
+
+.login-error {
+  margin: 10px 0 0;
+  padding: 8px 12px;
+  border-radius: 10px;
+  background: #fef2f2;
+  color: #b91c1c;
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+
+.login-submit {
+  margin-top: 14px;
+}
+
+.login-help-link {
+  display: block;
+  margin: 14px auto 0;
+}
+
+.login-help {
+  margin-top: 8px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: #f8fafc;
+  color: #475569;
+  font-size: 0.88rem;
+}
+
+.login-help p {
+  margin: 0 0 6px;
+}
+
+.login-master {
+  width: 100%;
+  box-sizing: border-box;
+}
+
+/* Pavé de code PIN */
+.pin-pad {
+  margin: 6px 0 4px;
+}
+
+.pin-label {
+  display: block;
+  margin-bottom: 6px;
+  font-weight: 600;
+  color: #334155;
+}
+
+.pin-input {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 12px 14px;
+  border: 2px solid var(--accent-gray);
+  border-radius: 12px;
+  font-size: 1.4rem;
+  letter-spacing: 0.4em;
+  text-align: center;
+  font-family: inherit;
+}
+
+.pin-input:focus {
+  outline: none;
+  border-color: #3b82f6;
+}
+
+.pin-keys {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.pin-key {
+  padding: 14px 0;
+  border: 1px solid var(--accent-gray);
+  border-radius: 12px;
+  background: #fff;
+  color: #0f172a;
+  font-family: inherit;
+  font-size: 1.3rem;
+  font-weight: 600;
+  cursor: pointer;
+  touch-action: manipulation;
+}
+
+.pin-key:active {
+  background: #eff6ff;
+}
+
+.pin-key-muted {
+  color: #64748b;
+}
+
+.pin-key-ok {
+  border-color: #2563eb;
+  background: #2563eb;
+  color: #fff;
+}
+
+/* Personne connectée (en-tête) */
+.user-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 12px 4px 4px;
+  border: 1px solid var(--accent-gray);
+  border-radius: 999px;
+  background: #fff;
+  color: #334155;
+  font-family: inherit;
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.user-pill-avatar {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  background: #2563eb;
+  color: #fff;
+  font-size: 0.8rem;
+}
+
+.user-menu-role {
+  margin: 0 0 12px;
+  color: #64748b;
+}
+
+.user-menu-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.user-menu-item {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 12px 14px;
+  border: 1px solid var(--accent-gray);
+  border-radius: 12px;
+  background: #fff;
+  color: #0f172a;
+  font-family: inherit;
+  font-size: 0.95rem;
+  font-weight: 600;
+  text-align: left;
+  cursor: pointer;
+}
+
+.user-menu-item small {
+  color: #64748b;
+  font-weight: 500;
+}
+
+/* Équipe */
+.team-add {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding-bottom: 14px;
+  border-bottom: 1px solid var(--accent-gray);
+}
+
+.team-add-row {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.team-add-row .loan-input {
+  flex: 1;
+  min-width: 0;
+}
+
+.team-notice {
+  margin: 10px 0 0;
+  padding: 8px 12px;
+  border-radius: 10px;
+  background: #f0fdf4;
+  color: #166534;
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+
+.team-list {
+  list-style: none;
+  margin: 12px 0 0;
+  padding: 0;
+}
+
+.team-item {
+  padding: 10px 0;
+  border-bottom: 1px solid #f1f5f9;
+}
+
+.team-item-inactive .team-name {
+  color: #94a3b8;
+  text-decoration: line-through;
+}
+
+.team-main {
+  display: flex;
+  flex-direction: column;
+}
+
+.team-name {
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.team-sub {
+  font-size: 0.8rem;
+  color: #64748b;
+}
+
+.team-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 6px;
+}
+
+.team-pin {
+  display: flex;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.team-pin .loan-input {
+  flex: 1;
+  min-width: 0;
+}
+
+.history-by {
+  margin-top: 2px;
+  color: #94a3b8;
+  font-size: 0.78em;
+}
+
+/* Boutons principaux des écrans de connexion et de l'équipe */
+.login-submit,
+.team-add .btn-add,
+.team-pin .btn-add {
+  background: linear-gradient(135deg, #3b82f6, #1d4ed8);
+  border: none;
+  color: #fff;
+}
+
+.login-submit:disabled {
+  opacity: 0.6;
+}
+
+/* Code d'un appareil en attente d'autorisation */
+.device-code {
+  margin: 8px 0 14px;
+  padding: 14px;
+  border-radius: 12px;
+  background: #eff6ff;
+  color: #1d4ed8;
+  font-size: 1.8rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-align: center;
+}

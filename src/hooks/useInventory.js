@@ -1,6 +1,4 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { sendLowStockAlert } from '../services/email';
-import { getLowStockThreshold } from '../config/thresholds';
 import { PHONE_CASE_INFO } from '../config/phoneAccessories';
 import { normalizeSerial } from '../utils/serial';
 import { getLoanSerials } from '../utils/loans';
@@ -10,7 +8,8 @@ import {
     stockKeyLabel, stockKeyOf, toOccasionKey
 } from '../utils/models';
 import { applyUndoPatch, diffState } from '../utils/undo';
-import { fetchCloud, pushCloud, getPasscode, savePasscode, loadSyncMeta, saveSyncMeta } from '../services/cloudSync';
+import { fetchCloud, pushCloud, loadSyncMeta, saveSyncMeta } from '../services/cloudSync';
+import { actorName, getToken } from '../services/auth';
 
 const STORAGE_KEY = 'vinci_inventory_v3';
 
@@ -157,6 +156,9 @@ function detachFromLoans(loans, serial, stockKey) {
     return next;
 }
 
+// Ligne d'historique signée par la personne connectée ("par …").
+const byActor = (entry) => (actorName() ? { ...entry, by: actorName() } : entry);
+
 // Mouvements gardés dans l'historique (les plus récents).
 const MAX_HISTORY = 500;
 
@@ -288,9 +290,9 @@ export function useInventory() {
     });
 
     // --- Synchronisation cloud -------------------------------------------
-    // syncStatus : 'off' (cloud non configuré) | 'needs-code' | 'syncing' |
-    //              'synced' | 'offline' | 'error'
-    const [syncStatus, setSyncStatus] = useState(getPasscode() ? 'syncing' : 'needs-code');
+    // syncStatus : 'off' (cloud non configuré) | 'syncing' | 'synced' | 'offline' |
+    //              'error' | 'needs-choice'. Sans session (appli verrouillée), pas de synchro.
+    const [syncStatus, setSyncStatus] = useState('syncing');
     const [syncNotice, setSyncNotice] = useState('');
 
     // Enregistrement sur l'appareil. Si le stockage est plein, on libère la place
@@ -367,10 +369,7 @@ export function useInventory() {
     }, []);
 
     const sync = useCallback(async () => {
-        if (!getPasscode()) {
-            setSyncStatus('needs-code');
-            return;
-        }
+        if (!getToken()) return;
         if (pendingCloudRef.current) {
             setSyncStatus('needs-choice');
             return;
@@ -425,7 +424,6 @@ export function useInventory() {
                 }
             }
             if (result.status === 503) setSyncStatus('off');
-            else if (result.status === 401) setSyncStatus('needs-code');
             else if (result.status === 0) setSyncStatus('offline');
             else setSyncStatus('error');
         } finally {
@@ -491,11 +489,6 @@ export function useInventory() {
         };
     }, [sync]);
 
-    const submitPasscode = (code) => {
-        savePasscode(code.trim());
-        sync();
-    };
-
     const dismissSyncNotice = () => setSyncNotice('');
 
     // choice : 'cloud' (cet appareil reprend le cloud) ou 'local' (le cloud est
@@ -544,13 +537,6 @@ export function useInventory() {
                 if (currentQty <= 0) return false; // Stock insufficient
 
                 stockUpdates[item] = (stockUpdates[item] || 0) - 1;
-
-                // Check for alert on this item (pre-calculation)
-                const newQty = currentQty - 1;
-                const threshold = getLowStockThreshold(item);
-                if (threshold > 0 && currentQty >= threshold && newQty < threshold) {
-                    sendLowStockAlert(item, newQty);
-                }
 
                 loanedItems.push(item);
                 details.push(label);
@@ -632,7 +618,7 @@ export function useInventory() {
                 ...prev,
                 stock: newStock,
                 devices,
-                history: [loanPackageEntry, ...prev.history].slice(0, MAX_HISTORY),
+                history: [byActor(loanPackageEntry), ...prev.history].slice(0, MAX_HISTORY),
                 loans: [...prev.loans, newLoan]
             };
         });
@@ -656,13 +642,6 @@ export function useInventory() {
                 }
 
                 stockUpdates[id] = (stockUpdates[id] || 0) - count;
-
-                // Alerts logic
-                const newQty = currentStock - count;
-                const threshold = getLowStockThreshold(id);
-                if (threshold > 0 && currentStock >= threshold && newQty < threshold) {
-                    sendLowStockAlert(id, newQty);
-                }
 
                 // Add to list for history details
                 // If count > 1, show "Souris (x2)"
@@ -689,7 +668,7 @@ export function useInventory() {
             const newState = {
                 ...prev,
                 stock: newStock,
-                history: [historyEntry, ...prev.history].slice(0, MAX_HISTORY)
+                history: [byActor(historyEntry), ...prev.history].slice(0, MAX_HISTORY)
             };
 
             // 4. If type is 'pret', save it as an active loan
@@ -735,7 +714,7 @@ export function useInventory() {
             return {
                 ...prev,
                 stock: newStock,
-                history: [historyEntry, ...prev.history].slice(0, MAX_HISTORY)
+                history: [byActor(historyEntry), ...prev.history].slice(0, MAX_HISTORY)
             };
         });
     };
@@ -821,7 +800,7 @@ export function useInventory() {
                 devices,
                 loans,
                 modelAliases,
-                history: [historyEntry, ...prev.history].slice(0, MAX_HISTORY)
+                history: [byActor(historyEntry), ...prev.history].slice(0, MAX_HISTORY)
             };
         });
     };
@@ -880,7 +859,7 @@ export function useInventory() {
                 stock,
                 devices,
                 modelAliases,
-                history: [historyEntry, ...prev.history].slice(0, MAX_HISTORY)
+                history: [byActor(historyEntry), ...prev.history].slice(0, MAX_HISTORY)
             };
         });
     };
@@ -958,7 +937,7 @@ export function useInventory() {
                 stock,
                 devices,
                 loans: [...prev.loans, ...loans],
-                history: [historyEntry, ...prev.history].slice(0, MAX_HISTORY)
+                history: [byActor(historyEntry), ...prev.history].slice(0, MAX_HISTORY)
             };
         });
     };
@@ -993,7 +972,7 @@ export function useInventory() {
                 stock,
                 devices,
                 loans: detachFromLoans(prev.loans, serial, device.model),
-                history: [historyEntry, ...prev.history].slice(0, MAX_HISTORY)
+                history: [byActor(historyEntry), ...prev.history].slice(0, MAX_HISTORY)
             };
         });
     };
@@ -1020,7 +999,7 @@ export function useInventory() {
             return {
                 ...prev,
                 stock: { ...prev.stock, [model]: tracked },
-                history: [historyEntry, ...prev.history].slice(0, MAX_HISTORY)
+                history: [byActor(historyEntry), ...prev.history].slice(0, MAX_HISTORY)
             };
         });
     };
@@ -1060,7 +1039,7 @@ export function useInventory() {
             return {
                 ...prev,
                 devices,
-                history: [historyEntry, ...prev.history].slice(0, MAX_HISTORY),
+                history: [byActor(historyEntry), ...prev.history].slice(0, MAX_HISTORY),
                 loans: prev.loans.map(l => (l.id === id ? { ...l, pickedUpAt: date, ...(comment ? { note: comment } : {}) } : l))
             };
         });
@@ -1150,7 +1129,6 @@ export function useInventory() {
         rollbackTo,
         syncStatus,
         syncNotice,
-        submitPasscode,
         dismissSyncNotice,
         syncChoice,
         resolveSyncChoice,

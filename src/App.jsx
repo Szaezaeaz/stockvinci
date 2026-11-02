@@ -15,12 +15,12 @@ import AlertBanner from './components/AlertBanner';
 import SyncStatus from './components/SyncStatus';
 import RollbackButton from './components/RollbackButton';
 import ReturnModal from './components/ReturnModal';
-import UpdateBanner from './components/UpdateBanner';
+import UserMenu from './components/UserMenu';
 
 function App() {
   const { stock, history, loans, addLoan, handOverLoan, setLoanNote, setDeviceNote, notePresets, addNotePreset, removeNotePreset, addWithdrawal, addStock,
         devices, returnEquipment, receiveDevices, importInventory, removeUntrackedStock, deleteDevice, undoStack, rollbackTo,
-        syncStatus, syncNotice, submitPasscode, dismissSyncNotice, syncNow, syncChoice, resolveSyncChoice } = useInventory();
+        syncStatus, syncNotice, dismissSyncNotice, syncNow, syncChoice, resolveSyncChoice } = useInventory();
   const [activeTab, setActiveTab] = useState('stock'); // 'stock' | 'assigned' | 'history'
   // Fenêtre "Retour matériel" : null = fermée ; sinon { name, serials, items } à préremplir.
   const [returnRequest, setReturnRequest] = useState(null);
@@ -50,12 +50,12 @@ function App() {
       totalUnits={totalUnits}
       headerExtra={(
         <div className="header-actions">
-          <SyncStatus status={syncStatus} choice={syncChoice} onSubmitCode={submitPasscode} onSyncNow={syncNow} onResolveChoice={resolveSyncChoice} />
+          <SyncStatus status={syncStatus} choice={syncChoice} onSyncNow={syncNow} onResolveChoice={resolveSyncChoice} />
           <RollbackButton undoStack={undoStack} onRollback={rollbackTo} />
+          <UserMenu onRestored={syncNow} />
         </div>
       )}
     >
-      <UpdateBanner />
 
       {syncNotice && (
         <div className="sync-notice">
