@@ -4,7 +4,7 @@ import SearchBar from './SearchBar';
 import { matchesQuery } from '../utils/search';
 import { exactNamesOf, groupOfModel, kindOfModel, listModelChoices, modelLabel, modelOf, shortModelName } from '../utils/models';
 
-const GROUP_ORDER = ['PC', 'iPhone', 'Android'];
+const GROUP_ORDER = ['PC', 'iPhone', 'Android', 'Écran'];
 
 // Modèles précis regroupés sous un modèle de l'appli, rappelés sous son nom
 // ("G11" : EliteBook 660 16" G11).
@@ -18,7 +18,7 @@ function exactHint(model) {
 // Les modèles sont ceux de l'appli : les lignes de l'accueil ("G11",
 // "Zbook"...) d'abord, puis les modèles qui n'en ont pas.
 // value : modèle choisi, ou '' si aucun.
-// kind : 'pc' ou 'phone' pour ne proposer qu'un type d'appareil.
+// kind : 'pc', 'phone' ou 'screen' pour ne proposer qu'un type d'appareil.
 // suggestions : modèles à proposer en premier (ex. ceux qu'un QR code peut désigner).
 // compact : petit bouton, pour une ligne de liste.
 export default function ModelPicker({ value, onChange, devices, kind, suggestions = [], placeholder = 'Choisir le modèle', compact = false }) {

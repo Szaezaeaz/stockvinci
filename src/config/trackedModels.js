@@ -1,4 +1,5 @@
 import { PHONE_MODEL_OPTIONS } from './phoneAccessories';
+import { SCREEN_MODEL } from '../utils/models';
 
 // Lignes de stock de l'accueil dont chaque appareil est suivi par son n° de série.
 export const PC_MODELS = [
@@ -11,4 +12,5 @@ export const PC_MODELS = [
     'Zbook Occasion'
 ];
 
-export const TRACKED_MODELS = new Set([...PC_MODELS, ...PHONE_MODEL_OPTIONS]);
+// Les écrans aussi (une seule ligne, sans modèle).
+export const TRACKED_MODELS = new Set([...PC_MODELS, ...PHONE_MODEL_OPTIONS, SCREEN_MODEL]);

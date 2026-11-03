@@ -5,8 +5,9 @@ import SearchBar from './SearchBar';
 import { TRACKED_MODELS } from '../config/trackedModels';
 import { matchesQuery } from '../utils/search';
 import { parseScan } from '../utils/scanParse';
+import { kindIcon } from '../utils/deviceKinds';
 import {
-    aliasKeyToLearn, conditionOfStockKey, deviceFullName, exactModelFor, exactModelFromStockKey, isOccasionOnly, kindOfModel,
+    SCREEN_MODEL, aliasKeyToLearn, conditionOfStockKey, deviceFullName, exactModelFor, exactModelFromStockKey, isOccasionOnly, kindOfModel,
     modelLabel, modelOf, stockKeyOf
 } from '../utils/models';
 import { useScanCapture } from '../hooks/useScanCapture';
@@ -15,7 +16,7 @@ import { useScanCapture } from '../hooks/useScanCapture';
 // premiers, la recherche sert à trouver les autres.
 const MAX_STOCK_SHOWN = 30;
 
-const iconOf = (kind) => (kind === 'phone' ? '📱' : '💻');
+const iconOf = kindIcon;
 
 // Nom affiché d'un appareil de la liste, puis son n° de série et son état.
 const itemLabel = (item) => deviceFullName(item);
@@ -25,9 +26,9 @@ function itemDetail(item) {
     return `${item.serial ? `S/N ${item.serial}` : 'sans n° de série'}${condition ? ` · ${condition}` : ''}`;
 }
 
-// Matériel à attribuer : un seul champ de scan pour les PC et les téléphones, la
+// Matériel à attribuer : un seul champ de scan pour les PC, téléphones et écrans, la
 // liste de ce qui est ajouté, et (repliée) la liste du stock pour choisir à la main.
-// items : [{ uid, kind: 'pc' | 'phone', model (ligne de stock), exactModel, serial }]
+// items : [{ uid, kind: 'pc' | 'phone' | 'screen', model (ligne de stock), exactModel, serial }]
 // (serial vide = stock ancien non suivi).
 export default function AssignmentPicker({ devices, stock, items, onItemsChange, onCreateDevice, initialScan, onInitialScanHandled }) {
     const [query, setQuery] = useState('');
@@ -137,7 +138,7 @@ export default function AssignmentPicker({ devices, stock, items, onItemsChange,
                     {...inputProps}
                     type="text"
                     className="assign-scan-input"
-                    placeholder="Scanne un PC ou un téléphone…"
+                    placeholder="Scanne un PC, un téléphone ou un écran…"
                     inputMode="text"
                     autoCapitalize="characters"
                     autoComplete="off"
@@ -210,7 +211,8 @@ export default function AssignmentPicker({ devices, stock, items, onItemsChange,
 }
 
 // Fenêtre « appareil absent de la base » : le modèle vient du QR code quand il est
-// reconnu, sinon on le choisit ; puis, pour un PC, son état.
+// reconnu, sinon on le choisit (un écran n'a pas de modèle : bouton « C'est un
+// écran ») ; puis, pour un PC, son état.
 function UnknownDeviceModal({ unknown, devices, onCreate, onCancel }) {
     const [model, setModel] = useState(unknown?.model ? modelOf(unknown.model) : '');
 
@@ -230,8 +232,14 @@ function UnknownDeviceModal({ unknown, devices, onCreate, onCancel }) {
                 </p>
             )}
 
+            {!unknown.model && (
+                <p className="unknown-text">C’est un PC, un téléphone ou un écran ?</p>
+            )}
             <div className="unknown-picker">
-                <ModelPicker value={model} onChange={setModel} devices={devices} suggestions={unknown.candidates} />
+                <ModelPicker value={model} onChange={setModel} devices={devices} suggestions={unknown.candidates} placeholder="PC ou téléphone : choisir le modèle" />
+                {!unknown.model && model !== SCREEN_MODEL && (
+                    <button type="button" className="pill-toggle unknown-screen" onClick={() => setModel(SCREEN_MODEL)}>🖥️ C’est un écran</button>
+                )}
             </div>
 
             {kind === 'pc' && <p className="unknown-text">Ce PC est-il neuf ou d'occasion ?</p>}
@@ -246,6 +254,11 @@ function UnknownDeviceModal({ unknown, devices, onCreate, onCancel }) {
                 {kind === 'phone' && (
                     <button type="button" className="unknown-yes" onClick={() => onCreate(model, null)}>
                         Ajouter ce {modelLabel(model)}
+                    </button>
+                )}
+                {kind === 'screen' && (
+                    <button type="button" className="unknown-yes" onClick={() => onCreate(model, null)}>
+                        Ajouter cet écran
                     </button>
                 )}
                 <button type="button" className="unknown-no" onClick={onCancel}>Non</button>

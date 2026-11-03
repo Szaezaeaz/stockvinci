@@ -7,6 +7,10 @@ import { HOME_LINES, MODEL_CATALOG, OCCASION_ONLY_LINES } from '../config/modelC
 //    l'accueil dont il fait partie ("G11", "Zbook", "Samsung XCOVER 7"), ou
 //    son modèle précis quand il n'a pas de ligne à l'accueil.
 // Un "HP ZBook Fury 16 G11" EST un "Zbook" : même modèle, même stock.
+//
+// Les écrans sont suivis par n° de série mais sans modèle : leur QR code ne contient
+// que le n° de série. Ils ont tous le modèle (et la ligne de stock) "Écran".
+export const SCREEN_MODEL = 'Écran';
 
 const BY_NAME = new Map(MODEL_CATALOG.map(entry => [entry.name, entry]));
 
@@ -44,12 +48,14 @@ export function exactModelFor(model, hint) {
 
 const looksLikePhone = (name) => /iphone|samsung|galaxy|xcover|pixel|android/i.test(String(name));
 
-// 'pc' ou 'phone'. Un modèle absent du catalogue est classé d'après son nom.
+// 'pc', 'phone' ou 'screen'. Un modèle absent du catalogue est classé d'après son nom.
 export function kindOfModel(name) {
+    if (name === SCREEN_MODEL) return 'screen';
     return catalogEntry(name)?.kind || LINES.get(name)?.kind || (looksLikePhone(name) ? 'phone' : 'pc');
 }
 
 export function groupOfModel(name) {
+    if (name === SCREEN_MODEL) return 'Écran';
     const known = catalogEntry(name) || LINES.get(name);
     if (known) return known.group;
     if (!looksLikePhone(name)) return 'PC';
@@ -60,10 +66,10 @@ export function groupOfModel(name) {
 export const isOccasionOnly = (name) => OCCASION_ONLY_LINES.has(modelOf(name));
 
 // Ligne de stock qui compte un appareil de ce modèle. Un PC se range en Neuf ou
-// en Occasion ; un téléphone n'a qu'une ligne.
+// en Occasion ; un téléphone ou un écran n'a qu'une ligne.
 export function stockKeyOf(name, condition) {
     const model = modelOf(name);
-    if (kindOfModel(name) === 'phone') return model;
+    if (kindOfModel(name) !== 'pc') return model;
     return `${model} ${condition === 'Occasion' || isOccasionOnly(name) ? 'Occasion' : 'Neuf'}`;
 }
 
@@ -124,7 +130,7 @@ export const deviceFullName = (device) => (device?.exactModel ? shortModelName(d
 // d'abord, puis les autres modèles du catalogue, plus ceux rencontrés dans la
 // base (un import peut en apporter de nouveaux).
 export function listModelChoices(devices) {
-    const names = [...HOME_LINES.filter(line => LINES.has(line)), ...MODEL_CATALOG.filter(entry => !entry.line).map(entry => entry.name)];
+    const names = [...HOME_LINES.filter(line => LINES.has(line)), SCREEN_MODEL, ...MODEL_CATALOG.filter(entry => !entry.line).map(entry => entry.name)];
     const seen = new Set(names);
     Object.values(devices || {}).forEach(device => {
         const model = modelOf(device.exactModel);

@@ -3656,3 +3656,15 @@ input[type="checkbox"]:focus {
   background: #fca5a5;
   cursor: not-allowed;
 }
+
+/* Écrans : raccourcis de choix */
+.scan-model-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.unknown-screen {
+  margin-top: 8px;
+}

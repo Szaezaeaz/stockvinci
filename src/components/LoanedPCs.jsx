@@ -18,7 +18,6 @@ const DEFAULT_ACCESSORIES = {
     bag: true,
     backpack: false,
     headset: false,
-    screen: false,
     dock: false,
     keyboard: false,
     phoneCase: true,
@@ -30,7 +29,6 @@ const ACCESSORY_PILLS = [
     { key: 'bag', label: 'Sacoche' },
     { key: 'backpack', label: 'Sac à dos' },
     { key: 'headset', label: 'Casque' },
-    { key: 'screen', label: 'Écran' },
     { key: 'dock', label: 'Dock' },
     { key: 'keyboard', label: 'Clavier' }
 ];
@@ -106,7 +104,7 @@ export default function LoanedPCs({ loans, onAdd, onHandOver, onSetLoanNote, dev
             return;
         }
         if (items.length === 0) {
-            alert('Ajoute au moins un PC ou un téléphone.');
+            alert('Ajoute au moins un PC, un téléphone ou un écran.');
             return;
         }
         // Chaque appareil suivi doit toujours être en stock.
@@ -121,7 +119,8 @@ export default function LoanedPCs({ loans, onAdd, onHandOver, onSetLoanNote, dev
         // Personne absente de l'appli : confirmation d'abord (faute de frappe ?).
         confirmPerson(fullName(lastName, firstName), (name) => {
             onAdd(name, {
-                pcs: items.filter(item => item.kind === 'pc').map(toLoanItem),
+                // Les écrans se déduisent comme les PC (une ligne de stock, un n° de série).
+                pcs: items.filter(item => item.kind !== 'phone').map(toLoanItem),
                 phones: phones.map(toLoanItem),
                 accessories,
                 note

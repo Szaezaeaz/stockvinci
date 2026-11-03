@@ -8,14 +8,28 @@ import { RETURN_ITEMS } from '../config/secondaryItems';
 import { useScanCapture } from '../hooks/useScanCapture';
 import { parseScan } from '../utils/scanParse';
 import { fullName, nameKey, splitName } from '../utils/person';
+import { getLoanSerials } from '../utils/loans';
+import { KIND_NAMES } from '../utils/deviceKinds';
 import {
-    aliasKeyToLearn, conditionOfStockKey, deviceFullName, exactModelFor, kindOfModel, modelLabel, modelOf, stockKeyOf
+    SCREEN_MODEL, aliasKeyToLearn, conditionOfStockKey, deviceFullName, exactModelFor, kindOfModel, modelLabel, modelOf, stockKeyOf
 } from '../utils/models';
 
 const KINDS = {
-    pc: { title: 'Retour PC', icon: '💻', one: 'PC', entersAs: 'stock Occasion' },
-    phone: { title: 'Retour Téléphone', icon: '📱', one: 'téléphone', entersAs: 'stock' }
+    pc: { title: 'Retour PC', icon: '💻', one: 'PC', entersAs: 'stock Occasion', placeholder: 'Scanner un PC…' },
+    phone: { title: 'Retour Téléphone', icon: '📱', one: 'téléphone', entersAs: 'stock', placeholder: 'Scanner un téléphone…' },
+    screen: { title: 'Retour Écran', icon: '🖥️', one: 'écran', entersAs: 'stock', placeholder: 'Scanner un écran…' }
 };
+const KIND_ORDER = ['pc', 'phone', 'screen'];
+
+// Écrans attribués autrefois comme simple accessoire, sans n° de série : ils se
+// rendent avec une pastille, comme le matériel secondaire.
+function untrackedScreens(loans, devices) {
+    return loans.reduce((count, loan) => {
+        const items = (loan.items || []).filter(item => item === SCREEN_MODEL).length;
+        const tracked = getLoanSerials(loan).filter(serial => devices?.[serial]?.model === SCREEN_MODEL).length;
+        return count + Math.max(0, items - tracked);
+    }, 0);
+}
 
 const plural = (count, word) => `${count} ${word}${count > 1 ? 's' : ''}`;
 
@@ -61,8 +75,8 @@ function ReturnSection({ kind, isOpen, onToggle, listed, isPicked, onPick, added
                                 <li key={entry.serial} className="return-added">
                                     <span className="assign-item-icon">{icon}</span>
                                     <span className="assign-item-main">
-                                        {entry.known ? (
-                                            <span className="assign-item-model">{deviceFullName(devices[entry.serial])}</span>
+                                        {entry.known || kind === 'screen' ? (
+                                            <span className="assign-item-model">{entry.known ? deviceFullName(devices[entry.serial]) : SCREEN_MODEL}</span>
                                         ) : (
                                             <ModelPicker
                                                 compact
@@ -94,7 +108,7 @@ function ReturnSection({ kind, isOpen, onToggle, listed, isPicked, onPick, added
                             {...scan.inputProps}
                             type="text"
                             className="assign-scan-input"
-                            placeholder={kind === 'pc' ? 'Scanner un PC…' : 'Scanner un téléphone…'}
+                            placeholder={KINDS[kind].placeholder}
                             inputMode="text"
                             autoCapitalize="characters"
                             autoComplete="off"
@@ -126,7 +140,7 @@ function initialChoices(personKey, devices, preselect) {
         key: personKey,
         open: {},
         picked,
-        items: Object.fromEntries(RETURN_ITEMS.map(item => [item.id, items.includes(item.id)])),
+        items: Object.fromEntries([...RETURN_ITEMS.map(item => item.id), SCREEN_MODEL].map(id => [id, items.includes(id)])),
         phoneCase: items.some(item => /^(Coque|Vitre)/.test(item))
     };
 }
@@ -147,8 +161,8 @@ export default function ReturnForm({ devices, loans, onSubmit, onDone, initialNa
         return initialChoices(last && first ? nameKey(fullName(last, first)) : '', devices, preselect);
     });
     const [extras, setExtras] = useState([]); // appareils scannés en plus
-    const [scanValues, setScanValues] = useState({ pc: '', phone: '' });
-    const [messages, setMessages] = useState({ pc: null, phone: null });
+    const [scanValues, setScanValues] = useState({ pc: '', phone: '', screen: '' });
+    const [messages, setMessages] = useState({ pc: null, phone: null, screen: null });
     const [note, setNote] = useState('');
 
     const name = fullName(lastName, firstName);
@@ -160,17 +174,20 @@ export default function ReturnForm({ devices, loans, onSubmit, onDone, initialNa
         const mine = Object.values(devices || {}).filter(device => device.status === 'assigned' && nameKey(device.holder) === personKey);
         const given = new Set();
         let known = mine.length > 0;
-        for (const loan of loans || []) {
-            if (nameKey(loan.name || loan.recipient) !== personKey) continue;
+        const personLoans = (loans || []).filter(loan => nameKey(loan.name || loan.recipient) === personKey);
+        for (const loan of personLoans) {
             known = true;
             (loan.items || []).forEach(item => given.add(item));
         }
+        // "Écran" dans une attribution ne compte comme accessoire que s'il n'a pas de n° de série.
+        if (untrackedScreens(personLoans, devices) === 0) given.delete(SCREEN_MODEL);
         const byName = (a, b) => deviceFullName(a).localeCompare(deviceFullName(b), 'fr') || a.serial.localeCompare(b.serial);
         return {
             known,
             given,
             pc: mine.filter(device => device.kind === 'pc').sort(byName),
-            phone: mine.filter(device => device.kind === 'phone').sort(byName)
+            phone: mine.filter(device => device.kind === 'phone').sort(byName),
+            screen: mine.filter(device => device.kind === 'screen').sort(byName)
         };
     }, [personKey, devices, loans]);
 
@@ -182,7 +199,8 @@ export default function ReturnForm({ devices, loans, onSubmit, onDone, initialNa
     });
 
     const attributed = (kind) => person?.[kind] || [];
-    const sectionOpen = (kind) => own.open[kind] ?? (person ? person[kind].length > 0 || !person.known : false);
+    // Personne inconnue : PC et téléphone ouverts d'office ; la section Écran, seulement si elle en a.
+    const sectionOpen = (kind) => own.open[kind] ?? (person ? person[kind].length > 0 || (!person.known && kind !== 'screen') : false);
     const isPicked = (serial) => own.picked[serial] ?? true; // le matériel attribué est coché d'office
     const isItemOn = (id) => own.items[id] ?? Boolean(person?.given.has(id));
     const setPicked = (serial, on) => patchChoices(base => ({ picked: { ...base.picked, [serial]: on } }));
@@ -202,7 +220,7 @@ export default function ReturnForm({ devices, loans, onSubmit, onDone, initialNa
         const known = devices?.[serial];
         if (known) {
             if (known.kind !== kind) {
-                return say(kind, false, `${serial} est ${known.kind === 'phone' ? 'un téléphone' : 'un PC'} : utilise « ${KINDS[known.kind].title} ».`);
+                return say(kind, false, `${serial} est ${KIND_NAMES[known.kind] || 'un PC'} : utilise « ${(KINDS[known.kind] || KINDS.pc).title} ».`);
             }
             if (known.status === 'stock') return say(kind, false, `${serial} : déjà en stock.`);
             if (personKey && nameKey(known.holder) === personKey) {
@@ -213,9 +231,12 @@ export default function ReturnForm({ devices, loans, onSubmit, onDone, initialNa
             return say(kind, true, `${serial} ajouté (attribué à ${known.holder || '?'}).`);
         }
 
-        // Appareil inconnu : modèle lu dans le QR code d'un PC, sinon à choisir.
+        // Appareil inconnu : modèle lu dans le QR code d'un PC, sinon à choisir (un écran
+        // n'a pas de modèle).
         const fromQr = Boolean(scan.modelName);
-        const recognized = scan.model && kindOfModel(scan.model) === kind ? modelOf(scan.model) : '';
+        const recognized = kind === 'screen'
+            ? SCREEN_MODEL
+            : scan.model && kindOfModel(scan.model) === kind ? modelOf(scan.model) : '';
         setExtras(prev => [...prev, {
             serial,
             kind,
@@ -242,6 +263,11 @@ export default function ReturnForm({ devices, loans, onSubmit, onDone, initialNa
         setValue: (value) => setScanValues(prev => ({ ...prev, phone: value })),
         onScan: (raw) => handleScan('phone', raw)
     });
+    const screenScan = useScanCapture({
+        value: scanValues.screen,
+        setValue: (value) => setScanValues(prev => ({ ...prev, screen: value })),
+        onScan: (raw) => handleScan('screen', raw)
+    });
 
     const setExtraModel = (serial, model) => setExtras(prev => prev.map(entry => (entry.serial === serial ? { ...entry, model } : entry)));
     const removeExtra = (serial) => setExtras(prev => prev.filter(entry => entry.serial !== serial));
@@ -252,9 +278,13 @@ export default function ReturnForm({ devices, loans, onSubmit, onDone, initialNa
         : { listed: [], added: [] });
     const pcs = returnedOf('pc');
     const phones = returnedOf('phone');
-    const returnedCount = pcs.listed.length + pcs.added.length + phones.listed.length + phones.added.length;
-    const itemNames = RETURN_ITEMS.map(item => item.id).filter(isItemOn);
-    const missingModel = [...pcs.added, ...phones.added].some(entry => !entry.known && !entry.model);
+    const screens = returnedOf('screen');
+    const allReturned = [pcs, phones, screens];
+    const returnedCount = allReturned.reduce((sum, r) => sum + r.listed.length + r.added.length, 0);
+    // Pastilles : le matériel secondaire, plus l'écran sans n° de série si la personne en a reçu un.
+    const pillIds = [...RETURN_ITEMS.map(item => item.id), ...(person?.given.has(SCREEN_MODEL) ? [SCREEN_MODEL] : [])];
+    const itemNames = pillIds.filter(isItemOn);
+    const missingModel = allReturned.flatMap(r => r.added).some(entry => !entry.known && !entry.model);
 
     // Coque et vitre : proposées quand un téléphone rendu en a en stock, cochées d'office
     // si la personne les avait reçues.
@@ -279,8 +309,8 @@ export default function ReturnForm({ devices, loans, onSubmit, onDone, initialNa
     const handleSubmit = (e) => {
         e.preventDefault();
         if (blocker) return;
-        const listed = [...pcs.listed, ...phones.listed].map(device => ({ serial: device.serial, kind: device.kind }));
-        const added = [...pcs.added, ...phones.added].map(entry => (entry.known
+        const listed = allReturned.flatMap(r => r.listed).map(device => ({ serial: device.serial, kind: device.kind }));
+        const added = allReturned.flatMap(r => r.added).map(entry => (entry.known
             ? { serial: entry.serial, kind: entry.kind }
             : {
                 serial: entry.serial,
@@ -297,8 +327,8 @@ export default function ReturnForm({ devices, loans, onSubmit, onDone, initialNa
     };
 
     // --- Tout sélectionner / désélectionner : tout ce qui est attribué à la personne ---
-    const myDevices = person ? [...person.pc, ...person.phone] : [];
-    const givenItems = person ? RETURN_ITEMS.map(item => item.id).filter(id => person.given.has(id)) : [];
+    const myDevices = person ? [...person.pc, ...person.phone, ...person.screen] : [];
+    const givenItems = person ? pillIds.filter(id => person.given.has(id)) : [];
     const allSelected = myDevices.length + givenItems.length > 0
         && myDevices.every(device => isPicked(device.serial)) && givenItems.every(isItemOn);
     const toggleAll = () => {
@@ -306,7 +336,7 @@ export default function ReturnForm({ devices, loans, onSubmit, onDone, initialNa
         patchChoices(base => ({
             picked: { ...base.picked, ...Object.fromEntries(myDevices.map(device => [device.serial, on])) },
             items: { ...base.items, ...Object.fromEntries(givenItems.map(id => [id, on])) },
-            open: on ? { pc: person.pc.length > 0 ? true : base.open.pc, phone: person.phone.length > 0 ? true : base.open.phone } : base.open,
+            open: on ? Object.fromEntries(KIND_ORDER.map(kind => [kind, person[kind].length > 0 ? true : base.open[kind]])) : base.open,
             phoneCase: on ? null : false
         }));
     };
@@ -315,6 +345,7 @@ export default function ReturnForm({ devices, loans, onSubmit, onDone, initialNa
         ? [
             person.pc.length > 0 && `${person.pc.length} PC`,
             person.phone.length > 0 && plural(person.phone.length, 'téléphone'),
+            person.screen.length > 0 && plural(person.screen.length, 'écran'),
             givenItems.length > 0 && `${givenItems.length} matériel secondaire`
         ].filter(Boolean).join(' · ') || 'aucun matériel enregistré'
         : '';
@@ -368,11 +399,12 @@ export default function ReturnForm({ devices, loans, onSubmit, onDone, initialNa
 
             <ReturnSection {...sectionProps('pc', pcScan, pcs)} />
             <ReturnSection {...sectionProps('phone', phoneScan, phones)} />
+            <ReturnSection {...sectionProps('screen', screenScan, screens)} />
 
             <div className="form-group">
                 <label>Matériel secondaire rendu</label>
                 <div className="pill-row">
-                    {RETURN_ITEMS.map(({ id }) => {
+                    {pillIds.map(id => {
                         const on = isItemOn(id);
                         return (
                             <button
@@ -382,7 +414,7 @@ export default function ReturnForm({ devices, loans, onSubmit, onDone, initialNa
                                 aria-pressed={on}
                                 onClick={() => setItem(id, !on)}
                             >
-                                {on ? '✓ ' : ''}{id}
+                                {on ? '✓ ' : ''}{id === SCREEN_MODEL ? 'Écran sans n° de série' : id}
                                 {person?.given.has(id) && <small className="pill-hint"> attribué</small>}
                             </button>
                         );

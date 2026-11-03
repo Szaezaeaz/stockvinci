@@ -104,7 +104,7 @@ function renameStockKeys(stock) {
 
 // Accessoires cochés par défaut quand on attribue du matériel.
 const DEFAULT_LOAN_ACCESSORIES = {
-    mouse: true, headset: false, bag: true, backpack: false, screen: false, dock: false, keyboard: false,
+    mouse: true, headset: false, bag: true, backpack: false, dock: false, keyboard: false,
     phoneCase: true, phoneScreen: true
 };
 
@@ -508,7 +508,7 @@ export function useInventory() {
         }
     };
 
-    // pcs / phones : [{ model, serial }] — chaque appareil peut porter son n° de série
+    // pcs (PC et écrans) / phones : [{ model, serial }] — chaque appareil peut porter son n° de série
     // (vide pour du stock ancien non suivi). Les appareils suivis passent "attribués"
     // à la personne.
     // note : commentaire facultatif (ex. "remis à l'assistante"), gardé sur l'attribution,
@@ -557,7 +557,6 @@ export function useInventory() {
             if (accessories.headset) deduct('Casque');
             if (accessories.bag) deduct('Sacoche');
             if (accessories.backpack) deduct('Sac à Dos');
-            if (accessories.screen) deduct('Écran');
             if (accessories.dock) deduct('Dock');
             if (accessories.keyboard) deduct('Clavier');
 

@@ -60,7 +60,7 @@ export default function AddMaterielModal({ isOpen, onClose, onConfirm, stock, de
                     className={`segment-btn ${mode === 'scan' ? 'active' : ''}`}
                     onClick={() => setMode('scan')}
                 >
-                    Scanner PC / téléphones
+                    Scanner PC / téléphones / écrans
                 </button>
             </div>
 

@@ -2,18 +2,18 @@ import React, { useState } from 'react';
 import ModelPicker from './ModelPicker';
 import { parseScan } from '../utils/scanParse';
 import {
-    aliasKeyToLearn, deviceModelLabel, exactModelFor, isOccasionOnly, kindOfModel, listModelChoices, modelLabel, modelOf, stockKeyOf
+    SCREEN_MODEL, aliasKeyToLearn, deviceModelLabel, exactModelFor, isOccasionOnly, kindOfModel, listModelChoices, modelLabel, modelOf, stockKeyOf
 } from '../utils/models';
 import { useScanCapture } from '../hooks/useScanCapture';
 
 const STATUS_LABELS = { stock: 'en stock', assigned: 'attribué' };
 const DEFAULT_MODEL = listModelChoices()[0];
 
-// État d'un appareil selon son modèle : sans objet pour un téléphone, forcément
+// État d'un appareil selon son modèle : sans objet pour un téléphone ou un écran, forcément
 // Occasion pour certains PC, sinon à choisir (null) après le scan.
 function conditionFor(model, previous = null) {
     if (!model) return previous;
-    if (kindOfModel(model) === 'phone') return 'n/a';
+    if (kindOfModel(model) !== 'pc') return 'n/a';
     if (isOccasionOnly(model)) return 'Occasion';
     return previous === 'Neuf' || previous === 'Occasion' ? previous : null;
 }
@@ -151,11 +151,16 @@ export default function ScanReceiveForm({ devices, onReceive, onDone, initialSca
         <div className="scan-form">
             <div className="form-group">
                 <label>Modèle</label>
-                <ModelPicker value={model} onChange={(name) => { setModel(name); refocus(); }} devices={devices} />
+                <div className="scan-model-row">
+                    <ModelPicker value={model} onChange={(name) => { setModel(name); refocus(); }} devices={devices} />
+                    {model !== SCREEN_MODEL && (
+                        <button type="button" className="pill-toggle" onClick={() => { setModel(SCREEN_MODEL); refocus(); }}>🖥️ Écrans</button>
+                    )}
+                </div>
                 <p className="scan-hint">
-                    Le QR code d'un PC indique son modèle : il est reconnu tout seul. Pour un téléphone ou un simple
-                    code-barres, choisis le modèle ici avant de scanner. Neuf ou Occasion se choisit pour chaque PC
-                    après le scan.
+                    Le QR code d'un PC indique son modèle : il est reconnu tout seul. Pour un téléphone, un écran ou un
+                    simple code-barres, choisis le modèle ici avant de scanner (« 🖥️ Écrans » pour les écrans : seul
+                    le n° de série compte). Neuf ou Occasion se choisit pour chaque PC après le scan.
                 </p>
             </div>
 
