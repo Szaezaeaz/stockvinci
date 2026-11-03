@@ -5,7 +5,8 @@ import { errorMessage, listBackups, restoreBackup } from '../services/auth';
 const KIND_LABELS = {
     auto: 'Automatique',
     jour: 'Début de journée',
-    restauration: 'Avant une restauration'
+    restauration: 'Avant une restauration',
+    remplacement: 'Avant un remplacement par un appareil'
 };
 
 const when = (at) => new Date(at).toLocaleString('fr-FR', { weekday: 'short', day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });

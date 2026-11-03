@@ -8,9 +8,9 @@ const ENDPOINT = '/api/inventory';
 export function loadSyncMeta() {
     try {
         const meta = JSON.parse(localStorage.getItem(META_KEY));
-        return { rev: Number(meta?.rev) || 0, dirty: Boolean(meta?.dirty) };
+        return { rev: Number(meta?.rev) || 0, dirty: Boolean(meta?.dirty), overwrite: Boolean(meta?.overwrite) };
     } catch {
-        return { rev: 0, dirty: false };
+        return { rev: 0, dirty: false, overwrite: false };
     }
 }
 
@@ -21,4 +21,6 @@ export const saveSyncMeta = (meta) => localStorage.setItem(META_KEY, JSON.string
 // knownRev : révision que cet appareil a déjà. Si le cloud est toujours à cette
 // révision, il répond { unchanged: true } sans renvoyer tout l'inventaire.
 export const fetchCloud = (knownRev = 0) => api(ENDPOINT + (knownRev > 0 ? `?rev=${knownRev}` : ''));
-export const pushCloud = (data, baseRev) => api(ENDPOINT, { method: 'PUT', body: { data, baseRev } });
+// overwrite : l'appareil remplace volontairement les données de l'équipe ; le serveur
+// en garde d'abord une sauvegarde.
+export const pushCloud = (data, baseRev, overwrite = false) => api(ENDPOINT, { method: 'PUT', body: { data, baseRev, overwrite } });

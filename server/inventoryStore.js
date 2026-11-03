@@ -13,14 +13,16 @@ import { pipeline, redis } from './redis.js';
 //   - 'auto' : l'inventaire juste après une modification, au plus une fois par
 //              quart d'heure, gardé 3 jours ;
 //   - 'jour' : l'inventaire avant la première modification du jour, gardé 31 jours ;
-//   - 'restauration' : l'inventaire juste avant une restauration, gardé 7 jours.
+//   - 'restauration' : l'inventaire juste avant une restauration, gardé 7 jours ;
+//   - 'remplacement' : l'inventaire juste avant qu'un appareil le remplace par ses
+//                      propres données (choix "Remplacer le cloud"), gardé 7 jours.
 // Un document d'inventaire n'est envoyé qu'une fois par requête à Redis (taille limitée).
 export const KEY = 'vinci_inventory';
 export const REV_KEY = 'vinci_inventory_rev';
 const BACKUPS_KEY = 'vinci_backups';
 const TICK_KEY = 'vinci_backup_tick';
 const DAY = 86400;
-const RETENTION_S = { auto: 3 * DAY, jour: 31 * DAY, restauration: 7 * DAY };
+const RETENTION_S = { auto: 3 * DAY, jour: 31 * DAY, restauration: 7 * DAY, remplacement: 7 * DAY };
 
 export const pack = (data) => gzipSync(Buffer.from(JSON.stringify(data))).toString('base64');
 const unpack = (z) => JSON.parse(gunzipSync(Buffer.from(z, 'base64')).toString());
@@ -61,7 +63,13 @@ async function saveBackup(docRaw, data, kind, by) {
 }
 
 // Écrit l'inventaire (révision rev) en gardant les sauvegardes à jour.
-export async function writeInventory(data, rev, by) {
+// overwrite : un appareil remplace les données de l'équipe ; on garde l'état d'avant.
+export async function writeInventory(data, rev, by, overwrite = false) {
+    if (overwrite) {
+        const previous = await redis(['GET', KEY]);
+        if (previous) await saveBackup(previous, parseDoc(previous).data, 'remplacement', by);
+    }
+
     // Première modification du jour : on garde l'état d'avant.
     const dayMark = `vinci_backup_day:${parisDay(new Date())}`;
     const [firstOfDay] = await pipeline([['SET', dayMark, '1', 'NX', 'EX', 2 * DAY]]);

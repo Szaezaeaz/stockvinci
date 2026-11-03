@@ -26,7 +26,7 @@ export default async function handler(req, res) {
         }
 
         if (req.method === 'PUT') {
-            const { data, baseRev } = req.body || {};
+            const { data, baseRev, overwrite } = req.body || {};
             if (!data || typeof data !== 'object' || typeof baseRev !== 'number') {
                 return send(res, 400, { error: 'bad_payload' });
             }
@@ -39,7 +39,7 @@ export default async function handler(req, res) {
                 if (stored) return send(res, 409, stored);
             }
             const rev = current.rev + 1;
-            await writeInventory(data, rev, user.name);
+            await writeInventory(data, rev, user.name, overwrite === true);
             return send(res, 200, { rev });
         }
 

@@ -384,10 +384,10 @@ export function useInventory() {
             let result;
             if (metaRef.current.dirty) {
                 const snapshot = dataRef.current;
-                result = await pushCloud(snapshot, metaRef.current.rev);
+                result = await pushCloud(snapshot, metaRef.current.rev, metaRef.current.overwrite);
                 if (result.status === 200) {
                     // Si l'utilisateur a encore modifié pendant l'envoi, on garde "dirty".
-                    updateMeta({ rev: result.body.rev, dirty: dataRef.current !== snapshot });
+                    updateMeta({ rev: result.body.rev, dirty: dataRef.current !== snapshot, overwrite: false });
                     if (metaRef.current.dirty) rerunRef.current = true;
                     setSyncStatus('synced');
                     return;
@@ -502,7 +502,8 @@ export function useInventory() {
             adoptCloud(cloud);
             setSyncStatus('synced');
         } else {
-            updateMeta({ rev: cloud.rev, dirty: true });
+            // overwrite : le serveur sauvegarde d'abord les données de l'équipe.
+            updateMeta({ rev: cloud.rev, dirty: true, overwrite: true });
             sync();
         }
     };
